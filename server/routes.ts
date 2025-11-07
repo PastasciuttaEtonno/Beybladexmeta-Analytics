@@ -304,11 +304,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lockChips = await db.selectDistinct({ name: comboStats.lockChip }).from(comboStats);
       
       res.json({
-        blades: blades.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
-        assistBlades: assistBlades.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
-        ratchets: ratchets.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
-        bits: bits.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
-        lockChips: lockChips.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
+        blades: blades.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        assistBlades: assistBlades.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        ratchets: ratchets.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        bits: bits.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        lockChips: lockChips.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch components' });
