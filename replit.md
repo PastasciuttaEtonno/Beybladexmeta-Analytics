@@ -18,6 +18,7 @@ The application follows a mobile-first, full-stack architecture.
 -   **Technology Stack:** Express.js for the API, with session-based authentication.
 -   **Security:** 
     -   Password hashing with bcrypt
+    -   PostgreSQL-backed session storage (production-ready, scalable across multiple processes)
     -   Session-based authentication with httpOnly, secure cookies (7-day expiration)
     -   Database-backed login rate limiting (5 attempts per 15 minutes per IP)
     -   Secure IP detection using `req.socket.remoteAddress` (cannot be spoofed via headers)
