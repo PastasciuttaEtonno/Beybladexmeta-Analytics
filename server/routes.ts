@@ -331,92 +331,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const secondPoints = calculatePoints(data.participants, 2);
       const thirdPoints = calculatePoints(data.participants, 3);
 
-      await db.transaction(async (tx) => {
-        const processCombo = async (combo: any, position: number) => {
-          const points = position === 1 ? firstPoints : position === 2 ? secondPoints : thirdPoints;
-          const primiPosti = position === 1 ? 1 : 0;
-          const secondiPosti = position === 2 ? 1 : 0;
-          const terziPosti = position === 3 ? 1 : 0;
+      const processCombo = async (combo: any, position: number) => {
+        const points = position === 1 ? firstPoints : position === 2 ? secondPoints : thirdPoints;
+        const primiPosti = position === 1 ? 1 : 0;
+        const secondiPosti = position === 2 ? 1 : 0;
+        const terziPosti = position === 3 ? 1 : 0;
 
-          await tx.execute(sql`
-            INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-            VALUES (${combo.blade}, ${combo.assistBlade}, ${combo.ratchet}, ${combo.bit}, ${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-            ON CONFLICT (blade, assist_blade, ratchet, bit, lock_chip)
-            DO UPDATE SET
-              primi_posti = combo_stats.primi_posti + ${primiPosti},
-              secondi_posti = combo_stats.secondi_posti + ${secondiPosti},
-              terzi_posti = combo_stats.terzi_posti + ${terziPosti},
-              punteggio_totale = combo_stats.punteggio_totale + ${points}
-          `);
+        await db.execute(sql`
+          INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+          VALUES (${combo.blade}, ${combo.assistBlade}, ${combo.ratchet}, ${combo.bit}, ${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+          ON CONFLICT (blade, assist_blade, ratchet, bit, lock_chip)
+          DO UPDATE SET
+            primi_posti = combo_stats.primi_posti + ${primiPosti},
+            secondi_posti = combo_stats.secondi_posti + ${secondiPosti},
+            terzi_posti = combo_stats.terzi_posti + ${terziPosti},
+            punteggio_totale = combo_stats.punteggio_totale + ${points}
+        `);
 
-          await tx.execute(sql`
-            INSERT INTO blade_stats (blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-            VALUES (${combo.blade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-            ON CONFLICT (blade)
-            DO UPDATE SET
-              primi_posti = blade_stats.primi_posti + ${primiPosti},
-              secondi_posti = blade_stats.secondi_posti + ${secondiPosti},
-              terzi_posti = blade_stats.terzi_posti + ${terziPosti},
-              punteggio_totale = blade_stats.punteggio_totale + ${points}
-          `);
+        await db.execute(sql`
+          INSERT INTO blade_stats (blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+          VALUES (${combo.blade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+          ON CONFLICT (blade)
+          DO UPDATE SET
+            primi_posti = blade_stats.primi_posti + ${primiPosti},
+            secondi_posti = blade_stats.secondi_posti + ${secondiPosti},
+            terzi_posti = blade_stats.terzi_posti + ${terziPosti},
+            punteggio_totale = blade_stats.punteggio_totale + ${points}
+        `);
 
-          await tx.execute(sql`
-            INSERT INTO assist_blade_stats (assist_blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-            VALUES (${combo.assistBlade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-            ON CONFLICT (assist_blade)
-            DO UPDATE SET
-              primi_posti = assist_blade_stats.primi_posti + ${primiPosti},
-              secondi_posti = assist_blade_stats.secondi_posti + ${secondiPosti},
-              terzi_posti = assist_blade_stats.terzi_posti + ${terziPosti},
-              punteggio_totale = assist_blade_stats.punteggio_totale + ${points}
-          `);
+        await db.execute(sql`
+          INSERT INTO assist_blade_stats (assist_blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+          VALUES (${combo.assistBlade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+          ON CONFLICT (assist_blade)
+          DO UPDATE SET
+            primi_posti = assist_blade_stats.primi_posti + ${primiPosti},
+            secondi_posti = assist_blade_stats.secondi_posti + ${secondiPosti},
+            terzi_posti = assist_blade_stats.terzi_posti + ${terziPosti},
+            punteggio_totale = assist_blade_stats.punteggio_totale + ${points}
+        `);
 
-          await tx.execute(sql`
-            INSERT INTO ratchet_stats (ratchet, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-            VALUES (${combo.ratchet}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-            ON CONFLICT (ratchet)
-            DO UPDATE SET
-              primi_posti = ratchet_stats.primi_posti + ${primiPosti},
-              secondi_posti = ratchet_stats.secondi_posti + ${secondiPosti},
-              terzi_posti = ratchet_stats.terzi_posti + ${terziPosti},
-              punteggio_totale = ratchet_stats.punteggio_totale + ${points}
-          `);
+        await db.execute(sql`
+          INSERT INTO ratchet_stats (ratchet, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+          VALUES (${combo.ratchet}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+          ON CONFLICT (ratchet)
+          DO UPDATE SET
+            primi_posti = ratchet_stats.primi_posti + ${primiPosti},
+            secondi_posti = ratchet_stats.secondi_posti + ${secondiPosti},
+            terzi_posti = ratchet_stats.terzi_posti + ${terziPosti},
+            punteggio_totale = ratchet_stats.punteggio_totale + ${points}
+        `);
 
-          await tx.execute(sql`
-            INSERT INTO bit_stats (bit, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-            VALUES (${combo.bit}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-            ON CONFLICT (bit)
-            DO UPDATE SET
-              primi_posti = bit_stats.primi_posti + ${primiPosti},
-              secondi_posti = bit_stats.secondi_posti + ${secondiPosti},
-              terzi_posti = bit_stats.terzi_posti + ${terziPosti},
-              punteggio_totale = bit_stats.punteggio_totale + ${points}
-          `);
+        await db.execute(sql`
+          INSERT INTO bit_stats (bit, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+          VALUES (${combo.bit}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+          ON CONFLICT (bit)
+          DO UPDATE SET
+            primi_posti = bit_stats.primi_posti + ${primiPosti},
+            secondi_posti = bit_stats.secondi_posti + ${secondiPosti},
+            terzi_posti = bit_stats.terzi_posti + ${terziPosti},
+            punteggio_totale = bit_stats.punteggio_totale + ${points}
+        `);
 
-          await tx.execute(sql`
-            INSERT INTO lock_chip_stats (lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-            VALUES (${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-            ON CONFLICT (lock_chip)
-            DO UPDATE SET
-              primi_posti = lock_chip_stats.primi_posti + ${primiPosti},
-              secondi_posti = lock_chip_stats.secondi_posti + ${secondiPosti},
-              terzi_posti = lock_chip_stats.terzi_posti + ${terziPosti},
-              punteggio_totale = lock_chip_stats.punteggio_totale + ${points}
-          `);
-        };
+        await db.execute(sql`
+          INSERT INTO lock_chip_stats (lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+          VALUES (${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+          ON CONFLICT (lock_chip)
+          DO UPDATE SET
+            primi_posti = lock_chip_stats.primi_posti + ${primiPosti},
+            secondi_posti = lock_chip_stats.secondi_posti + ${secondiPosti},
+            terzi_posti = lock_chip_stats.terzi_posti + ${terziPosti},
+            punteggio_totale = lock_chip_stats.punteggio_totale + ${points}
+        `);
+      };
 
-        for (const combo of data.firstPlaceCombos) {
-          await processCombo(combo, 1);
-        }
+      for (const combo of data.firstPlaceCombos) {
+        await processCombo(combo, 1);
+      }
 
-        for (const combo of data.secondPlaceCombos) {
-          await processCombo(combo, 2);
-        }
+      for (const combo of data.secondPlaceCombos) {
+        await processCombo(combo, 2);
+      }
 
-        for (const combo of data.thirdPlaceCombos) {
-          await processCombo(combo, 3);
-        }
-      });
+      for (const combo of data.thirdPlaceCombos) {
+        await processCombo(combo, 3);
+      }
 
       res.json({ success: true, message: 'Tournament results submitted successfully' });
     } catch (error) {
