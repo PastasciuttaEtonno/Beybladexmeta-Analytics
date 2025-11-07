@@ -16,7 +16,14 @@ The application follows a mobile-first, full-stack architecture.
 
 **Backend:**
 -   **Technology Stack:** Express.js for the API, with session-based authentication.
--   **Security:** Implements bcrypt for password hashing and uses httpOnly session cookies to enhance security. Protected routes ensure only authenticated users can access specific resources.
+-   **Security:** 
+    -   Password hashing with bcrypt
+    -   Session-based authentication with httpOnly, secure cookies (7-day expiration)
+    -   Database-backed login rate limiting (5 attempts per 15 minutes per IP)
+    -   Secure IP detection using `req.socket.remoteAddress` (cannot be spoofed via headers)
+    -   Comprehensive security headers (CSP, XSS Protection, HSTS, X-Frame-Options)
+    -   Protected routes ensuring only authenticated users can access resources
+    -   Automatic cleanup of old rate limit records (24-hour retention)
 -   **Admin Features:** Role-based access control with an `isAdmin` field. Admin users have access to a dedicated Messages section for tournament data entry and a system for submitting tournament results, which updates various statistics tables.
 
 **Database:**
