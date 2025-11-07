@@ -129,13 +129,22 @@ export default function ComboDetail() {
     );
   }
 
-  const components = [
+  const allComponents = [
     { label: "Blade", value: combo.blade, folder: "blades" },
     { label: "Assist Blade", value: combo.assistBlade, folder: "assist-blades" },
     { label: "Ratchet", value: combo.ratchet, folder: "ratchets" },
     { label: "Bit", value: combo.bit, folder: "bits" },
     { label: "Lock Chip", value: combo.lockChip, folder: "chips" },
   ];
+
+  const components = allComponents.filter(component => {
+    const value = component.value;
+    return value !== null && 
+           value !== undefined && 
+           value !== "" && 
+           value.toUpperCase() !== "NONE" &&
+           value !== "-";
+  });
 
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
