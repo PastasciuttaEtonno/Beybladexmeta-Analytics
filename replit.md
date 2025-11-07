@@ -13,11 +13,12 @@ A modern, responsive web application optimized for mobile browsers with secure a
 1. ✅ Secure authentication with email/password
 2. ✅ Session-based auth with express-session (7-day sessions)
 3. ✅ Protected routes (redirect to login if not authenticated)
-4. ✅ Mobile-first bottom navigation bar
-5. ✅ 5 content sections: Home, Analytics, Schedule, Messages, Settings
+4. ✅ Mobile-first bottom navigation bar with 5 sections
+5. ✅ 5 content sections: Home, Analytics, Schedule, Messages, Profile
 6. ✅ Profile management (edit display name, upload profile picture)
-7. ✅ Dark mode with system preference detection
-8. ✅ PostgreSQL database with secure password hashing
+7. ✅ Comprehensive profile page with settings (appearance, preferences, support)
+8. ✅ Dark mode with system preference detection
+9. ✅ PostgreSQL database with secure password hashing
 
 ## Database Schema
 
@@ -127,6 +128,8 @@ npx tsx server/create-user.ts <email> <password> <name>
 - ✅ Updated frontend to use real authentication
 - ✅ Created admin user creation tool
 - ✅ Tested complete authentication flow end-to-end
+- ✅ Removed Settings from bottom navbar (reduced from 6 to 5 items)
+- ✅ Merged Settings content into Profile page (appearance, preferences, support)
 
 ## Security Features
 1. **Password Security**: bcrypt hashing with 10 salt rounds

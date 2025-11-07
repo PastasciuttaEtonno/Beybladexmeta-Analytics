@@ -1,4 +1,4 @@
-import { Home, BarChart3, Calendar, MessageCircle, Settings, User } from 'lucide-react';
+import { Home, BarChart3, Calendar, MessageCircle, User } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 import { cn } from '@/lib/utils';
 
@@ -7,7 +7,6 @@ const navItems = [
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/schedule', icon: Calendar, label: 'Schedule' },
   { path: '/messages', icon: MessageCircle, label: 'Messages' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 

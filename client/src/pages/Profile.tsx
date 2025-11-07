@@ -8,7 +8,7 @@ import { Avatar } from '@/components/Avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, LogOut, Moon, Sun } from 'lucide-react';
+import { Camera, LogOut, Moon, Sun, Bell, Lock, HelpCircle, Info, ChevronRight } from 'lucide-react';
 
 export default function Profile() {
   const { user, logout, updateProfile } = useAuth();
@@ -96,6 +96,13 @@ export default function Profile() {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleSettingClick = (label: string) => {
+    toast({
+      title: label,
+      description: `${label} settings would open here`,
+    });
   };
 
   return (
@@ -188,34 +195,92 @@ export default function Profile() {
           )}
         </Card>
 
-        <Card className="p-6 space-y-4">
-          <h3 className="font-semibold">Appearance</h3>
-          <button
-            onClick={toggleTheme}
-            className="w-full p-4 flex items-center justify-between rounded-lg bg-muted/50 hover-elevate active-elevate-2"
-            data-testid="button-toggle-theme"
-          >
-            <div className="flex items-center gap-3">
-              {theme === 'dark' ? (
-                <Moon className="w-5 h-5" />
-              ) : (
-                <Sun className="w-5 h-5" />
-              )}
-              <span className="font-medium">Dark Mode</span>
-            </div>
-            <div
-              className={`w-12 h-6 rounded-full transition-colors ${
-                theme === 'dark' ? 'bg-primary' : 'bg-muted'
-              }`}
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground px-1">
+            Appearance
+          </h2>
+          <Card className="p-4">
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center justify-between hover-elevate active-elevate-2"
+              data-testid="button-toggle-theme"
             >
+              <div className="flex items-center gap-3">
+                {theme === 'dark' ? (
+                  <Moon className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <Sun className="w-5 h-5 text-muted-foreground" />
+                )}
+                <span className="font-medium">Dark Mode</span>
+              </div>
               <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  theme === 'dark' ? 'translate-x-6' : 'translate-x-0.5'
-                } mt-0.5`}
-              />
-            </div>
-          </button>
-        </Card>
+                className={`w-12 h-6 rounded-full transition-colors ${
+                  theme === 'dark' ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                    theme === 'dark' ? 'translate-x-6' : 'translate-x-0.5'
+                  } mt-0.5`}
+                />
+              </div>
+            </button>
+          </Card>
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground px-1">
+            Preferences
+          </h2>
+          <Card className="divide-y divide-border">
+            <button
+              onClick={() => handleSettingClick('Notifications')}
+              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
+              data-testid="button-notifications"
+            >
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              <span className="flex-1 font-medium">Notifications</span>
+              <span className="text-sm text-muted-foreground">On</span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+            <button
+              onClick={() => handleSettingClick('Privacy')}
+              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
+              data-testid="button-privacy"
+            >
+              <Lock className="w-5 h-5 text-muted-foreground" />
+              <span className="flex-1 font-medium">Privacy</span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </Card>
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground px-1">
+            Support
+          </h2>
+          <Card className="divide-y divide-border">
+            <button
+              onClick={() => handleSettingClick('Help Center')}
+              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
+              data-testid="button-help-center"
+            >
+              <HelpCircle className="w-5 h-5 text-muted-foreground" />
+              <span className="flex-1 font-medium">Help Center</span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+            <button
+              onClick={() => handleSettingClick('About')}
+              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
+              data-testid="button-about"
+            >
+              <Info className="w-5 h-5 text-muted-foreground" />
+              <span className="flex-1 font-medium">About</span>
+              <span className="text-sm text-muted-foreground">v1.0.0</span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </Card>
+        </div>
 
         <Button
           variant="destructive"

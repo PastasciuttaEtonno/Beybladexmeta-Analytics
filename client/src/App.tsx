@@ -12,7 +12,6 @@ import Home from "@/pages/Home";
 import Analytics from "@/pages/Analytics";
 import Schedule from "@/pages/Schedule";
 import Messages from "@/pages/Messages";
-import Settings from "@/pages/Settings";
 import Profile from "@/pages/Profile";
 
 function AppRoutes() {
@@ -44,13 +43,6 @@ function AppRoutes() {
       <Route path="/messages">
         <ProtectedRoute>
           <Messages />
-          <BottomNav />
-        </ProtectedRoute>
-      </Route>
-      
-      <Route path="/settings">
-        <ProtectedRoute>
-          <Settings />
           <BottomNav />
         </ProtectedRoute>
       </Route>
