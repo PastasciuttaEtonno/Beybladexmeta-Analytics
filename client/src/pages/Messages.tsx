@@ -96,6 +96,43 @@ export default function Messages() {
     setter(newCombos);
   };
 
+  const validateDeckUniqueness = (combos: ComboForm[], deckName: string): string | null => {
+    const parts: { [key: string]: string[] } = {
+      blade: [],
+      assistBlade: [],
+      ratchet: [],
+      bit: [],
+      lockChip: [],
+    };
+
+    for (const combo of combos) {
+      parts.blade.push(combo.blade);
+      parts.assistBlade.push(combo.assistBlade);
+      parts.ratchet.push(combo.ratchet);
+      parts.bit.push(combo.bit);
+      parts.lockChip.push(combo.lockChip);
+    }
+
+    const checkDuplicates = (arr: string[], partName: string, allowNone: boolean): string | null => {
+      const filtered = allowNone ? arr.filter(v => v !== 'None') : arr;
+      const unique = new Set(filtered);
+      if (filtered.length !== unique.size) {
+        return `${deckName} has duplicate ${partName}s. Each combo must use different parts (except "None" for Assist Blade and Lock Chip).`;
+      }
+      return null;
+    };
+
+    const errors = [
+      checkDuplicates(parts.blade, 'Blade', false),
+      checkDuplicates(parts.assistBlade, 'Assist Blade', true),
+      checkDuplicates(parts.ratchet, 'Ratchet', false),
+      checkDuplicates(parts.bit, 'Bit', false),
+      checkDuplicates(parts.lockChip, 'Lock Chip', true),
+    ].filter(Boolean);
+
+    return errors.length > 0 ? errors[0] : null;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -117,6 +154,20 @@ export default function Messages() {
       toast({
         title: 'Error',
         description: 'Please fill in all combo components',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const firstPlaceError = validateDeckUniqueness(firstPlace, '1st Place');
+    const secondPlaceError = validateDeckUniqueness(secondPlace, '2nd Place');
+    const thirdPlaceError = validateDeckUniqueness(thirdPlace, '3rd Place');
+
+    const validationError = firstPlaceError || secondPlaceError || thirdPlaceError;
+    if (validationError) {
+      toast({
+        title: 'Validation Error',
+        description: validationError,
         variant: 'destructive',
       });
       return;
