@@ -1,61 +1,171 @@
 import { PageHeader } from '@/components/PageHeader';
 import { Card } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { TrendingUp, Users, Activity, CheckCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, TrendingUp } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import type { BladeStats, RatchetStats, BitStats } from '@shared/schema';
+
+const getImageUrl = (component: string, type: string) => {
+  const normalized = component.toLowerCase().replace(/\s+/g, '-');
+  return `/api/object-storage/public/${type}/${normalized}.png`;
+};
 
 export default function Home() {
-  const { user } = useAuth();
+  const { data: bladeData, isLoading: bladeLoading } = useQuery<{ blade: BladeStats | null }>({
+    queryKey: ['/api/stats/top/blade'],
+  });
 
-  const stats = [
-    { label: 'Active Tasks', value: '12', icon: Activity, color: 'text-blue-500' },
-    { label: 'Completed', value: '48', icon: CheckCircle, color: 'text-green-500' },
-    { label: 'Team Members', value: '8', icon: Users, color: 'text-purple-500' },
-    { label: 'Progress', value: '85%', icon: TrendingUp, color: 'text-orange-500' },
-  ];
+  const { data: ratchetData, isLoading: ratchetLoading } = useQuery<{ ratchet: RatchetStats | null }>({
+    queryKey: ['/api/stats/top/ratchet'],
+  });
+
+  const { data: bitData, isLoading: bitLoading } = useQuery<{ bit: BitStats | null }>({
+    queryKey: ['/api/stats/top/bit'],
+  });
+
+  const topBlade = bladeData?.blade;
+  const topRatchet = ratchetData?.ratchet;
+  const topBit = bitData?.bit;
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title={`Welcome, ${user?.displayName}`} />
+      <PageHeader title="Il Meta in Sintesi" />
       
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          {stats.map((stat, idx) => (
-            <Card
-              key={idx}
-              className="p-4 space-y-2 hover-elevate"
-              data-testid={`card-stat-${idx}`}
-            >
-              <div className="flex items-center justify-between">
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold" data-testid={`text-stat-value-${idx}`}>
-                  {stat.value}
-                </p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            </Card>
-          ))}
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-5 h-5 text-primary" />
+          <p className="text-sm text-muted-foreground">
+            I componenti più performanti nei tornei
+          </p>
         </div>
 
-        <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Recent Activity</h2>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
-                data-testid={`item-activity-${i}`}
-              >
-                <div className="w-2 h-2 rounded-full bg-primary" />
+        <div className="space-y-4">
+          {(bladeLoading || !topBlade) ? (
+            <Card className="p-6">
+              <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+            </Card>
+          ) : (
+            <Card className="p-6 space-y-4" data-testid="card-top-blade">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                <h2 className="text-lg font-semibold">Top Blade</h2>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="w-24 h-24 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={getImageUrl(topBlade.blade, 'blades')}
+                    alt={topBlade.blade}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<div class="text-3xl">🛡️</div>';
+                    }}
+                    data-testid="img-top-blade"
+                  />
+                </div>
+                
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Activity {i}</p>
-                  <p className="text-xs text-muted-foreground">Just now</p>
+                  <p className="text-2xl font-bold mb-2" data-testid="text-blade-name">
+                    {topBlade.blade}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {topBlade.primiPosti} Primi Posti
+                    </Badge>
+                    <Badge variant="outline" className="text-xs" data-testid="text-blade-score">
+                      Punteggio: {topBlade.punteggioTotale.toLocaleString()}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </Card>
+            </Card>
+          )}
+
+          {(ratchetLoading || !topRatchet) ? (
+            <Card className="p-6">
+              <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+            </Card>
+          ) : (
+            <Card className="p-6 space-y-4" data-testid="card-top-ratchet">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="w-5 h-5 text-gray-400" />
+                <h2 className="text-lg font-semibold">Top Ratchet</h2>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="w-24 h-24 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={getImageUrl(topRatchet.ratchet, 'ratchets')}
+                    alt={topRatchet.ratchet}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<div class="text-3xl">⚙️</div>';
+                    }}
+                    data-testid="img-top-ratchet"
+                  />
+                </div>
+                
+                <div className="flex-1">
+                  <p className="text-2xl font-bold mb-2" data-testid="text-ratchet-name">
+                    {topRatchet.ratchet}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {topRatchet.primiPosti} Primi Posti
+                    </Badge>
+                    <Badge variant="outline" className="text-xs" data-testid="text-ratchet-score">
+                      Punteggio: {topRatchet.punteggioTotale.toLocaleString()}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {(bitLoading || !topBit) ? (
+            <Card className="p-6">
+              <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+            </Card>
+          ) : (
+            <Card className="p-6 space-y-4" data-testid="card-top-bit">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="w-5 h-5 text-amber-600" />
+                <h2 className="text-lg font-semibold">Top Bit</h2>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="w-24 h-24 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={getImageUrl(topBit.bit, 'bits')}
+                    alt={topBit.bit}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<div class="text-3xl">⚡</div>';
+                    }}
+                    data-testid="img-top-bit"
+                  />
+                </div>
+                
+                <div className="flex-1">
+                  <p className="text-2xl font-bold mb-2" data-testid="text-bit-name">
+                    {topBit.bit}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {topBit.primiPosti} Primi Posti
+                    </Badge>
+                    <Badge variant="outline" className="text-xs" data-testid="text-bit-score">
+                      Punteggio: {topBit.punteggioTotale.toLocaleString()}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
       </main>
     </div>
   );
