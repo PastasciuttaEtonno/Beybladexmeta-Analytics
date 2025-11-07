@@ -171,7 +171,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get top blade by total score
+  // Get all top components in a single query (OPTIMIZED)
+  app.get('/api/stats/top/components', requireAuth, async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT component_type, name, primi_posti, secondi_posti, terzi_posti, punteggio_totale
+        FROM top_component_snapshot
+      `);
+      
+      const topComponents = {
+        blade: null as any,
+        ratchet: null as any,
+        bit: null as any,
+      };
+      
+      for (const row of result.rows as any[]) {
+        const component = {
+          [row.component_type]: row.name,
+          primiPosti: row.primi_posti,
+          secondiPosti: row.secondi_posti,
+          terziPosti: row.terzi_posti,
+          punteggioTotale: row.punteggio_totale,
+        };
+        
+        if (row.component_type === 'blade') {
+          topComponents.blade = component;
+        } else if (row.component_type === 'ratchet') {
+          topComponents.ratchet = component;
+        } else if (row.component_type === 'bit') {
+          topComponents.bit = component;
+        }
+      }
+      
+      res.json(topComponents);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch top components' });
+    }
+  });
+
+  // Legacy endpoints (kept for backwards compatibility, but use /api/stats/top/components for better performance)
   app.get('/api/stats/top/blade', requireAuth, async (req, res) => {
     try {
       const topBlade = await db.select()
@@ -185,7 +223,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get top ratchet by total score
   app.get('/api/stats/top/ratchet', requireAuth, async (req, res) => {
     try {
       const topRatchet = await db.select()
@@ -199,7 +236,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get top bit by total score
   app.get('/api/stats/top/bit', requireAuth, async (req, res) => {
     try {
       const topBit = await db.select()
@@ -475,6 +511,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const combo of data.thirdPlaceCombos) {
         await processCombo(combo, 3);
+      }
+
+      // Refresh materialized view for top components (performance optimization)
+      try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY top_component_snapshot`);
+      } catch (refreshError) {
+        console.error('Failed to refresh materialized view:', refreshError);
       }
 
       res.json({ success: true, message: 'Tournament results submitted successfully' });

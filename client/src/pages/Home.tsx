@@ -1,8 +1,8 @@
-import { PageHeader } from '@/components/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, TrendingUp, Shield, Cog, Zap } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useTheme } from '@/contexts/ThemeProvider';
 import type { BladeStats, RatchetStats, BitStats } from '@shared/schema';
 
 const getImageUrl = (component: string, type: string) => {
@@ -10,34 +10,44 @@ const getImageUrl = (component: string, type: string) => {
   return `/public-objects/${type}/${normalized}.png`;
 };
 
+interface TopComponentsResponse {
+  blade: BladeStats | null;
+  ratchet: RatchetStats | null;
+  bit: BitStats | null;
+}
+
 export default function Home() {
-  const { data: bladeData, isLoading: bladeLoading } = useQuery<{ blade: BladeStats | null }>({
-    queryKey: ['/api/stats/top/blade'],
+  const { theme } = useTheme();
+  
+  const { data: topComponents, isLoading } = useQuery<TopComponentsResponse>({
+    queryKey: ['/api/stats/top/components'],
   });
 
-  const { data: ratchetData, isLoading: ratchetLoading } = useQuery<{ ratchet: RatchetStats | null }>({
-    queryKey: ['/api/stats/top/ratchet'],
-  });
-
-  const { data: bitData, isLoading: bitLoading } = useQuery<{ bit: BitStats | null }>({
-    queryKey: ['/api/stats/top/bit'],
-  });
-
-  const topBlade = bladeData?.blade;
-  const topRatchet = ratchetData?.ratchet;
-  const topBit = bitData?.bit;
+  const topBlade = topComponents?.blade;
+  const topRatchet = topComponents?.ratchet;
+  const topBit = topComponents?.bit;
+  
+  const bladeLoading = isLoading;
+  const ratchetLoading = isLoading;
+  const bitLoading = isLoading;
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Il Meta in Sintesi" />
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+        <div className="flex items-center justify-between h-16 px-4 max-w-2xl mx-auto">
+          <div className="flex items-center gap-3">
+            <img
+              src={theme === 'dark' ? '/meta logoWhite.svg' : '/meta logo.svg'}
+              alt="Logo"
+              className="h-12 w-auto"
+              data-testid="img-home-logo"
+            />
+            <h1 className="text-xl font-bold" data-testid="text-page-title">Il Meta in Sintesi</h1>
+          </div>
+        </div>
+      </header>
       
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-          <TrendingUp className="w-5 h-5 text-primary" />
-          <p className="text-sm text-muted-foreground">
-            I componenti più performanti nei tornei
-          </p>
-        </div>
 
         <div className="space-y-4">
           {bladeLoading ? (

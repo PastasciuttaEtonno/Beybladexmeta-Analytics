@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Smartphone } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeProvider';
 
 export default function Login() {
   const { user, login } = useAuth();
   const { toast } = useToast();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,10 +53,12 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Smartphone className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-2xl font-bold" data-testid="text-app-name">Mobile App</h1>
+          <img
+            src={theme === 'dark' ? '/meta logoWhite.svg' : '/meta logo.svg'}
+            alt="Logo"
+            className="h-20 w-auto"
+            data-testid="img-logo"
+          />
           <p className="text-sm text-muted-foreground">Sign in to continue</p>
         </div>
 
