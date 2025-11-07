@@ -33,6 +33,41 @@ A modern, responsive web application optimized for mobile browsers with secure a
 }
 ```
 
+### Meta-Game Statistics Tables
+
+**Combo Stats** (Tournament Combination Performance)
+```typescript
+{
+  blade: text (primary key component)
+  assist_blade: text (primary key component)
+  ratchet: text (primary key component)
+  bit: text (primary key component)
+  lock_chip: text (primary key component)
+  primi_posti: integer (1st place count, default 0)
+  secondi_posti: integer (2nd place count, default 0)
+  terzi_posti: integer (3rd place count, default 0)
+  punteggio_totale: double precision (total score, default 0)
+}
+```
+
+**Component Stats Tables** (Individual Part Performance)
+Each of these tables follows the same structure:
+- `blade_stats` - Blade performance
+- `assist_blade_stats` - Assist Blade performance
+- `ratchet_stats` - Ratchet performance
+- `bit_stats` - Bit performance
+- `lock_chip_stats` - Lock Chip performance
+
+```typescript
+{
+  [component_name]: text (primary key)
+  primi_posti: integer (default 0)
+  secondi_posti: integer (default 0)
+  terzi_posti: integer (default 0)
+  punteggio_totale: double precision (default 0)
+}
+```
+
 ## Authentication Flow
 
 ### Login
@@ -130,6 +165,10 @@ npx tsx server/create-user.ts <email> <password> <name>
 - ✅ Tested complete authentication flow end-to-end
 - ✅ Removed Settings from bottom navbar (reduced from 6 to 5 items)
 - ✅ Merged Settings content into Profile page (appearance, preferences, support)
+- ✅ Created 6 meta-game statistics tables for tournament tracking
+  - combo_stats (composite primary key for 5-part combinations)
+  - 5 component stats tables (blade, assist_blade, ratchet, bit, lock_chip)
+- ✅ All tables track: primi_posti, secondi_posti, terzi_posti, punteggio_totale
 
 ## Security Features
 1. **Password Security**: bcrypt hashing with 10 salt rounds
