@@ -13,6 +13,7 @@ import Analytics from "@/pages/Analytics";
 import Schedule from "@/pages/Schedule";
 import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
+import ComboDetail from "@/pages/ComboDetail";
 
 function AppRoutes() {
   return (
@@ -51,6 +52,12 @@ function AppRoutes() {
         <ProtectedRoute>
           <Profile />
           <BottomNav />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/combo/:id">
+        <ProtectedRoute>
+          <ComboDetail />
         </ProtectedRoute>
       </Route>
 

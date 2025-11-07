@@ -6,6 +6,7 @@ import { loginSchema, updateProfileSchema } from "@shared/schema";
 import { db } from "./db";
 import { comboStats } from "@shared/schema";
 import { desc } from "drizzle-orm";
+import { ObjectStorageService } from "./objectStorage";
 
 // Extend express session type
 declare module 'express-session' {
@@ -105,6 +106,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ combos: topCombos });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch combo stats' });
+    }
+  });
+
+  // Serve public objects from storage (component images)
+  app.get("/public-objects/:filePath(*)", async (req, res) => {
+    const filePath = req.params.filePath;
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const file = await objectStorageService.searchPublicObject(filePath);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      objectStorageService.downloadObject(file, res, 3600, true);
+    } catch (error) {
+      console.error("Error searching for public object:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   });
 

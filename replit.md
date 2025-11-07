@@ -182,6 +182,36 @@ npm run db:push
 npx tsx server/create-user.ts <email> <password> <name>
 ```
 
+## Object Storage Setup
+
+### Folder Structure
+The object storage bucket contains the following folders for component images:
+- `public/assist-blades/` - Assist Blade images
+- `public/bits/` - Bit images
+- `public/blades/` - Blade images
+- `public/chips/` - Lock Chip images
+- `public/ratchets/` - Ratchet images
+
+### Image Upload Process
+1. Open the "Object Storage" tool pane in the Replit workspace
+2. Navigate to the bucket: `repl-default-bucket-*`
+3. Create folders if they don't exist: `public/blades`, `public/assist-blades`, `public/ratchets`, `public/bits`, `public/chips`
+4. Upload images to their respective folders
+5. Image naming convention: Component names converted to lowercase with hyphens (e.g., "Phoenix Wing" → "phoenix-wing.png")
+
+### Image Serving
+Images are served via the `/public-objects/:filePath` endpoint:
+- Example: `/public-objects/blades/phoenix-wing.png`
+- Images are cached for 1 hour (3600 seconds)
+- Automatically handles image not found scenarios with fallback UI
+
+### Combo Detail Page
+- Route: `/combo/:id` (protected, requires authentication)
+- Shows full combo details with all 5 component images
+- Displays tournament statistics (1st, 2nd, 3rd place counts and total score)
+- Accessible by tapping any combo card in the Analytics leaderboard
+- Back button returns to leaderboard
+
 ## Recent Changes (Latest Session)
 - ✅ Created PostgreSQL database
 - ✅ Implemented bcrypt password hashing
@@ -203,6 +233,15 @@ npx tsx server/create-user.ts <email> <password> <name>
   - Displays placement stats and total scores
   - Loading states and empty state handling
 - ✅ Seeded sample tournament data for testing (10 combinations)
+- ✅ Set up Replit Object Storage for component images
+  - Created bucket with environment variables (PUBLIC_OBJECT_SEARCH_PATHS, PRIVATE_OBJECT_DIR)
+  - Implemented object storage service (server/objectStorage.ts, server/objectAcl.ts)
+  - Added public file serving route (GET /public-objects/:filePath)
+- ✅ Created combo detail page
+  - Displays all 5 combo components with images
+  - Shows tournament statistics
+  - Clickable cards in leaderboard navigate to detail page
+  - Rank badges and icons for top 3 positions
 
 ## Security Features
 1. **Password Security**: bcrypt hashing with 10 salt rounds

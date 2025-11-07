@@ -3,9 +3,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import type { ComboStats } from '@shared/schema';
 
 export default function Analytics() {
+  const [, setLocation] = useLocation();
   const { data, isLoading } = useQuery<{ combos: ComboStats[] }>({
     queryKey: ['/api/stats/combos'],
   });
@@ -22,6 +24,14 @@ export default function Analytics() {
     if (index === 1) return <Badge className="bg-gray-400 hover:bg-gray-500">2nd</Badge>;
     if (index === 2) return <Badge className="bg-amber-600 hover:bg-amber-700">3rd</Badge>;
     return <Badge variant="outline">{index + 1}</Badge>;
+  };
+
+  const getComboId = (combo: ComboStats) => {
+    return encodeURIComponent(`${combo.blade}|${combo.assistBlade}|${combo.ratchet}|${combo.bit}|${combo.lockChip}`);
+  };
+
+  const handleComboClick = (combo: ComboStats) => {
+    setLocation(`/combo/${getComboId(combo)}`);
   };
 
   return (
@@ -54,7 +64,8 @@ export default function Analytics() {
               {data.combos.map((combo, index) => (
                 <Card
                   key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
-                  className="p-4 hover-elevate active-elevate-2"
+                  className="p-4 hover-elevate active-elevate-2 cursor-pointer"
+                  onClick={() => handleComboClick(combo)}
                   data-testid={`card-combo-${index}`}
                 >
                   <div className="flex items-start gap-3">
