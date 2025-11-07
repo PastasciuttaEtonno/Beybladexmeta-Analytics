@@ -1,0 +1,133 @@
+Modello Transazione SQL per Risultato Torneo
+Questo script SQL deve essere generato dal tuo backend ed eseguito come un'unica transazione. Il tuo frontend è responsabile di inviare la stringa 'None' (o un segnaposto da te deciso) per qualsiasi assist_blade o lock_chip non selezionato.
+
+1. Logica del Frontend (Pre-SQL)
+Form: L'interfaccia utente (UI) deve avere dropdown o checkbox per assist_blade e lock_chip.
+
+Valore di Default: Se un utente deseleziona "Usa Assist Blade", il valore inviato al backend per assist_blade deve essere 'None'. Non può essere NULL o una stringa vuota ''.
+
+Dati Inviati: Il frontend invia al backend 9 set di combo (3 per il 1°, 3 per il 2°, 3 per il 3°) e i dati del torneo (es. numero partecipanti).
+
+2. Logica del Backend (Generazione SQL)
+Il backend riceve i dati, calcola i punteggi (es. $punti_primo, $punti_secondo) e costruisce la seguente transazione SQL.
+
+3. Modello di Transazione SQL
+SQL
+
+-- PASSO 1: Inizia la transazione.
+BEGIN TRANSACTION;
+
+/* ===============================================================
+   BLOCCO 1: Deck 1° Posto, Combo 1
+   (Questo blocco di 6 query va ripetuto 9 volte)
+   
+   Variabili d'esempio per questo blocco:
+   $blade     = 'SharkEdge'
+   $assist    = 'KnightLance'  -- O 'None' se non selezionato
+   $ratchet   = '5-60'
+   $bit       = 'Flat'
+   $lock      = 'Metal'        -- O 'None' se non selezionato
+   $punti     = $punti_primo   -- Punteggio calcolato
+   $primi     = 1
+   $secondi   = 0
+   $terzi     = 0
+ ===============================================================
+*/
+
+-- 1.1: Aggiorna/Inserisci la COMBO
+INSERT INTO public.combo_stats (
+    blade, assist_blade, ratchet, bit, lock_chip, 
+    primi_posti, secondi_posti, terzi_posti, punteggio_totale
+)
+VALUES (
+    $blade, $assist, $ratchet, $bit, $lock, 
+    $primi, $secondi, $terzi, $punti
+)
+ON CONFLICT (blade, assist_blade, ratchet, bit, lock_chip)
+DO UPDATE SET
+    primi_posti = combo_stats.primi_posti + $primi,
+    secondi_posti = combo_stats.secondi_posti + $secondi,
+    terzi_posti = combo_stats.terzi_posti + $terzi,
+    punteggio_totale = combo_stats.punteggio_totale + $punti;
+
+-- 1.2: Aggiorna/Inserisci la BLADE
+INSERT INTO public.blade_stats (blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+VALUES ($blade, $primi, $secondi, $terzi, $punti)
+ON CONFLICT (blade)
+DO UPDATE SET
+    primi_posti = blade_stats.primi_posti + $primi,
+    secondi_posti = blade_stats.secondi_posti + $secondi,
+    terzi_posti = blade_stats.terzi_posti + $terzi,
+    punteggio_totale = blade_stats.punteggio_totale + $punti;
+
+-- 1.3: Aggiorna/Inserisci l'ASSIST BLADE
+-- Se $assist è 'None', aggiornerà la riga 'None'
+INSERT INTO public.assist_blade_stats (assist_blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+VALUES ($assist, $primi, $secondi, $terzi, $punti)
+ON CONFLICT (assist_blade)
+DO UPDATE SET
+    primi_posti = assist_blade_stats.primi_posti + $primi,
+    secondi_posti = assist_blade_stats.secondi_posti + $secondi,
+    terzi_posti = assist_blade_stats.terzi_posti + $terzi,
+    punteggio_totale = assist_blade_stats.punteggio_totale + $punti;
+
+-- 1.4: Aggiorna/Inserisci il RATCHET
+INSERT INTO public.ratchet_stats (ratchet, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+VALUES ($ratchet, $primi, $secondi, $terzi, $punti)
+ON CONFLICT (ratchet)
+DO UPDATE SET
+    primi_posti = ratchet_stats.primi_posti + $primi,
+    secondi_posti = ratchet_stats.secondi_posti + $secondi,
+    terzi_posti = ratchet_stats.terzi_posti + $terzi,
+    punteggio_totale = ratchet_stats.punteggio_totale + $punti;
+
+-- 1.5: Aggiorna/Inserisci il BIT
+INSERT INTO public.bit_stats (bit, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+VALUES ($bit, $primi, $secondi, $terzi, $punti)
+ON CONFLICT (bit)
+DO UPDATE SET
+    primi_posti = bit_stats.primi_posti + $primi,
+    secondi_posti = bit_stats.secondi_posti + $secondi,
+    terzi_posti = bit_stats.terzi_posti + $terzi,
+    punteggio_totale = bit_stats.punteggio_totale + $punti;
+
+-- 1.6: Aggiorna/Inserisci il LOCK CHIP
+-- Se $lock è 'None', aggiornerà la riga 'None'
+INSERT INTO public.lock_chip_stats (lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+VALUES ($lock, $primi, $secondi, $terzi, $punti)
+ON CONFLICT (lock_chip)
+DO UPDATE SET
+    primi_posti = lock_chip_stats.primi_posti + $primi,
+    secondi_posti = lock_chip_stats.secondi_posti + $secondi,
+    terzi_posti = lock_chip_stats.terzi_posti + $terzi,
+    punteggio_totale = lock_chip_stats.punteggio_totale + $punti;
+
+
+/* ===============================================================
+   BLOCCHI SUCCESSIVI (2-9)
+   
+   Ripeti il blocco di 6 query per le altre 2 combo del 1° posto.
+   
+   Ripeti il blocco di 6 query per le 3 combo del 2° posto, 
+   usando le variabili:
+   $punti     = $punti_secondo
+   $primi     = 0
+   $secondi   = 1
+   $terzi     = 0
+   
+   Ripeti il blocco di 6 query per le 3 combo del 3° posto,
+   usando le variabili:
+   $punti     = $punti_terzo
+   $primi     = 0
+   $secondi   = 0
+   $terzi     = 1
+ ===============================================================
+*/
+
+
+-- PASSO FINALE: Se tutti i 54 comandi (9 combo * 6 tabelle)
+-- sono stati eseguiti senza errori, rendi le modifiche permanenti.
+COMMIT;
+
+-- Se si verifica un errore, il tuo backend deve intercettarlo
+-- e inviare un ROLLBACK; per annullare l'intera operazione.

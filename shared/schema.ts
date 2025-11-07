@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, doublePrecision, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name").notNull(),
   photoURL: text("photo_url"),
+  isAdmin: boolean("is_admin").notNull().default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
