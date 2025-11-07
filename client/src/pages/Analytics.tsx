@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,10 +7,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Trophy, Medal, Award, TrendingUp, Filter, X } from 'lucide-react';
+import { Trophy, Medal, Award, TrendingUp, Filter, X, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import type { ComboStats } from '@shared/schema';
+
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+interface ComboResponse {
+  combos: ComboStats[];
+  pagination: PaginationMeta;
+}
 
 export default function Analytics() {
   const [, setLocation] = useLocation();
@@ -18,19 +30,27 @@ export default function Analytics() {
   const [sortBy, setSortBy] = useState('score');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Temporary state for modal inputs
   const [tempSearchTerm, setTempSearchTerm] = useState('');
   const [tempSortBy, setTempSortBy] = useState('score');
   const [tempSortOrder, setTempSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const { data, isLoading } = useQuery<{ combos: ComboStats[] }>({
-    queryKey: ['/api/stats/combos', searchTerm, sortBy, sortOrder],
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy, sortOrder]);
+
+  const { data, isLoading } = useQuery<ComboResponse>({
+    queryKey: ['/api/stats/combos', searchTerm, sortBy, sortOrder, currentPage],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       params.append('sortBy', sortBy);
       params.append('sortOrder', sortOrder);
+      params.append('page', currentPage.toString());
+      params.append('limit', '20');
       
       const response = await fetch(`/api/stats/combos?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch combos');
@@ -310,6 +330,56 @@ export default function Analytics() {
               <p className="text-sm text-muted-foreground mt-1">
                 Statistics will appear here once tournaments are recorded
               </p>
+            </div>
+          )}
+
+          {data?.combos && data.combos.length > 0 && data.pagination && (
+            <div className="mt-6 space-y-3">
+              <div className="text-center text-sm text-muted-foreground" data-testid="text-pagination-info">
+                Page {data.pagination.page} of {data.pagination.totalPages} ({data.pagination.total.toLocaleString()} total combos)
+              </div>
+              
+              <div className="flex items-center justify-center gap-2">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  data-testid="button-first-page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </Button>
+                
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  data-testid="button-previous-page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.min(data.pagination.totalPages, prev + 1))}
+                  disabled={currentPage === data.pagination.totalPages}
+                  data-testid="button-next-page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setCurrentPage(data.pagination.totalPages)}
+                  disabled={currentPage === data.pagination.totalPages}
+                  data-testid="button-last-page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
         </Card>
