@@ -103,3 +103,41 @@ export type InsertBitStats = z.infer<typeof insertBitStatsSchema>;
 export type BitStats = typeof bitStats.$inferSelect;
 export type InsertLockChipStats = z.infer<typeof insertLockChipStatsSchema>;
 export type LockChipStats = typeof lockChipStats.$inferSelect;
+
+export const favoriteCombos = pgTable("favorite_combos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  blade: text("blade").notNull(),
+  assistBlade: text("assist_blade").notNull(),
+  ratchet: text("ratchet").notNull(),
+  bit: text("bit").notNull(),
+  lockChip: text("lock_chip").notNull(),
+});
+
+export const favoriteDecks = pgTable("favorite_decks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+});
+
+export const favoriteDeckCombos = pgTable("favorite_deck_combos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deckId: varchar("deck_id").notNull().references(() => favoriteDecks.id, { onDelete: 'cascade' }),
+  comboNumber: integer("combo_number").notNull(),
+  blade: text("blade").notNull(),
+  assistBlade: text("assist_blade").notNull(),
+  ratchet: text("ratchet").notNull(),
+  bit: text("bit").notNull(),
+  lockChip: text("lock_chip").notNull(),
+});
+
+export const insertFavoriteComboSchema = createInsertSchema(favoriteCombos).omit({ id: true });
+export const insertFavoriteDeckSchema = createInsertSchema(favoriteDecks).omit({ id: true });
+export const insertFavoriteDeckComboSchema = createInsertSchema(favoriteDeckCombos).omit({ id: true });
+
+export type InsertFavoriteCombo = z.infer<typeof insertFavoriteComboSchema>;
+export type FavoriteCombo = typeof favoriteCombos.$inferSelect;
+export type InsertFavoriteDeck = z.infer<typeof insertFavoriteDeckSchema>;
+export type FavoriteDeck = typeof favoriteDecks.$inferSelect;
+export type InsertFavoriteDeckCombo = z.infer<typeof insertFavoriteDeckComboSchema>;
+export type FavoriteDeckCombo = typeof favoriteDeckCombos.$inferSelect;

@@ -4,8 +4,8 @@ import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema } from "@shared/schema";
 import { db } from "./db";
-import { comboStats } from "@shared/schema";
-import { desc, asc, or, ilike, sql } from "drizzle-orm";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, insertFavoriteComboSchema, insertFavoriteDeckSchema } from "@shared/schema";
+import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 
 // Extend express session type
@@ -132,6 +132,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ combos: topCombos });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch combo stats' });
+    }
+  });
+
+  // Get user's favorite combos
+  app.get('/api/favorites/combos', requireAuth, async (req, res) => {
+    try {
+      const combos = await db.select()
+        .from(favoriteCombos)
+        .where(eq(favoriteCombos.userId, req.session.userId!));
+      
+      res.json({ combos });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch favorite combos' });
+    }
+  });
+
+  // Add a favorite combo
+  app.post('/api/favorites/combos', requireAuth, async (req, res) => {
+    try {
+      const comboData = insertFavoriteComboSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
+
+      const [newCombo] = await db.insert(favoriteCombos)
+        .values(comboData)
+        .returning();
+      
+      res.json({ combo: newCombo });
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid request' });
+    }
+  });
+
+  // Delete a favorite combo
+  app.delete('/api/favorites/combos/:id', requireAuth, async (req, res) => {
+    try {
+      await db.delete(favoriteCombos)
+        .where(
+          and(
+            eq(favoriteCombos.id, req.params.id),
+            eq(favoriteCombos.userId, req.session.userId!)
+          )
+        );
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete favorite combo' });
+    }
+  });
+
+  // Get user's favorite decks with combos
+  app.get('/api/favorites/decks', requireAuth, async (req, res) => {
+    try {
+      const decks = await db.select()
+        .from(favoriteDecks)
+        .where(eq(favoriteDecks.userId, req.session.userId!));
+      
+      const decksWithCombos = await Promise.all(
+        decks.map(async (deck) => {
+          const combos = await db.select()
+            .from(favoriteDeckCombos)
+            .where(eq(favoriteDeckCombos.deckId, deck.id))
+            .orderBy(asc(favoriteDeckCombos.comboNumber));
+          
+          return { ...deck, combos };
+        })
+      );
+      
+      res.json({ decks: decksWithCombos });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch favorite decks' });
+    }
+  });
+
+  // Add a favorite deck
+  app.post('/api/favorites/decks', requireAuth, async (req, res) => {
+    try {
+      const { name, combos } = req.body;
+      
+      if (!name || !combos || combos.length !== 3) {
+        return res.status(400).json({ error: 'Deck must have a name and exactly 3 combos' });
+      }
+
+      const deckData = insertFavoriteDeckSchema.parse({
+        name,
+        userId: req.session.userId,
+      });
+
+      const [newDeck] = await db.insert(favoriteDecks)
+        .values(deckData)
+        .returning();
+
+      const combosToInsert = combos.map((combo: any, index: number) => ({
+        deckId: newDeck.id,
+        comboNumber: index + 1,
+        blade: combo.blade,
+        assistBlade: combo.assistBlade,
+        ratchet: combo.ratchet,
+        bit: combo.bit,
+        lockChip: combo.lockChip,
+      }));
+
+      const insertedCombos = await db.insert(favoriteDeckCombos)
+        .values(combosToInsert)
+        .returning();
+      
+      res.json({ deck: { ...newDeck, combos: insertedCombos } });
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid request' });
+    }
+  });
+
+  // Delete a favorite deck
+  app.delete('/api/favorites/decks/:id', requireAuth, async (req, res) => {
+    try {
+      await db.delete(favoriteDecks)
+        .where(
+          and(
+            eq(favoriteDecks.id, req.params.id),
+            eq(favoriteDecks.userId, req.session.userId!)
+          )
+        );
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete favorite deck' });
+    }
+  });
+
+  // Get all unique components (for dropdowns)
+  app.get('/api/components', requireAuth, async (req, res) => {
+    try {
+      const blades = await db.selectDistinct({ name: comboStats.blade }).from(comboStats);
+      const assistBlades = await db.selectDistinct({ name: comboStats.assistBlade }).from(comboStats);
+      const ratchets = await db.selectDistinct({ name: comboStats.ratchet }).from(comboStats);
+      const bits = await db.selectDistinct({ name: comboStats.bit }).from(comboStats);
+      const lockChips = await db.selectDistinct({ name: comboStats.lockChip }).from(comboStats);
+      
+      res.json({
+        blades: blades.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
+        assistBlades: assistBlades.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
+        ratchets: ratchets.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
+        bits: bits.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
+        lockChips: lockChips.map(b => b.name).filter(n => n && n !== 'NONE' && n !== '-'),
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch components' });
     }
   });
 

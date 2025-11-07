@@ -10,7 +10,7 @@ import { BottomNav } from "@/components/BottomNav";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import Analytics from "@/pages/Analytics";
-import Schedule from "@/pages/Schedule";
+import Favorites from "@/pages/Favorites";
 import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
 import ComboDetail from "@/pages/ComboDetail";
@@ -34,9 +34,9 @@ function AppRoutes() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/schedule">
+      <Route path="/favorites">
         <ProtectedRoute>
-          <Schedule />
+          <Favorites />
           <BottomNav />
         </ProtectedRoute>
       </Route>
