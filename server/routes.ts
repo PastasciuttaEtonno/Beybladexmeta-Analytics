@@ -171,6 +171,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get top blade by total score
+  app.get('/api/stats/top/blade', requireAuth, async (req, res) => {
+    try {
+      const topBlade = await db.select()
+        .from(bladeStats)
+        .orderBy(desc(bladeStats.punteggioTotale))
+        .limit(1);
+      
+      res.json({ blade: topBlade[0] || null });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch top blade' });
+    }
+  });
+
+  // Get top ratchet by total score
+  app.get('/api/stats/top/ratchet', requireAuth, async (req, res) => {
+    try {
+      const topRatchet = await db.select()
+        .from(ratchetStats)
+        .orderBy(desc(ratchetStats.punteggioTotale))
+        .limit(1);
+      
+      res.json({ ratchet: topRatchet[0] || null });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch top ratchet' });
+    }
+  });
+
+  // Get top bit by total score
+  app.get('/api/stats/top/bit', requireAuth, async (req, res) => {
+    try {
+      const topBit = await db.select()
+        .from(bitStats)
+        .orderBy(desc(bitStats.punteggioTotale))
+        .limit(1);
+      
+      res.json({ bit: topBit[0] || null });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch top bit' });
+    }
+  });
+
   // Get user's favorite combos
   app.get('/api/favorites/combos', requireAuth, async (req, res) => {
     try {
