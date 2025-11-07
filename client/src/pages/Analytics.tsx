@@ -1,15 +1,31 @@
+import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trophy, Medal, Award, TrendingUp, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import type { ComboStats } from '@shared/schema';
 
 export default function Analytics() {
   const [, setLocation] = useLocation();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('score');
+
   const { data, isLoading } = useQuery<{ combos: ComboStats[] }>({
-    queryKey: ['/api/stats/combos'],
+    queryKey: ['/api/stats/combos', searchTerm, sortBy],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      params.append('sortBy', sortBy);
+      params.append('sortOrder', 'desc');
+      
+      const response = await fetch(`/api/stats/combos?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch combos');
+      return response.json();
+    },
   });
 
   const getRankIcon = (index: number) => {
@@ -45,8 +61,36 @@ export default function Analytics() {
             <div>
               <h2 className="text-lg font-semibold">Top Combinations</h2>
               <p className="text-sm text-muted-foreground">
-                Ranked by total tournament score
+                Search and filter tournament combos
               </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by blade, assist blade, ratchet, bit, or lock chip..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                data-testid="input-search"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full" data-testid="select-sort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="score">Total Score</SelectItem>
+                  <SelectItem value="first">1st Place</SelectItem>
+                  <SelectItem value="second">2nd Place</SelectItem>
+                  <SelectItem value="third">3rd Place</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

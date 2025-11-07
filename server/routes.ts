@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema } from "@shared/schema";
 import { db } from "./db";
 import { comboStats } from "@shared/schema";
-import { desc } from "drizzle-orm";
+import { desc, asc, or, ilike, sql } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 
 // Extend express session type
@@ -95,13 +95,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/stats/combos', requireAuth, async (req, res) => {
     try {
       const limitParam = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      const limit = Math.max(1, Math.min(limitParam, 100)); // Clamp between 1-100
+      const limit = Math.max(1, Math.min(limitParam, 100));
       
-      const topCombos = await db
-        .select()
-        .from(comboStats)
-        .orderBy(desc(comboStats.punteggioTotale))
-        .limit(limit);
+      const search = req.query.search as string | undefined;
+      const sortByParam = (req.query.sortBy as string) || 'score';
+      const sortOrder = (req.query.sortOrder as string) || 'desc';
+
+      const validSortFields = ['score', 'first', 'second', 'third'];
+      const sortBy = validSortFields.includes(sortByParam) ? sortByParam : 'score';
+
+      let query = db.select().from(comboStats);
+
+      if (search && search.trim()) {
+        const searchTerm = `%${search.trim()}%`;
+        query = query.where(
+          or(
+            ilike(comboStats.blade, searchTerm),
+            ilike(comboStats.assistBlade, searchTerm),
+            ilike(comboStats.ratchet, searchTerm),
+            ilike(comboStats.bit, searchTerm),
+            ilike(comboStats.lockChip, searchTerm)
+          )
+        ) as any;
+      }
+
+      const sortColumn = {
+        score: comboStats.punteggioTotale,
+        first: comboStats.primiPosti,
+        second: comboStats.secondiPosti,
+        third: comboStats.terziPosti,
+      }[sortBy];
+
+      const orderFn = sortOrder === 'asc' ? asc : desc;
+      const topCombos = await query.orderBy(orderFn(sortColumn!)).limit(limit);
       
       res.json({ combos: topCombos });
     } catch (error) {
