@@ -1,0 +1,107 @@
+Meta-Game Stats Database Schema
+This SQL script creates 6 tables to track aggregated tournament statistics. The design is denormalized (pre-calculated) to ensure maximum read speed for displaying leaderboards.
+
+1. Main Combo Stats Table
+This table is the "core" of the system. It tracks the results for every single unique combination (defined by its 5-part primary key).
+
+SQL
+
+/* ===========================================================
+  Table 1: combo_stats
+  Tracks statistics for each unique combination.
+===========================================================
+*/
+CREATE TABLE public.combo_stats (
+  -- Primary Key (the 5 parts of the combo)
+  blade text NOT NULL,
+  assist_blade text NOT NULL,
+  ratchet text NOT NULL,
+  bit text NOT NULL,
+  lock_chip text NOT NULL,
+
+  -- Placement counters (for "appearance" analysis)
+  primi_posti integer NOT NULL DEFAULT 0,
+  secondi_posti integer NOT NULL DEFAULT 0,
+  terzi_posti integer NOT NULL DEFAULT 0,
+
+  -- Total accumulated score (e.g., Base Points * Participants)
+  punteggio_totale double precision NOT NULL DEFAULT 0,
+
+  -- Definition of the Composite Primary Key
+  CONSTRAINT combo_stats_pkey PRIMARY KEY (
+    blade, 
+    assist_blade, 
+    ratchet, 
+    bit, 
+    lock_chip
+  )
+);
+2. Component Stats Tables (Aggregated)
+These 5 tables aggregate the results for each individual part. They are updated at the same time as the combo_stats table to keep the data pre-calculated.
+
+SQL
+
+/* ===========================================================
+  Table 2: blade_stats
+  Aggregated statistics for each individual Blade.
+===========================================================
+*/
+CREATE TABLE public.blade_stats (
+  blade text NOT NULL PRIMARY KEY,
+  primi_posti integer NOT NULL DEFAULT 0,
+  secondi_posti integer NOT NULL DEFAULT 0,
+  terzi_posti integer NOT NULL DEFAULT 0,
+  punteggio_totale double precision NOT NULL DEFAULT 0
+);
+
+/* ===========================================================
+  Table 3: assist_blade_stats
+  Aggregated statistics for each individual Assist Blade.
+===========================================================
+*/
+CREATE TABLE public.assist_blade_stats (
+  assist_blade text NOT NULL PRIMARY KEY,
+  primi_posti integer NOT NULL DEFAULT 0,
+  secondi_posti integer NOT NULL DEFAULT 0,
+  terzi_posti integer NOT NULL DEFAULT 0,
+  punteggio_totale double precision NOT NULL DEFAULT 0
+);
+
+/* ===========================================================
+  Table 4: ratchet_stats
+  Aggregated statistics for each individual Ratchet.
+===========================================================
+*/
+CREATE TABLE public.ratchet_stats (
+  ratchet text NOT NULL PRIMARY KEY,
+  primi_posti integer NOT NULL DEFAULT 0,
+  secondi_posti integer NOT NULL DEFAULT 0,
+  terzi_posti integer NOT NULL DEFAULT 0,
+  punteggio_totale double precision NOT NULL DEFAULT 0
+);
+
+/* ===========================================================
+  Table 5: bit_stats
+  Aggregated statistics for each individual Bit.
+===========================================================
+*/
+CREATE TABLE public.bit_stats (
+  bit text NOT NULL PRIMARY KEY,
+  primi_posti integer NOT NULL DEFAULT 0,
+  secondi_posti integer NOT NULL DEFAULT 0,
+  terzi_posti integer NOT NULL DEFAULT 0,
+  punteggio_totale double precision NOT NULL DEFAULT 0
+);
+
+/* ===========================================================
+  Table 6: lock_chip_stats
+  Aggregated statistics for each individual Lock Chip.
+===========================================================
+*/
+CREATE TABLE public.lock_chip_stats (
+  lock_chip text NOT NULL PRIMARY KEY,
+  primi_posti integer NOT NULL DEFAULT 0,
+  secondi_posti integer NOT NULL DEFAULT 0,
+  terzi_posti integer NOT NULL DEFAULT 0,
+  punteggio_totale double precision NOT NULL DEFAULT 0
+);
