@@ -1,0 +1,58 @@
+Project Title: Modern, Mobile-First Web App with Profile Management
+
+Core Objective:
+Build a modern, minimal, and fully-functioning web app that is optimized primarily for smartphones. The app must be protected by a login system (where accounts are created manually by an admin, not by public registration). Once logged in, users should have access to 5 content sections and a profile section where they can manage their details.
+
+Key Requirements & Tech Stack:
+
+Technology Stack:
+
+Frontend: React (using functional components, Hooks, and Context API for state management like auth status).
+
+Backend & Database: Firebase (Use Firebase Authentication for login and Firestore for user profile data like name/photoURL).
+
+Styling: Tailwind CSS (for a mobile-first, responsive, and minimal design).
+
+Image Storage: Firebase Storage (for user profile pictures).
+
+Authentication Flow:
+
+Login Page: A clean, minimal login page (email/password). This is the entry point to the app.
+
+No Sign-up: Do not create a public registration page. Assume users will be created manually in the Firebase Auth console.
+
+Protected Routes: All app sections (including the 5 sections and the profile page) must be private. If a non-authenticated user tries to access them, they must be redirected to the login page.
+
+Logout: A clear logout button must be available in the profile section.
+
+Application Structure (Post-Login):
+
+Mobile-First Navigation: Implement a clean navigation system suitable for mobile, such as a sticky bottom tab bar, to switch between the 5 sections and the profile section.
+
+5 Content Sections: Create 5 distinct "pages" or "views" (e.g., "Home," "Analytics," "Schedule," "Messages," "Settings"). These can be filled with placeholder content, but the navigation and routing must work.
+
+Profile Section: A dedicated page for user profile management.
+
+Profile Section Features:
+
+Display Info: Show the user's current display name and profile picture.
+
+Edit Name: An input field and "Save" button to allow users to update their display name. This must update the data in Firestore and/or Firebase Auth profile.
+
+Edit Profile Picture: A button that allows the user to upload a new profile picture. This should:
+
+Open a file picker.
+
+Upload the selected image to Firebase Storage.
+
+Update the user's photoURL in their Firestore document and/or Firebase Auth profile.
+
+Display the new picture immediately.
+
+Design & UI/UX:
+
+Modern & Minimal: The design should be clean, uncluttered, and professional.
+
+Smartphone Optimized: This is critical. The layout must look and feel like a native mobile app. Test for responsive design, but prioritize the mobile viewport.
+
+Dark Mode: Implement a dark mode. This can be a manual toggle (e.g., in the profile section) or, for a more advanced approach, it can respect the user's system settings (using Tailwind's dark: variant and prefers-color-scheme).
