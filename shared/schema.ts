@@ -142,3 +142,21 @@ export type InsertFavoriteDeck = z.infer<typeof insertFavoriteDeckSchema>;
 export type FavoriteDeck = typeof favoriteDecks.$inferSelect;
 export type InsertFavoriteDeckCombo = z.infer<typeof insertFavoriteDeckComboSchema>;
 export type FavoriteDeckCombo = typeof favoriteDeckCombos.$inferSelect;
+
+export const tournamentComboSchema = z.object({
+  blade: z.string().min(1),
+  assistBlade: z.string().min(1),
+  ratchet: z.string().min(1),
+  bit: z.string().min(1),
+  lockChip: z.string().min(1),
+});
+
+export const tournamentResultSchema = z.object({
+  participants: z.number().int().min(1),
+  firstPlaceCombos: z.array(tournamentComboSchema).length(3),
+  secondPlaceCombos: z.array(tournamentComboSchema).length(3),
+  thirdPlaceCombos: z.array(tournamentComboSchema).length(3),
+});
+
+export type TournamentCombo = z.infer<typeof tournamentComboSchema>;
+export type TournamentResult = z.infer<typeof tournamentResultSchema>;

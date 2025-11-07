@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, insertFavoriteComboSchema, insertFavoriteDeckSchema } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, insertFavoriteComboSchema, insertFavoriteDeckSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 
@@ -21,6 +21,23 @@ function requireAuth(req: Request, res: Response, next: Function) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   next();
+}
+
+// Middleware to check if user is authenticated and is an admin
+async function requireAdmin(req: Request, res: Response, next: Function) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to verify admin status' });
+  }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -295,6 +312,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch components' });
+    }
+  });
+
+  // Submit tournament results (admin only)
+  app.post('/api/admin/tournament-results', requireAdmin, async (req, res) => {
+    try {
+      const data = tournamentResultSchema.parse(req.body);
+      
+      const calculatePoints = (participants: number, position: number) => {
+        if (position === 1) return participants * 3;
+        if (position === 2) return participants * 2;
+        if (position === 3) return participants * 1;
+        return 0;
+      };
+
+      const firstPoints = calculatePoints(data.participants, 1);
+      const secondPoints = calculatePoints(data.participants, 2);
+      const thirdPoints = calculatePoints(data.participants, 3);
+
+      await db.transaction(async (tx) => {
+        const processCombo = async (combo: any, position: number) => {
+          const points = position === 1 ? firstPoints : position === 2 ? secondPoints : thirdPoints;
+          const primiPosti = position === 1 ? 1 : 0;
+          const secondiPosti = position === 2 ? 1 : 0;
+          const terziPosti = position === 3 ? 1 : 0;
+
+          await tx.execute(sql`
+            INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+            VALUES (${combo.blade}, ${combo.assistBlade}, ${combo.ratchet}, ${combo.bit}, ${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+            ON CONFLICT (blade, assist_blade, ratchet, bit, lock_chip)
+            DO UPDATE SET
+              primi_posti = combo_stats.primi_posti + ${primiPosti},
+              secondi_posti = combo_stats.secondi_posti + ${secondiPosti},
+              terzi_posti = combo_stats.terzi_posti + ${terziPosti},
+              punteggio_totale = combo_stats.punteggio_totale + ${points}
+          `);
+
+          await tx.execute(sql`
+            INSERT INTO blade_stats (blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+            VALUES (${combo.blade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+            ON CONFLICT (blade)
+            DO UPDATE SET
+              primi_posti = blade_stats.primi_posti + ${primiPosti},
+              secondi_posti = blade_stats.secondi_posti + ${secondiPosti},
+              terzi_posti = blade_stats.terzi_posti + ${terziPosti},
+              punteggio_totale = blade_stats.punteggio_totale + ${points}
+          `);
+
+          await tx.execute(sql`
+            INSERT INTO assist_blade_stats (assist_blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+            VALUES (${combo.assistBlade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+            ON CONFLICT (assist_blade)
+            DO UPDATE SET
+              primi_posti = assist_blade_stats.primi_posti + ${primiPosti},
+              secondi_posti = assist_blade_stats.secondi_posti + ${secondiPosti},
+              terzi_posti = assist_blade_stats.terzi_posti + ${terziPosti},
+              punteggio_totale = assist_blade_stats.punteggio_totale + ${points}
+          `);
+
+          await tx.execute(sql`
+            INSERT INTO ratchet_stats (ratchet, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+            VALUES (${combo.ratchet}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+            ON CONFLICT (ratchet)
+            DO UPDATE SET
+              primi_posti = ratchet_stats.primi_posti + ${primiPosti},
+              secondi_posti = ratchet_stats.secondi_posti + ${secondiPosti},
+              terzi_posti = ratchet_stats.terzi_posti + ${terziPosti},
+              punteggio_totale = ratchet_stats.punteggio_totale + ${points}
+          `);
+
+          await tx.execute(sql`
+            INSERT INTO bit_stats (bit, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+            VALUES (${combo.bit}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+            ON CONFLICT (bit)
+            DO UPDATE SET
+              primi_posti = bit_stats.primi_posti + ${primiPosti},
+              secondi_posti = bit_stats.secondi_posti + ${secondiPosti},
+              terzi_posti = bit_stats.terzi_posti + ${terziPosti},
+              punteggio_totale = bit_stats.punteggio_totale + ${points}
+          `);
+
+          await tx.execute(sql`
+            INSERT INTO lock_chip_stats (lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+            VALUES (${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+            ON CONFLICT (lock_chip)
+            DO UPDATE SET
+              primi_posti = lock_chip_stats.primi_posti + ${primiPosti},
+              secondi_posti = lock_chip_stats.secondi_posti + ${secondiPosti},
+              terzi_posti = lock_chip_stats.terzi_posti + ${terziPosti},
+              punteggio_totale = lock_chip_stats.punteggio_totale + ${points}
+          `);
+        };
+
+        for (const combo of data.firstPlaceCombos) {
+          await processCombo(combo, 1);
+        }
+
+        for (const combo of data.secondPlaceCombos) {
+          await processCombo(combo, 2);
+        }
+
+        for (const combo of data.thirdPlaceCombos) {
+          await processCombo(combo, 3);
+        }
+      });
+
+      res.json({ success: true, message: 'Tournament results submitted successfully' });
+    } catch (error) {
+      console.error('Tournament submission error:', error);
+      res.status(400).json({ error: 'Failed to submit tournament results' });
     }
   });
 
