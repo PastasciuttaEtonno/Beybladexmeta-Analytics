@@ -33,6 +33,7 @@ The application follows a mobile-first, full-stack architecture.
 **Core Features & Implementations:**
 -   **Authentication:** Session-based authentication with 7-day expiration, protected routes, and an admin user creation CLI tool.
 -   **Navigation:** Mobile-first bottom navigation with Home, Analytics, Favorites, Tournament, and Profile sections. Admin-only sections (Tournament) are indicated with a lock icon for non-admin users.
+-   **Home Dashboard ("Il Meta in Sintesi"):** Above-the-fold statistics dashboard showing the top-performing components (Blade, Ratchet, Bit) with images, names, and key statistics (Primi Posti, Punteggio Totale). Provides immediate visual insight into the current meta-game.
 -   **Analytics:** Leaderboard UI displaying top combinations with filtering, sorting, search capabilities, and pagination (20 combos per page with First/Previous/Next/Last navigation). A detailed combo page shows component images and statistics.
 -   **Favorites:** Users can add/delete individual favorite combos and create/delete "decks" (groups of three combos) with strict server-side validation for unique parts.
 -   **Tournament Entry (Admin-Only):** Admin users can submit tournament results with 9 combos (3 per placement). Each placement deck (1st, 2nd, 3rd) requires all 3 combos to have different parts, except "None" can be repeated for Assist Blade and Lock Chip. Frontend validation provides immediate feedback before submission.
