@@ -1,57 +1,297 @@
 import { PageHeader } from '@/components/PageHeader';
-import { Card } from '@/components/ui/card';
-import { Avatar } from '@/components/Avatar';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
+import { apiRequest } from '@/lib/queryClient';
+import { Lock, Trophy, Medal, Award } from 'lucide-react';
+
+type ComboForm = {
+  blade: string;
+  assistBlade: string;
+  ratchet: string;
+  bit: string;
+  lockChip: string;
+};
 
 export default function Messages() {
-  const [conversations] = useState([
-    { id: 1, name: 'Sarah Johnson', message: 'Hey, how are you?', time: '2m ago', unread: 2 },
-    { id: 2, name: 'Mike Chen', message: 'Meeting at 3pm?', time: '1h ago', unread: 0 },
-    { id: 3, name: 'Emily Davis', message: 'Thanks for the update!', time: '3h ago', unread: 0 },
-    { id: 4, name: 'Alex Kim', message: 'Can you review this?', time: '1d ago', unread: 1 },
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [participants, setParticipants] = useState<number>(0);
+  
+  const [firstPlace, setFirstPlace] = useState<ComboForm[]>([
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
   ]);
+  
+  const [secondPlace, setSecondPlace] = useState<ComboForm[]>([
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+  ]);
+  
+  const [thirdPlace, setThirdPlace] = useState<ComboForm[]>([
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+  ]);
+
+  const { data: componentsData } = useQuery<{
+    blades: string[];
+    assistBlades: string[];
+    ratchets: string[];
+    bits: string[];
+    lockChips: string[];
+  }>({
+    queryKey: ['/api/components'],
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('POST', '/api/admin/tournament-results', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Tournament results submitted successfully',
+      });
+      setParticipants(0);
+      setFirstPlace([
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+      ]);
+      setSecondPlace([
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+      ]);
+      setThirdPlace([
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+        { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+      ]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to submit tournament results',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateCombo = (position: 'first' | 'second' | 'third', index: number, field: keyof ComboForm, value: string) => {
+    const setter = position === 'first' ? setFirstPlace : position === 'second' ? setSecondPlace : setThirdPlace;
+    const combos = position === 'first' ? firstPlace : position === 'second' ? secondPlace : thirdPlace;
+    
+    const newCombos = [...combos];
+    newCombos[index] = { ...newCombos[index], [field]: value };
+    setter(newCombos);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (participants < 1) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid number of participants',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const allCombos = [...firstPlace, ...secondPlace, ...thirdPlace];
+    const hasEmpty = allCombos.some(combo => 
+      !combo.blade || !combo.assistBlade || !combo.ratchet || !combo.bit || !combo.lockChip
+    );
+
+    if (hasEmpty) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all combo components',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    submitMutation.mutate({
+      participants,
+      firstPlaceCombos: firstPlace,
+      secondPlaceCombos: secondPlace,
+      thirdPlaceCombos: thirdPlace,
+    });
+  };
+
+  if (!user?.isAdmin) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background pb-20">
+        <PageHeader title="Tournament Entry" />
+        
+        <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
+          <Card className="p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <Lock className="w-16 h-16 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Admin Access Required</h2>
+            <p className="text-muted-foreground">
+              This section is only accessible to administrators.
+            </p>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  const renderComboInputs = (combos: ComboForm[], position: 'first' | 'second' | 'third', icon: React.ReactNode, title: string) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center gap-2 pb-4">
+        {icon}
+        <h3 className="text-lg font-semibold">{title}</h3>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {combos.map((combo, idx) => (
+          <div key={idx} className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0">
+            <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
+            
+            <div>
+              <Label htmlFor={`${position}-${idx}-blade`}>Blade</Label>
+              <Select 
+                value={combo.blade} 
+                onValueChange={(val) => updateCombo(position, idx, 'blade', val)}
+              >
+                <SelectTrigger id={`${position}-${idx}-blade`} data-testid={`select-${position}-${idx}-blade`}>
+                  <SelectValue placeholder="Select blade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {componentsData?.blades.map(b => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor={`${position}-${idx}-assistBlade`}>Assist Blade</Label>
+              <Select 
+                value={combo.assistBlade} 
+                onValueChange={(val) => updateCombo(position, idx, 'assistBlade', val)}
+              >
+                <SelectTrigger id={`${position}-${idx}-assistBlade`} data-testid={`select-${position}-${idx}-assistBlade`}>
+                  <SelectValue placeholder="Select assist blade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="None">None</SelectItem>
+                  {componentsData?.assistBlades.map(b => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor={`${position}-${idx}-ratchet`}>Ratchet</Label>
+              <Select 
+                value={combo.ratchet} 
+                onValueChange={(val) => updateCombo(position, idx, 'ratchet', val)}
+              >
+                <SelectTrigger id={`${position}-${idx}-ratchet`} data-testid={`select-${position}-${idx}-ratchet`}>
+                  <SelectValue placeholder="Select ratchet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {componentsData?.ratchets.map(b => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor={`${position}-${idx}-bit`}>Bit</Label>
+              <Select 
+                value={combo.bit} 
+                onValueChange={(val) => updateCombo(position, idx, 'bit', val)}
+              >
+                <SelectTrigger id={`${position}-${idx}-bit`} data-testid={`select-${position}-${idx}-bit`}>
+                  <SelectValue placeholder="Select bit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {componentsData?.bits.map(b => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor={`${position}-${idx}-lockChip`}>Lock Chip</Label>
+              <Select 
+                value={combo.lockChip} 
+                onValueChange={(val) => updateCombo(position, idx, 'lockChip', val)}
+              >
+                <SelectTrigger id={`${position}-${idx}-lockChip`} data-testid={`select-${position}-${idx}-lockChip`}>
+                  <SelectValue placeholder="Select lock chip" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="None">None</SelectItem>
+                  {componentsData?.lockChips.map(b => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Messages" />
+      <PageHeader title="Tournament Entry" />
       
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
-        <div className="space-y-2">
-          {conversations.map((conv) => (
-            <Card
-              key={conv.id}
-              className="p-4 hover-elevate active-elevate-2"
-              data-testid={`conversation-${conv.id}`}
-            >
-              <div className="flex items-center gap-3">
-                <Avatar alt={conv.name} size="md" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="font-medium truncate" data-testid={`text-contact-name-${conv.id}`}>
-                      {conv.name}
-                    </h3>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {conv.time}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm text-muted-foreground truncate">
-                      {conv.message}
-                    </p>
-                    {conv.unread > 0 && (
-                      <span
-                        className="flex items-center justify-center w-5 h-5 text-xs font-medium text-primary-foreground bg-primary rounded-full"
-                        data-testid={`badge-unread-${conv.id}`}
-                      >
-                        {conv.unread}
-                      </span>
-                    )}
-                  </div>
-                </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Tournament Information</h3>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label htmlFor="participants">Number of Participants</Label>
+                <Input
+                  id="participants"
+                  type="number"
+                  min="1"
+                  value={participants || ''}
+                  onChange={(e) => setParticipants(parseInt(e.target.value) || 0)}
+                  placeholder="Enter number of participants"
+                  data-testid="input-participants"
+                />
               </div>
-            </Card>
-          ))}
-        </div>
+            </CardContent>
+          </Card>
+
+          {renderComboInputs(firstPlace, 'first', <Trophy className="w-5 h-5 text-yellow-500" />, '1st Place')}
+          {renderComboInputs(secondPlace, 'second', <Medal className="w-5 h-5 text-gray-400" />, '2nd Place')}
+          {renderComboInputs(thirdPlace, 'third', <Award className="w-5 h-5 text-amber-600" />, '3rd Place')}
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitMutation.isPending}
+            data-testid="button-submit-tournament"
+          >
+            {submitMutation.isPending ? 'Submitting...' : 'Submit Tournament Results'}
+          </Button>
+        </form>
       </main>
     </div>
   );
