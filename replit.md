@@ -248,11 +248,15 @@ Images are served via the `/public-objects/:filePath` endpoint:
   - Shows tournament statistics
   - Clickable cards in leaderboard navigate to detail page
   - Rank badges and icons for top 3 positions
-- ✅ Added filtering and sorting to Analytics leaderboard
+- ✅ Added mobile-friendly filtering and sorting to Analytics leaderboard
+  - Filter button with modal dialog (better for mobile devices)
   - Search input filters across all 5 component fields (blade, assist blade, ratchet, bit, lock chip)
   - Sort dropdown with 4 options: Total Score, 1st Place, 2nd Place, 3rd Place
+  - Sort order dropdown: Highest to Lowest (desc) or Lowest to Highest (asc)
+  - Visual indicator (dot) on filter button when filters are active
+  - Active filter badges displayed below header showing current filters
   - Backend validates sort parameters and ensures consistent ordering
-  - Query refetches automatically on filter/sort changes
+  - Query refetches automatically when filters are applied
 
 ## Security Features
 1. **Password Security**: bcrypt hashing with 10 salt rounds

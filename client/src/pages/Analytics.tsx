@@ -16,19 +16,21 @@ export default function Analytics() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('score');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   
   // Temporary state for modal inputs
   const [tempSearchTerm, setTempSearchTerm] = useState('');
   const [tempSortBy, setTempSortBy] = useState('score');
+  const [tempSortOrder, setTempSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { data, isLoading } = useQuery<{ combos: ComboStats[] }>({
-    queryKey: ['/api/stats/combos', searchTerm, sortBy],
+    queryKey: ['/api/stats/combos', searchTerm, sortBy, sortOrder],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       params.append('sortBy', sortBy);
-      params.append('sortOrder', 'desc');
+      params.append('sortOrder', sortOrder);
       
       const response = await fetch(`/api/stats/combos?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch combos');
@@ -39,24 +41,28 @@ export default function Analytics() {
   const handleOpenFilterModal = () => {
     setTempSearchTerm(searchTerm);
     setTempSortBy(sortBy);
+    setTempSortOrder(sortOrder);
     setFilterModalOpen(true);
   };
 
   const handleApplyFilters = () => {
     setSearchTerm(tempSearchTerm);
     setSortBy(tempSortBy);
+    setSortOrder(tempSortOrder);
     setFilterModalOpen(false);
   };
 
   const handleClearFilters = () => {
     setTempSearchTerm('');
     setTempSortBy('score');
+    setTempSortOrder('desc');
     setSearchTerm('');
     setSortBy('score');
+    setSortOrder('desc');
     setFilterModalOpen(false);
   };
 
-  const hasActiveFilters = searchTerm !== '' || sortBy !== 'score';
+  const hasActiveFilters = searchTerm !== '' || sortBy !== 'score' || sortOrder !== 'desc';
 
   const getRankIcon = (index: number) => {
     if (index === 0) return <Trophy className="w-5 h-5 text-yellow-500" />;
@@ -149,6 +155,19 @@ export default function Analytics() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="order">Sort order</Label>
+                    <Select value={tempSortOrder} onValueChange={(value) => setTempSortOrder(value as 'asc' | 'desc')}>
+                      <SelectTrigger id="order" data-testid="select-modal-order">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desc">Highest to Lowest</SelectItem>
+                        <SelectItem value="asc">Lowest to Highest</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <DialogFooter className="flex-row gap-2 sm:gap-2">
@@ -185,6 +204,11 @@ export default function Analytics() {
               {sortBy !== 'score' && (
                 <Badge variant="secondary" className="text-xs">
                   Sort: {sortBy === 'first' ? '1st Place' : sortBy === 'second' ? '2nd Place' : '3rd Place'}
+                </Badge>
+              )}
+              {sortOrder !== 'desc' && (
+                <Badge variant="secondary" className="text-xs">
+                  Order: {sortOrder === 'asc' ? 'Lowest to Highest' : 'Highest to Lowest'}
                 </Badge>
               )}
             </div>
