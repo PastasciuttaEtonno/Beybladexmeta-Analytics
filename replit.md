@@ -32,9 +32,10 @@ The application follows a mobile-first, full-stack architecture.
 
 **Core Features & Implementations:**
 -   **Authentication:** Session-based authentication with 7-day expiration, protected routes, and an admin user creation CLI tool.
--   **Navigation:** Mobile-first bottom navigation with Home, Analytics, Favorites, Messages, and Profile sections. Admin-only sections are indicated with a lock icon.
+-   **Navigation:** Mobile-first bottom navigation with Home, Analytics, Favorites, Tournament, and Profile sections. Admin-only sections (Tournament) are indicated with a lock icon for non-admin users.
 -   **Analytics:** Leaderboard UI displaying top combinations with filtering, sorting, and search capabilities. A detailed combo page shows component images and statistics.
 -   **Favorites:** Users can add/delete individual favorite combos and create/delete "decks" (groups of three combos) with strict server-side validation for unique parts.
+-   **Tournament Entry (Admin-Only):** Admin users can submit tournament results with 9 combos (3 per placement). Each placement deck (1st, 2nd, 3rd) requires all 3 combos to have different parts, except "None" can be repeated for Assist Blade and Lock Chip. Frontend validation provides immediate feedback before submission.
 -   **Object Storage:** Utilizes Replit's Object Storage for storing component images, served via a public endpoint with caching. Image naming follows a specific convention (lowercase, hyphens).
 
 ## External Dependencies
