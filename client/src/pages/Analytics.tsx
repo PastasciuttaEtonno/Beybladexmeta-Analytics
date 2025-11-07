@@ -116,9 +116,9 @@ export default function Analytics() {
             <div className="flex items-center gap-3">
               <TrendingUp className="w-6 h-6 text-primary" />
               <div>
-                <h2 className="text-lg font-semibold">Top Combinations</h2>
+                <h2 className="text-lg font-semibold">Top Combos</h2>
                 <p className="text-sm text-muted-foreground">
-                  Tournament combos leaderboard
+                  Classifica combo m
                 </p>
               </div>
             </div>
