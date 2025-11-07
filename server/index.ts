@@ -54,9 +54,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
+  rolling: true, // Reset expiration on every request
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: 'lax', // Important for mobile browsers
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
   },
 }));
