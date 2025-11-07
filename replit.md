@@ -89,31 +89,58 @@ Each of these tables follows the same structure:
 
 ## API Endpoints
 
-### POST /api/auth/login
+### Authentication Endpoints
+
+**POST /api/auth/login**
 Login with email and password
 ```json
 Request: { "email": "user@example.com", "password": "password123" }
 Response: { "user": { "id": "...", "email": "...", "displayName": "...", "photoURL": null } }
 ```
 
-### POST /api/auth/logout
+**POST /api/auth/logout**
 Logout and destroy session
 ```json
 Response: { "success": true }
 ```
 
-### GET /api/auth/me
+**GET /api/auth/me**
 Get current authenticated user
 ```json
 Response: { "user": { "id": "...", "email": "...", "displayName": "...", "photoURL": null } }
 ```
 
-### PATCH /api/auth/profile
+**PATCH /api/auth/profile**
 Update user profile
 ```json
 Request: { "displayName": "New Name", "photoURL": "..." }
 Response: { "user": { "id": "...", "email": "...", "displayName": "New Name", "photoURL": "..." } }
 ```
+
+### Statistics Endpoints
+
+**GET /api/stats/combos**
+Get top combinations leaderboard (requires authentication)
+```json
+Query params: ?limit=N (optional, default 50, max 100)
+Response: { 
+  "combos": [
+    {
+      "blade": "Phoenix Wing",
+      "assistBlade": "Blaze",
+      "ratchet": "9-60",
+      "bit": "High Needle",
+      "lockChip": "Phoenix",
+      "primiPosti": 15,
+      "secondiPosti": 8,
+      "terziPosti": 3,
+      "punteggioTotale": 2450
+    },
+    ...
+  ]
+}
+```
+Sorted by: punteggio_totale (descending)
 
 ## Admin: Creating Users
 
@@ -169,6 +196,13 @@ npx tsx server/create-user.ts <email> <password> <name>
   - combo_stats (composite primary key for 5-part combinations)
   - 5 component stats tables (blade, assist_blade, ratchet, bit, lock_chip)
 - ✅ All tables track: primi_posti, secondi_posti, terzi_posti, punteggio_totale
+- ✅ Built leaderboard UI in Analytics section
+  - GET /api/stats/combos endpoint (protected, with input validation)
+  - Mobile-optimized cards showing all 5 combo components
+  - Special visual treatment for top 3 (trophy, medal, award icons)
+  - Displays placement stats and total scores
+  - Loading states and empty state handling
+- ✅ Seeded sample tournament data for testing (10 combinations)
 
 ## Security Features
 1. **Password Security**: bcrypt hashing with 10 salt rounds
