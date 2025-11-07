@@ -197,7 +197,8 @@ The object storage bucket contains the following folders for component images:
 2. Navigate to the bucket: `repl-default-bucket-*`
 3. Create folders if they don't exist: `public/blades`, `public/assist-blades`, `public/ratchets`, `public/bits`, `public/chips`
 4. Upload images to their respective folders
-5. Image naming convention: Component names converted to lowercase with hyphens (e.g., "Phoenix Wing" → "phoenix-wing.png")
+5. Image naming convention: Component names converted to lowercase with hyphens (e.g., "Phoenix Wing" → "phoenix-wing.png" or "phoenix-wing.webp")
+6. Supported formats: PNG and WebP (component automatically tries both)
 
 ### Image Serving
 Images are served via the `/public-objects/:filePath` endpoint:

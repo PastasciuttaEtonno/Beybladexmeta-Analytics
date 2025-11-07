@@ -19,25 +19,34 @@ type ComboStats = {
 };
 
 function ComponentImage({ folder, name }: { folder: string; name: string }) {
-  const [imageError, setImageError] = useState(false);
+  const [currentFormat, setCurrentFormat] = useState<'png' | 'webp' | 'failed'>('png');
   
-  const getImagePath = (folder: string, name: string) => {
+  const getImagePath = (folder: string, name: string, format: 'png' | 'webp') => {
     const sanitized = name.toLowerCase().replace(/\s+/g, '-');
-    return `/public-objects/${folder}/${sanitized}.png`;
+    return `/public-objects/${folder}/${sanitized}.${format}`;
+  };
+
+  const handleImageError = () => {
+    if (currentFormat === 'png') {
+      setCurrentFormat('webp');
+    } else if (currentFormat === 'webp') {
+      setCurrentFormat('failed');
+    }
   };
 
   return (
     <div className="aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
-      {imageError ? (
+      {currentFormat === 'failed' ? (
         <div className="text-center p-4">
           <p className="text-sm text-muted-foreground">Image not available</p>
         </div>
       ) : (
         <img
-          src={getImagePath(folder, name)}
+          key={currentFormat}
+          src={getImagePath(folder, name, currentFormat)}
           alt={name}
           className="w-full h-full object-contain"
-          onError={() => setImageError(true)}
+          onError={handleImageError}
           data-testid={`img-${folder}`}
         />
       )}
