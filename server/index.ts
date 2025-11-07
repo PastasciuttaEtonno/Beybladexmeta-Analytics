@@ -11,6 +11,31 @@ declare module 'http' {
   }
 }
 
+// Security headers middleware
+app.use((req, res, next) => {
+  // Prevent clickjacking attacks
+  res.setHeader('X-Frame-Options', 'DENY');
+  
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // Enable XSS protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // Strict Transport Security (HSTS) - only in production
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  
+  // Content Security Policy
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+  );
+  
+  next();
+});
+
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',

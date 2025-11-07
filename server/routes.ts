@@ -7,12 +7,19 @@ import { db } from "./db";
 import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, insertFavoriteComboSchema, insertFavoriteDeckSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
+import { loginRateLimiter } from "./rateLimiter";
 
 // Extend express session type
 declare module 'express-session' {
   interface SessionData {
     userId: string;
   }
+}
+
+// Helper function to get client IP
+// Uses socket remoteAddress which is the actual TCP connection IP (cannot be spoofed)
+function getClientIp(req: Request): string {
+  return req.socket.remoteAddress || 'unknown';
 }
 
 // Middleware to check if user is authenticated
@@ -43,19 +50,35 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Login endpoint
   app.post('/api/auth/login', async (req, res) => {
+    const clientIp = getClientIp(req);
+    
     try {
       const { email, password } = loginSchema.parse(req.body);
       
+      // Check if IP or email is blocked due to too many failed attempts
+      const blockStatus = await loginRateLimiter.isBlocked(clientIp, email);
+      if (blockStatus.blocked) {
+        return res.status(429).json({ 
+          error: 'Too many login attempts',
+          retryAfter: blockStatus.remainingTime,
+          message: `Too many failed login attempts. Please try again in ${blockStatus.remainingTime} seconds.`
+        });
+      }
+      
       const user = await storage.getUserByEmail(email);
       if (!user) {
+        await loginRateLimiter.recordFailedAttempt(clientIp, email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       const isValid = await verifyPassword(password, user.password);
       if (!isValid) {
+        await loginRateLimiter.recordFailedAttempt(clientIp, email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      // Successful login - record it and clear any previous failed attempts
+      await loginRateLimiter.recordSuccessfulLogin(clientIp, email);
       req.session.userId = user.id;
       
       // Don't send password hash to client

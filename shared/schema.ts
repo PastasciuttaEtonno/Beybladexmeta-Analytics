@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -160,3 +160,19 @@ export const tournamentResultSchema = z.object({
 
 export type TournamentCombo = z.infer<typeof tournamentComboSchema>;
 export type TournamentResult = z.infer<typeof tournamentResultSchema>;
+
+export const loginAttempts = pgTable("login_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ipAddress: text("ip_address").notNull(),
+  email: text("email"),
+  attemptedAt: timestamp("attempted_at").notNull().defaultNow(),
+  success: boolean("success").notNull().default(false),
+}, (table) => ({
+  ipIdx: index("login_attempts_ip_idx").on(table.ipAddress),
+  emailIdx: index("login_attempts_email_idx").on(table.email),
+  attemptedAtIdx: index("login_attempts_attempted_at_idx").on(table.attemptedAt),
+}));
+
+export const insertLoginAttemptSchema = createInsertSchema(loginAttempts).omit({ id: true });
+export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
