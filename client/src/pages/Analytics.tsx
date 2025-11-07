@@ -1,56 +1,142 @@
 import { PageHeader } from '@/components/PageHeader';
 import { Card } from '@/components/ui/card';
-import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import type { ComboStats } from '@shared/schema';
 
 export default function Analytics() {
-  const metrics = [
-    { label: 'Total Views', value: '2,543', change: '+12%', trend: 'up' },
-    { label: 'Engagement', value: '68%', change: '+5%', trend: 'up' },
-    { label: 'Conversion', value: '3.2%', change: '-2%', trend: 'down' },
-  ];
+  const { data, isLoading } = useQuery<{ combos: ComboStats[] }>({
+    queryKey: ['/api/stats/combos'],
+  });
+
+  const getRankIcon = (index: number) => {
+    if (index === 0) return <Trophy className="w-5 h-5 text-yellow-500" />;
+    if (index === 1) return <Medal className="w-5 h-5 text-gray-400" />;
+    if (index === 2) return <Award className="w-5 h-5 text-amber-600" />;
+    return null;
+  };
+
+  const getRankBadge = (index: number) => {
+    if (index === 0) return <Badge className="bg-yellow-500 hover:bg-yellow-600">1st</Badge>;
+    if (index === 1) return <Badge className="bg-gray-400 hover:bg-gray-500">2nd</Badge>;
+    if (index === 2) return <Badge className="bg-amber-600 hover:bg-amber-700">3rd</Badge>;
+    return <Badge variant="outline">{index + 1}</Badge>;
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Analytics" />
+      <PageHeader title="Meta-Game Leaderboard" />
       
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
-        <div className="grid gap-4">
-          {metrics.map((metric, idx) => (
-            <Card
-              key={idx}
-              className="p-4 hover-elevate"
-              data-testid={`card-metric-${idx}`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{metric.label}</p>
-                  <p className="text-2xl font-bold mt-1" data-testid={`text-metric-value-${idx}`}>
-                    {metric.value}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {metric.trend === 'up' ? (
-                    <TrendingUp className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <TrendingDown className="w-5 h-5 text-red-500" />
-                  )}
-                  <span className={`text-sm font-medium ${metric.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                    {metric.change}
-                  </span>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Card className="p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <TrendingUp className="w-6 h-6 text-primary" />
+            <div>
+              <h2 className="text-lg font-semibold">Top Combinations</h2>
+              <p className="text-sm text-muted-foreground">
+                Ranked by total tournament score
+              </p>
+            </div>
+          </div>
 
-        <Card className="p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">Chart Placeholder</h2>
-          </div>
-          <div className="h-48 bg-muted/30 rounded-lg flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">Chart visualization would go here</p>
-          </div>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="h-24 bg-muted/30 rounded-lg animate-pulse"
+                />
+              ))}
+            </div>
+          ) : data?.combos && data.combos.length > 0 ? (
+            <div className="space-y-3">
+              {data.combos.map((combo, index) => (
+                <Card
+                  key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
+                  className="p-4 hover-elevate active-elevate-2"
+                  data-testid={`card-combo-${index}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex flex-col items-center gap-1 min-w-[3rem]">
+                      {getRankIcon(index)}
+                      {getRankBadge(index)}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Blade</p>
+                          <p className="text-sm font-medium truncate" data-testid={`text-blade-${index}`}>
+                            {combo.blade}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Assist Blade</p>
+                          <p className="text-sm font-medium truncate">
+                            {combo.assistBlade}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Ratchet</p>
+                          <p className="text-sm font-medium truncate">
+                            {combo.ratchet}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Bit</p>
+                          <p className="text-sm font-medium truncate">
+                            {combo.bit}
+                          </p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Lock Chip</p>
+                          <p className="text-sm font-medium truncate">
+                            {combo.lockChip}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 pt-3 border-t border-border">
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">Score</p>
+                          <p className="text-lg font-bold text-primary" data-testid={`text-score-${index}`}>
+                            {combo.punteggioTotale.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">1st</p>
+                          <p className="text-sm font-semibold text-yellow-500">
+                            {combo.primiPosti}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">2nd</p>
+                          <p className="text-sm font-semibold text-gray-400">
+                            {combo.secondiPosti}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">3rd</p>
+                          <p className="text-sm font-semibold text-amber-600">
+                            {combo.terziPosti}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No tournament data yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Statistics will appear here once tournaments are recorded
+              </p>
+            </div>
+          )}
         </Card>
       </main>
     </div>

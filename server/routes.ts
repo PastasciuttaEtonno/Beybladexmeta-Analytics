@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema } from "@shared/schema";
+import { db } from "./db";
+import { comboStats } from "@shared/schema";
+import { desc } from "drizzle-orm";
 
 // Extend express session type
 declare module 'express-session' {
@@ -84,6 +87,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ user: userWithoutPassword });
     } catch (error) {
       res.status(400).json({ error: 'Invalid request' });
+    }
+  });
+
+  // Get top combos leaderboard
+  app.get('/api/stats/combos', requireAuth, async (req, res) => {
+    try {
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const limit = Math.max(1, Math.min(limitParam, 100)); // Clamp between 1-100
+      
+      const topCombos = await db
+        .select()
+        .from(comboStats)
+        .orderBy(desc(comboStats.punteggioTotale))
+        .limit(limit);
+      
+      res.json({ combos: topCombos });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch combo stats' });
     }
   });
 
