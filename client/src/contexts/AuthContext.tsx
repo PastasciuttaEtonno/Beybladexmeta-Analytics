@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
-  uid: string;
+  id: string;
   email: string;
   displayName: string;
   photoURL: string | null;
@@ -22,41 +22,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('mockUser');
-    if (stored) {
-      setUser(JSON.parse(stored));
-    }
-    setLoading(false);
+    // Check if user is logged in on mount
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error('Failed to check auth:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const mockUser: User = {
-      uid: '123',
-      email,
-      displayName: email.split('@')[0],
-      photoURL: null,
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Login failed');
+    }
+
+    const data = await response.json();
+    setUser(data.user);
   };
 
   const logout = async () => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    const response = await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Logout failed');
+    }
+
     setUser(null);
-    localStorage.removeItem('mockUser');
   };
 
   const updateProfile = async (updates: { displayName?: string; photoURL?: string }) => {
-    if (!user) return;
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    localStorage.setItem('mockUser', JSON.stringify(updatedUser));
+    const response = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Update failed');
+    }
+
+    const data = await response.json();
+    setUser(data.user);
   };
 
   return (
