@@ -19,34 +19,38 @@ type ComboStats = {
 };
 
 function ComponentImage({ folder, name }: { folder: string; name: string }) {
-  const [currentFormat, setCurrentFormat] = useState<'png' | 'webp' | 'failed'>('png');
+  const [attemptIndex, setAttemptIndex] = useState(0);
   
-  const getImagePath = (folder: string, name: string, format: 'png' | 'webp') => {
-    const sanitized = name
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .toLowerCase()
-      .replace(/\s+/g, '-');
-    return `/public-objects/${folder}/${sanitized}.${format}`;
+  const getImageVariations = (name: string, format: 'png' | 'webp') => {
+    const variations = [
+      name.toLowerCase().replace(/\s+/g, ''),
+      name.toLowerCase().replace(/\s+/g, '-'),
+      name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().replace(/\s+/g, '-'),
+    ];
+    return variations.map(v => `/public-objects/${folder}/${v}.${format}`);
   };
 
+  const allAttempts = [
+    ...getImageVariations(name, 'png'),
+    ...getImageVariations(name, 'webp'),
+  ];
+
   const handleImageError = () => {
-    if (currentFormat === 'png') {
-      setCurrentFormat('webp');
-    } else if (currentFormat === 'webp') {
-      setCurrentFormat('failed');
+    if (attemptIndex < allAttempts.length - 1) {
+      setAttemptIndex(attemptIndex + 1);
     }
   };
 
   return (
     <div className="aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
-      {currentFormat === 'failed' ? (
+      {attemptIndex >= allAttempts.length ? (
         <div className="text-center p-4">
           <p className="text-sm text-muted-foreground">Image not available</p>
         </div>
       ) : (
         <img
-          key={currentFormat}
-          src={getImagePath(folder, name, currentFormat)}
+          key={attemptIndex}
+          src={allAttempts[attemptIndex]}
           alt={name}
           className="w-full h-full object-contain"
           onError={handleImageError}
