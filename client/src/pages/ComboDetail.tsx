@@ -31,8 +31,8 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
   };
 
   const allAttempts = [
-    ...getImageVariations(name, 'png'),
     ...getImageVariations(name, 'webp'),
+    ...getImageVariations(name, 'png'),
   ];
 
   const handleImageError = () => {

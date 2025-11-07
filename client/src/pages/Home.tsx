@@ -3,12 +3,54 @@ import { Badge } from '@/components/ui/badge';
 import { Trophy, TrendingUp, Shield, Cog, Zap } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/contexts/ThemeProvider';
+import { useState } from 'react';
 import type { BladeStats, RatchetStats, BitStats } from '@shared/schema';
 
-const getImageUrl = (component: string, type: string) => {
+const getImageUrls = (component: string, type: string): string[] => {
   const normalized = component.toLowerCase().replace(/\s+/g, '-');
-  return `/public-objects/${type}/${normalized}.png`;
+  return [
+    `/public-objects/${type}/${normalized}.webp`,
+    `/public-objects/${type}/${normalized}.png`,
+  ];
 };
+
+function ComponentImage({ 
+  name, 
+  type, 
+  fallbackIcon, 
+  testId 
+}: { 
+  name: string; 
+  type: string; 
+  fallbackIcon: React.ReactNode;
+  testId: string;
+}) {
+  const [attemptIndex, setAttemptIndex] = useState(0);
+  const imageUrls = getImageUrls(name, type);
+
+  const handleImageError = () => {
+    setAttemptIndex(attemptIndex + 1);
+  };
+
+  return (
+    <div className="w-24 h-24 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
+      {attemptIndex >= imageUrls.length ? (
+        <div className="flex items-center justify-center">
+          {fallbackIcon}
+        </div>
+      ) : (
+        <img
+          key={attemptIndex}
+          src={imageUrls[attemptIndex]}
+          alt={name}
+          className="w-full h-full object-contain"
+          onError={handleImageError}
+          data-testid={testId}
+        />
+      )}
+    </div>
+  );
+}
 
 interface TopComponentsResponse {
   blade: BladeStats | null;
@@ -75,25 +117,12 @@ export default function Home() {
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
-                  <img
-                    src={getImageUrl(topBlade.blade, 'blades')}
-                    alt={topBlade.blade}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        e.currentTarget.remove();
-                        const icon = document.createElement('div');
-                        icon.className = 'flex items-center justify-center';
-                        const svg = '<svg class="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>';
-                        icon.innerHTML = svg;
-                        parent.appendChild(icon);
-                      }
-                    }}
-                    data-testid="img-top-blade"
-                  />
-                </div>
+                <ComponentImage 
+                  name={topBlade.blade}
+                  type="blades"
+                  fallbackIcon={<Shield className="w-12 h-12 text-muted-foreground" />}
+                  testId="img-top-blade"
+                />
                 
                 <div className="flex-1">
                   <p className="text-2xl font-bold mb-2" data-testid="text-blade-name">
@@ -137,25 +166,12 @@ export default function Home() {
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
-                  <img
-                    src={getImageUrl(topRatchet.ratchet, 'ratchets')}
-                    alt={topRatchet.ratchet}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        e.currentTarget.remove();
-                        const icon = document.createElement('div');
-                        icon.className = 'flex items-center justify-center';
-                        const svg = '<svg class="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
-                        icon.innerHTML = svg;
-                        parent.appendChild(icon);
-                      }
-                    }}
-                    data-testid="img-top-ratchet"
-                  />
-                </div>
+                <ComponentImage 
+                  name={topRatchet.ratchet}
+                  type="ratchets"
+                  fallbackIcon={<Cog className="w-12 h-12 text-muted-foreground" />}
+                  testId="img-top-ratchet"
+                />
                 
                 <div className="flex-1">
                   <p className="text-2xl font-bold mb-2" data-testid="text-ratchet-name">
@@ -199,25 +215,12 @@ export default function Home() {
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
-                  <img
-                    src={getImageUrl(topBit.bit, 'bits')}
-                    alt={topBit.bit}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        e.currentTarget.remove();
-                        const icon = document.createElement('div');
-                        icon.className = 'flex items-center justify-center';
-                        const svg = '<svg class="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
-                        icon.innerHTML = svg;
-                        parent.appendChild(icon);
-                      }
-                    }}
-                    data-testid="img-top-bit"
-                  />
-                </div>
+                <ComponentImage 
+                  name={topBit.bit}
+                  type="bits"
+                  fallbackIcon={<Zap className="w-12 h-12 text-muted-foreground" />}
+                  testId="img-top-bit"
+                />
                 
                 <div className="flex-1">
                   <p className="text-2xl font-bold mb-2" data-testid="text-bit-name">
