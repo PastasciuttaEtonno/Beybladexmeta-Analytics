@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Trophy, Medal, Award, TrendingUp, Filter, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
@@ -115,6 +115,9 @@ export default function Analytics() {
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Filter Combos</DialogTitle>
+                  <DialogDescription>
+                    Search and sort tournament combinations by component names and placement statistics.
+                  </DialogDescription>
                 </DialogHeader>
                 
                 <div className="space-y-4 py-4">
