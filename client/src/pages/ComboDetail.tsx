@@ -22,7 +22,10 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
   const [currentFormat, setCurrentFormat] = useState<'png' | 'webp' | 'failed'>('png');
   
   const getImagePath = (folder: string, name: string, format: 'png' | 'webp') => {
-    const sanitized = name.toLowerCase().replace(/\s+/g, '-');
+    const sanitized = name
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .toLowerCase()
+      .replace(/\s+/g, '-');
     return `/public-objects/${folder}/${sanitized}.${format}`;
   };
 
