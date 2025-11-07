@@ -112,9 +112,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/stats/combos', requireAuth, async (req, res) => {
     try {
       const pageParam = req.query.page ? parseInt(req.query.page as string) : 1;
-      const page = Math.max(1, pageParam);
+      const page = Number.isFinite(pageParam) ? Math.max(1, pageParam) : 1;
       const limitParam = req.query.limit ? parseInt(req.query.limit as string) : 20;
-      const limit = Math.max(1, Math.min(limitParam, 100));
+      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 20;
       const offset = (page - 1) * limit;
       
       const search = req.query.search as string | undefined;
