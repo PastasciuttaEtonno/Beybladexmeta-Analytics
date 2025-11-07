@@ -111,8 +111,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get top combos leaderboard
   app.get('/api/stats/combos', requireAuth, async (req, res) => {
     try {
-      const limitParam = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const pageParam = req.query.page ? parseInt(req.query.page as string) : 1;
+      const page = Math.max(1, pageParam);
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const limit = Math.max(1, Math.min(limitParam, 100));
+      const offset = (page - 1) * limit;
       
       const search = req.query.search as string | undefined;
       const sortByParam = (req.query.sortBy as string) || 'score';
@@ -122,18 +125,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sortBy = validSortFields.includes(sortByParam) ? sortByParam : 'score';
 
       let query = db.select().from(comboStats);
+      let countQuery = db.select({ count: sql<number>`count(*)` }).from(comboStats);
 
       if (search && search.trim()) {
         const searchTerm = `%${search.trim()}%`;
-        query = query.where(
-          or(
-            ilike(comboStats.blade, searchTerm),
-            ilike(comboStats.assistBlade, searchTerm),
-            ilike(comboStats.ratchet, searchTerm),
-            ilike(comboStats.bit, searchTerm),
-            ilike(comboStats.lockChip, searchTerm)
-          )
-        ) as any;
+        const whereClause = or(
+          ilike(comboStats.blade, searchTerm),
+          ilike(comboStats.assistBlade, searchTerm),
+          ilike(comboStats.ratchet, searchTerm),
+          ilike(comboStats.bit, searchTerm),
+          ilike(comboStats.lockChip, searchTerm)
+        );
+        query = query.where(whereClause) as any;
+        countQuery = countQuery.where(whereClause) as any;
       }
 
       const sortColumn = {
@@ -144,9 +148,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }[sortBy];
 
       const orderFn = sortOrder === 'asc' ? asc : desc;
-      const topCombos = await query.orderBy(orderFn(sortColumn!)).limit(limit);
       
-      res.json({ combos: topCombos });
+      const [topCombos, countResult] = await Promise.all([
+        query.orderBy(orderFn(sortColumn!)).limit(limit).offset(offset),
+        countQuery
+      ]);
+
+      const total = Number(countResult[0]?.count || 0);
+      const totalPages = Math.ceil(total / limit);
+      
+      res.json({ 
+        combos: topCombos,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages
+        }
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch combo stats' });
     }
