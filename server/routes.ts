@@ -391,15 +391,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all unique components (for dropdowns)
+  // Get all unique components from stats tables (for dropdowns)
   app.get('/api/components', requireAuth, async (req, res) => {
     try {
-      const blades = await db.selectDistinct({ name: comboStats.blade }).from(comboStats);
-      const assistBlades = await db.selectDistinct({ name: comboStats.assistBlade }).from(comboStats);
-      const ratchets = await db.selectDistinct({ name: comboStats.ratchet }).from(comboStats);
-      const bits = await db.selectDistinct({ name: comboStats.bit }).from(comboStats);
-      const lockChips = await db.selectDistinct({ name: comboStats.lockChip }).from(comboStats);
+      // Fetch from individual component stats tables instead of combo_stats
+      const blades = await db.select({ name: bladeStats.blade })
+        .from(bladeStats)
+        .orderBy(asc(bladeStats.blade));
       
+      const assistBlades = await db.select({ name: assistBladeStats.assistBlade })
+        .from(assistBladeStats)
+        .orderBy(asc(assistBladeStats.assistBlade));
+      
+      const ratchets = await db.select({ name: ratchetStats.ratchet })
+        .from(ratchetStats)
+        .orderBy(asc(ratchetStats.ratchet));
+      
+      const bits = await db.select({ name: bitStats.bit })
+        .from(bitStats)
+        .orderBy(asc(bitStats.bit));
+      
+      const lockChips = await db.select({ name: lockChipStats.lockChip })
+        .from(lockChipStats)
+        .orderBy(asc(lockChipStats.lockChip));
+      
+      // Filter out None/empty values and sort alphabetically
       res.json({
         blades: blades.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
         assistBlades: assistBlades.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
