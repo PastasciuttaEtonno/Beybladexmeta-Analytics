@@ -160,17 +160,17 @@ export default function ComboDetail() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {components.map((component) => (
                 <Card key={component.label} className="overflow-hidden">
-                  <CardHeader className="space-y-1 pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardHeader className="space-y-0.5 pb-2">
+                    <CardTitle className="text-xs font-medium text-muted-foreground">
                       {component.label}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 pb-4">
+                  <CardContent className="space-y-2 pb-3">
                     <ComponentImage folder={component.folder} name={component.value} />
-                    <p className="text-center font-medium" data-testid={`text-${component.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <p className="text-center text-sm font-medium truncate" data-testid={`text-${component.label.toLowerCase().replace(/\s+/g, '-')}`}>
                       {component.value}
                     </p>
                   </CardContent>
