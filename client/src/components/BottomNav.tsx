@@ -1,4 +1,4 @@
-import { Home, BarChart3, Star, MessageCircle, User, Lock } from 'lucide-react';
+import { Home, BarChart3, Star, Trophy, User, Lock } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +7,7 @@ const navItems = [
   { path: '/', icon: Home, label: 'Home', adminOnly: false },
   { path: '/analytics', icon: BarChart3, label: 'Analytics', adminOnly: false },
   { path: '/favorites', icon: Star, label: 'Favorites', adminOnly: false },
-  { path: '/messages', icon: MessageCircle, label: 'Messages', adminOnly: true },
+  { path: '/messages', icon: Trophy, label: 'Tournament', adminOnly: true },
   { path: '/profile', icon: User, label: 'Profile', adminOnly: false },
 ];
 
