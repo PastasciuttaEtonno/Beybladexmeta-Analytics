@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Medal, Award, TrendingUp, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Trophy, Medal, Award, TrendingUp, Filter, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import type { ComboStats } from '@shared/schema';
@@ -13,6 +16,11 @@ export default function Analytics() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('score');
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  
+  // Temporary state for modal inputs
+  const [tempSearchTerm, setTempSearchTerm] = useState('');
+  const [tempSortBy, setTempSortBy] = useState('score');
 
   const { data, isLoading } = useQuery<{ combos: ComboStats[] }>({
     queryKey: ['/api/stats/combos', searchTerm, sortBy],
@@ -27,6 +35,28 @@ export default function Analytics() {
       return response.json();
     },
   });
+
+  const handleOpenFilterModal = () => {
+    setTempSearchTerm(searchTerm);
+    setTempSortBy(sortBy);
+    setFilterModalOpen(true);
+  };
+
+  const handleApplyFilters = () => {
+    setSearchTerm(tempSearchTerm);
+    setSortBy(tempSortBy);
+    setFilterModalOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempSearchTerm('');
+    setTempSortBy('score');
+    setSearchTerm('');
+    setSortBy('score');
+    setFilterModalOpen(false);
+  };
+
+  const hasActiveFilters = searchTerm !== '' || sortBy !== 'score';
 
   const getRankIcon = (index: number) => {
     if (index === 0) return <Trophy className="w-5 h-5 text-yellow-500" />;
@@ -56,43 +86,106 @@ export default function Analytics() {
       
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
         <Card className="p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <TrendingUp className="w-6 h-6 text-primary" />
-            <div>
-              <h2 className="text-lg font-semibold">Top Combinations</h2>
-              <p className="text-sm text-muted-foreground">
-                Search and filter tournament combos
-              </p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-6 h-6 text-primary" />
+              <div>
+                <h2 className="text-lg font-semibold">Top Combinations</h2>
+                <p className="text-sm text-muted-foreground">
+                  Tournament combos leaderboard
+                </p>
+              </div>
             </div>
+            
+            <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  size="icon" 
+                  variant="outline" 
+                  className="relative"
+                  onClick={handleOpenFilterModal}
+                  data-testid="button-filter"
+                >
+                  <Filter className="w-4 h-4" />
+                  {hasActiveFilters && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Filter Combos</DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="search">Search</Label>
+                    <Input
+                      id="search"
+                      placeholder="Search by blade, assist blade, ratchet, bit, or chip..."
+                      value={tempSearchTerm}
+                      onChange={(e) => setTempSearchTerm(e.target.value)}
+                      data-testid="input-modal-search"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Filters across all component names
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sort">Sort by</Label>
+                    <Select value={tempSortBy} onValueChange={setTempSortBy}>
+                      <SelectTrigger id="sort" data-testid="select-modal-sort">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="score">Total Score</SelectItem>
+                        <SelectItem value="first">1st Place</SelectItem>
+                        <SelectItem value="second">2nd Place</SelectItem>
+                        <SelectItem value="third">3rd Place</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <DialogFooter className="flex-row gap-2 sm:gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleClearFilters}
+                    className="flex-1"
+                    data-testid="button-clear-filters"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Clear
+                  </Button>
+                  <Button
+                    onClick={handleApplyFilters}
+                    className="flex-1"
+                    data-testid="button-apply-filters"
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    Apply
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
-          <div className="space-y-3 mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by blade, assist blade, ratchet, bit, or lock chip..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-                data-testid="input-search"
-              />
+          {hasActiveFilters && (
+            <div className="mb-4 flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">Active filters:</span>
+              {searchTerm && (
+                <Badge variant="secondary" className="text-xs">
+                  Search: {searchTerm}
+                </Badge>
+              )}
+              {sortBy !== 'score' && (
+                <Badge variant="secondary" className="text-xs">
+                  Sort: {sortBy === 'first' ? '1st Place' : sortBy === 'second' ? '2nd Place' : '3rd Place'}
+                </Badge>
+              )}
             </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</span>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full" data-testid="select-sort">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="score">Total Score</SelectItem>
-                  <SelectItem value="first">1st Place</SelectItem>
-                  <SelectItem value="second">2nd Place</SelectItem>
-                  <SelectItem value="third">3rd Place</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          )}
 
           {isLoading ? (
             <div className="space-y-3">

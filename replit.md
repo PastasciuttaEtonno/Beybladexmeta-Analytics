@@ -122,7 +122,12 @@ Response: { "user": { "id": "...", "email": "...", "displayName": "New Name", "p
 **GET /api/stats/combos**
 Get top combinations leaderboard (requires authentication)
 ```json
-Query params: ?limit=N (optional, default 50, max 100)
+Query params: 
+  - limit=N (optional, default 50, max 100)
+  - search=text (optional, filters across all 5 component fields using case-insensitive ILIKE)
+  - sortBy=field (optional, default 'score', options: 'score', 'first', 'second', 'third')
+  - sortOrder=order (optional, default 'desc', options: 'asc', 'desc')
+
 Response: { 
   "combos": [
     {
@@ -140,7 +145,7 @@ Response: {
   ]
 }
 ```
-Sorted by: punteggio_totale (descending)
+Default sorting: punteggio_totale (descending)
 
 ## Admin: Creating Users
 
@@ -243,6 +248,11 @@ Images are served via the `/public-objects/:filePath` endpoint:
   - Shows tournament statistics
   - Clickable cards in leaderboard navigate to detail page
   - Rank badges and icons for top 3 positions
+- ✅ Added filtering and sorting to Analytics leaderboard
+  - Search input filters across all 5 component fields (blade, assist blade, ratchet, bit, lock chip)
+  - Sort dropdown with 4 options: Total Score, 1st Place, 2nd Place, 3rd Place
+  - Backend validates sort parameters and ensures consistent ordering
+  - Query refetches automatically on filter/sort changes
 
 ## Security Features
 1. **Password Security**: bcrypt hashing with 10 salt rounds
