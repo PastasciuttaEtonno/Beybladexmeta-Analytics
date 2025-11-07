@@ -1,430 +1,48 @@
 # Mobile-First Web Application
 
 ## Overview
-A modern, responsive web application optimized for mobile browsers with secure authentication, profile management, and 5 content sections.
+A modern, responsive web application optimized for mobile browsers, designed to manage secure authentication, user profiles, and provide five distinct content sections. The application features advanced meta-game statistics tracking for competitive scenarios, allowing users to analyze performance of combinations and individual components. It also includes robust favorite management for saving and organizing preferred combinations and decks. The business vision is to provide a comprehensive platform for enthusiasts to track, analyze, and optimize their strategies, with market potential in competitive gaming communities.
 
-## Architecture
-- **Frontend**: React with TypeScript, Tailwind CSS, Wouter (routing)
-- **Backend**: Express.js with session-based authentication
-- **Database**: PostgreSQL (Neon) with Drizzle ORM
-- **Security**: bcrypt password hashing, httpOnly session cookies
+## User Preferences
+I prefer clear and concise explanations. I value iterative development and expect the agent to communicate proposed changes before implementation, especially for significant architectural decisions or feature modifications. Ensure all solutions are mobile-first and maintain a consistent user experience. I prefer to use TypeScript for type safety and modern JavaScript features.
 
-## Features Implemented
-1. ✅ Secure authentication with email/password
-2. ✅ Session-based auth with express-session (7-day sessions)
-3. ✅ Protected routes (redirect to login if not authenticated)
-4. ✅ Mobile-first bottom navigation bar with 5 sections
-5. ✅ 5 content sections: Home, Analytics, Favorites, Messages, Profile
-6. ✅ Profile management (edit display name, upload profile picture)
-7. ✅ Comprehensive profile page with settings (appearance, preferences, support)
-8. ✅ Dark mode with system preference detection
-9. ✅ PostgreSQL database with secure password hashing
-10. ✅ Favorites management: Save individual combos and create decks (3-combo groups)
-11. ✅ Deck validation: All 15 parts must be unique across 3 combos (enforced server-side)
-12. ✅ Component dropdowns: Select from available tournament-tested parts
+## System Architecture
+The application follows a mobile-first, full-stack architecture.
 
-## Database Schema
+**Frontend:**
+-   **Technology Stack:** React with TypeScript, Tailwind CSS for styling, and Wouter for client-side routing.
+-   **UI/UX:** Emphasizes a responsive design with a mobile-first approach, including a bottom navigation bar for easy access to the five main sections. Dark mode is supported and respects system preferences. Touch targets are optimized for mobile.
+-   **Features:** Secure authentication, profile management (edit display name, profile picture), appearance settings, preferences, and support, all integrated into a comprehensive profile page.
 
-### Users Table
-```typescript
-{
-  id: varchar (UUID, primary key)
-  email: text (unique, not null)
-  password: text (bcrypt hash, not null)
-  displayName: text (not null)
-  photoURL: text (nullable)
-}
-```
+**Backend:**
+-   **Technology Stack:** Express.js for the API, with session-based authentication.
+-   **Security:** Implements bcrypt for password hashing and uses httpOnly session cookies to enhance security. Protected routes ensure only authenticated users can access specific resources.
+-   **Admin Features:** Role-based access control with an `isAdmin` field. Admin users have access to a dedicated Messages section for tournament data entry and a system for submitting tournament results, which updates various statistics tables.
 
-### Meta-Game Statistics Tables
+**Database:**
+-   **Technology Stack:** PostgreSQL (via Neon) managed with Drizzle ORM.
+-   **Schema Highlights:**
+    -   `Users`: Stores user credentials, display names, profile pictures, and admin status.
+    -   `Combo Stats`: Tracks tournament performance for 5-part combinations (`blade`, `assist_blade`, `ratchet`, `bit`, `lock_chip`), including 1st, 2nd, 3rd place counts, and total scores.
+    -   `Component Stats`: Five separate tables (`blade_stats`, `assist_blade_stats`, `ratchet_stats`, `bit_stats`, `lock_chip_stats`) track individual component performance with similar metrics.
+    -   `Favorite Combos`: Allows users to save individual combinations.
+    -   `Favorite Decks`: Enables users to create named groups of three combinations.
+    -   `Favorite Deck Combos`: Links individual combos to specific decks, enforcing a rule that all 15 parts across the three combos in a deck must be unique.
+-   **Data Operations:** Tournament scoring uses an `INSERT...ON CONFLICT DO UPDATE` (UPSERT) strategy to accumulate statistics across six tables.
 
-**Combo Stats** (Tournament Combination Performance)
-```typescript
-{
-  blade: text (primary key component)
-  assist_blade: text (primary key component)
-  ratchet: text (primary key component)
-  bit: text (primary key component)
-  lock_chip: text (primary key component)
-  primi_posti: integer (1st place count, default 0)
-  secondi_posti: integer (2nd place count, default 0)
-  terzi_posti: integer (3rd place count, default 0)
-  punteggio_totale: double precision (total score, default 0)
-}
-```
+**Core Features & Implementations:**
+-   **Authentication:** Session-based authentication with 7-day expiration, protected routes, and an admin user creation CLI tool.
+-   **Navigation:** Mobile-first bottom navigation with Home, Analytics, Favorites, Messages, and Profile sections. Admin-only sections are indicated with a lock icon.
+-   **Analytics:** Leaderboard UI displaying top combinations with filtering, sorting, and search capabilities. A detailed combo page shows component images and statistics.
+-   **Favorites:** Users can add/delete individual favorite combos and create/delete "decks" (groups of three combos) with strict server-side validation for unique parts.
+-   **Object Storage:** Utilizes Replit's Object Storage for storing component images, served via a public endpoint with caching. Image naming follows a specific convention (lowercase, hyphens).
 
-**Component Stats Tables** (Individual Part Performance)
-Each of these tables follows the same structure:
-- `blade_stats` - Blade performance
-- `assist_blade_stats` - Assist Blade performance
-- `ratchet_stats` - Ratchet performance
-- `bit_stats` - Bit performance
-- `lock_chip_stats` - Lock Chip performance
-
-```typescript
-{
-  [component_name]: text (primary key)
-  primi_posti: integer (default 0)
-  secondi_posti: integer (default 0)
-  terzi_posti: integer (default 0)
-  punteggio_totale: double precision (default 0)
-}
-```
-
-### Favorites Tables
-
-**Favorite Combos** (User-saved combinations)
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key to users.id)
-  blade: text
-  assistBlade: text
-  ratchet: text
-  bit: text
-  lockChip: text
-}
-```
-
-**Favorite Decks** (Named groups of 3 combos)
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key to users.id)
-  name: text
-}
-```
-
-**Favorite Deck Combos** (Individual combos within decks)
-```typescript
-{
-  id: varchar (UUID, primary key)
-  deckId: varchar (foreign key to favorite_decks.id, cascade delete)
-  comboNumber: integer (1, 2, or 3 - order within deck)
-  blade: text
-  assistBlade: text
-  ratchet: text
-  bit: text
-  lockChip: text
-}
-```
-
-**Deck Validation Rules:**
-- Decks must contain exactly 3 combos
-- All 15 parts (5 parts × 3 combos) must be unique across the deck
-- Server-side validation prevents invalid decks from being saved
-
-## Authentication Flow
-
-### Login
-1. User submits email/password via `/api/auth/login`
-2. Backend verifies password hash with bcrypt
-3. Session created and cookie sent to client
-4. User redirected to home page
-
-### Session Management
-- Sessions stored server-side with express-session
-- HttpOnly cookies (secure in production)
-- 7-day session expiration
-- Session validates on protected routes
-
-### Protected Routes
-- All routes except `/login` require authentication
-- `ProtectedRoute` component checks session via `/api/auth/me`
-- Redirects to `/login` if not authenticated
-
-## API Endpoints
-
-### Authentication Endpoints
-
-**POST /api/auth/login**
-Login with email and password
-```json
-Request: { "email": "user@example.com", "password": "password123" }
-Response: { "user": { "id": "...", "email": "...", "displayName": "...", "photoURL": null } }
-```
-
-**POST /api/auth/logout**
-Logout and destroy session
-```json
-Response: { "success": true }
-```
-
-**GET /api/auth/me**
-Get current authenticated user
-```json
-Response: { "user": { "id": "...", "email": "...", "displayName": "...", "photoURL": null } }
-```
-
-**PATCH /api/auth/profile**
-Update user profile
-```json
-Request: { "displayName": "New Name", "photoURL": "..." }
-Response: { "user": { "id": "...", "email": "...", "displayName": "New Name", "photoURL": "..." } }
-```
-
-### Statistics Endpoints
-
-**GET /api/stats/combos**
-Get top combinations leaderboard (requires authentication)
-```json
-Query params: 
-  - limit=N (optional, default 50, max 100)
-  - search=text (optional, filters across all 5 component fields using case-insensitive ILIKE)
-  - sortBy=field (optional, default 'score', options: 'score', 'first', 'second', 'third')
-  - sortOrder=order (optional, default 'desc', options: 'asc', 'desc')
-
-Response: { 
-  "combos": [
-    {
-      "blade": "Phoenix Wing",
-      "assistBlade": "Blaze",
-      "ratchet": "9-60",
-      "bit": "High Needle",
-      "lockChip": "Phoenix",
-      "primiPosti": 15,
-      "secondiPosti": 8,
-      "terziPosti": 3,
-      "punteggioTotale": 2450
-    },
-    ...
-  ]
-}
-```
-Default sorting: punteggio_totale (descending)
-
-### Favorites Endpoints
-
-**GET /api/favorites/combos**
-Get all favorite combos for authenticated user
-```json
-Response: { 
-  "combos": [
-    {
-      "id": "uuid",
-      "userId": "uuid",
-      "blade": "Phoenix Wing",
-      "assistBlade": "Blaze",
-      "ratchet": "9-60",
-      "bit": "High Needle",
-      "lockChip": "Phoenix"
-    },
-    ...
-  ]
-}
-```
-
-**POST /api/favorites/combos**
-Add a new favorite combo
-```json
-Request: {
-  "blade": "Phoenix Wing",
-  "assistBlade": "Blaze",
-  "ratchet": "9-60",
-  "bit": "High Needle",
-  "lockChip": "Phoenix"
-}
-Response: { "combo": { ... } }
-```
-
-**DELETE /api/favorites/combos/:id**
-Delete a favorite combo
-```json
-Response: { "success": true }
-```
-
-**GET /api/favorites/decks**
-Get all decks with combos for authenticated user
-```json
-Response: {
-  "decks": [
-    {
-      "id": "uuid",
-      "userId": "uuid",
-      "name": "My Tournament Deck",
-      "combos": [
-        { "comboNumber": 1, "blade": "...", "assistBlade": "...", ... },
-        { "comboNumber": 2, "blade": "...", "assistBlade": "...", ... },
-        { "comboNumber": 3, "blade": "...", "assistBlade": "...", ... }
-      ]
-    },
-    ...
-  ]
-}
-```
-
-**POST /api/favorites/decks**
-Create a new deck with 3 combos (all 15 parts must be unique)
-```json
-Request: {
-  "name": "My Tournament Deck",
-  "combos": [
-    { "blade": "A", "assistBlade": "B", "ratchet": "C", "bit": "D", "lockChip": "E" },
-    { "blade": "F", "assistBlade": "G", "ratchet": "H", "bit": "I", "lockChip": "J" },
-    { "blade": "K", "assistBlade": "L", "ratchet": "M", "bit": "N", "lockChip": "O" }
-  ]
-}
-Response: { "deck": { ... } }
-Validation: All parts must be different, returns 400 if duplicates found
-```
-
-**DELETE /api/favorites/decks/:id**
-Delete a deck
-```json
-Response: { "success": true }
-```
-
-**GET /api/components**
-Get lists of all available components for dropdowns
-```json
-Response: {
-  "blades": ["Phoenix Wing", "Dran Sword", ...],
-  "assistBlades": ["Blaze", "Tusk", ...],
-  "ratchets": ["9-60", "5-60", ...],
-  "bits": ["High Needle", "Low Flat", ...],
-  "lockChips": ["Phoenix", "Dran", ...]
-}
-```
-
-## Admin: Creating Users
-
-Since this is an admin-created user system (no public registration), use the CLI tool to create users:
-
-```bash
-npx tsx server/create-user.ts <email> <password> <displayName>
-```
-
-**Example:**
-```bash
-npx tsx server/create-user.ts john@example.com secretpass "John Doe"
-```
-
-This will:
-- Hash the password with bcrypt
-- Store the user in the database
-- Display the credentials
-
-### Test User
-A test user has been created for development:
-- **Email**: demo@example.com
-- **Password**: password123
-
-## Running the Application
-
-### Development
-```bash
-npm run dev
-```
-Server runs on port 5000, accessible via the Replit webview.
-
-### Database Commands
-```bash
-# Push schema changes to database
-npm run db:push
-
-# Create a new user (admin only)
-npx tsx server/create-user.ts <email> <password> <name>
-```
-
-## Object Storage Setup
-
-### Folder Structure
-The object storage bucket contains the following folders for component images:
-- `public/assist-blades/` - Assist Blade images
-- `public/bits/` - Bit images
-- `public/blades/` - Blade images
-- `public/chips/` - Lock Chip images
-- `public/ratchets/` - Ratchet images
-
-### Image Upload Process
-1. Open the "Object Storage" tool pane in the Replit workspace
-2. Navigate to the bucket: `repl-default-bucket-*`
-3. Create folders if they don't exist: `public/blades`, `public/assist-blades`, `public/ratchets`, `public/bits`, `public/chips`
-4. Upload images to their respective folders
-5. Image naming convention: Component names converted to lowercase with hyphens (e.g., "Phoenix Wing" → "phoenix-wing.png" or "phoenix-wing.webp")
-6. Supported formats: PNG and WebP (component automatically tries both)
-
-### Image Serving
-Images are served via the `/public-objects/:filePath` endpoint:
-- Example: `/public-objects/blades/phoenix-wing.png`
-- Images are cached for 1 hour (3600 seconds)
-- Automatically handles image not found scenarios with fallback UI
-
-### Combo Detail Page
-- Route: `/combo/:id` (protected, requires authentication)
-- Shows full combo details with all 5 component images
-- Displays tournament statistics (1st, 2nd, 3rd place counts and total score)
-- Accessible by tapping any combo card in the Analytics leaderboard
-- Back button returns to leaderboard
-
-## Recent Changes (Latest Session)
-- ✅ Created PostgreSQL database
-- ✅ Implemented bcrypt password hashing
-- ✅ Built session-based authentication system
-- ✅ Created secure API endpoints (login, logout, profile update)
-- ✅ Updated frontend to use real authentication
-- ✅ Created admin user creation tool
-- ✅ Tested complete authentication flow end-to-end
-- ✅ Removed Settings from bottom navbar (reduced from 6 to 5 items)
-- ✅ Merged Settings content into Profile page (appearance, preferences, support)
-- ✅ Created 6 meta-game statistics tables for tournament tracking
-  - combo_stats (composite primary key for 5-part combinations)
-  - 5 component stats tables (blade, assist_blade, ratchet, bit, lock_chip)
-- ✅ All tables track: primi_posti, secondi_posti, terzi_posti, punteggio_totale
-- ✅ Built leaderboard UI in Analytics section
-  - GET /api/stats/combos endpoint (protected, with input validation)
-  - Mobile-optimized cards showing all 5 combo components
-  - Special visual treatment for top 3 (trophy, medal, award icons)
-  - Displays placement stats and total scores
-  - Loading states and empty state handling
-- ✅ Seeded sample tournament data for testing (10 combinations)
-- ✅ Set up Replit Object Storage for component images
-  - Created bucket with environment variables (PUBLIC_OBJECT_SEARCH_PATHS, PRIVATE_OBJECT_DIR)
-  - Implemented object storage service (server/objectStorage.ts, server/objectAcl.ts)
-  - Added public file serving route (GET /public-objects/:filePath)
-- ✅ Created combo detail page
-  - Displays all 5 combo components with images
-  - Shows tournament statistics
-  - Clickable cards in leaderboard navigate to detail page
-  - Rank badges and icons for top 3 positions
-- ✅ Added mobile-friendly filtering and sorting to Analytics leaderboard
-  - Filter button with modal dialog (better for mobile devices)
-  - Search input filters across all 5 component fields (blade, assist blade, ratchet, bit, lock chip)
-  - Sort dropdown with 4 options: Total Score, 1st Place, 2nd Place, 3rd Place
-  - Sort order dropdown: Highest to Lowest (desc) or Lowest to Highest (asc)
-  - Visual indicator (dot) on filter button when filters are active
-  - Active filter badges displayed below header showing current filters
-  - Backend validates sort parameters and ensures consistent ordering
-  - Query refetches automatically when filters are applied
-- ✅ Implemented Favorites feature
-  - Replaced Schedule section with Favorites in bottom navigation (Star icon)
-  - Created 3 database tables: favorite_combos, favorite_decks, favorite_deck_combos
-  - Built Favorites page with tabs for Combos and Decks
-  - Add/delete favorite combos with component selection dropdowns
-  - Create/delete decks with exactly 3 combos
-  - Server-side validation ensures all 15 parts are unique across deck combos
-  - Component dropdown data sourced from combo_stats table
-  - All CRUD operations protected by authentication
-
-## Security Features
-1. **Password Security**: bcrypt hashing with 10 salt rounds
-2. **Session Security**: httpOnly cookies, secure flag in production
-3. **Protected Routes**: Server-side session validation
-4. **No Password Exposure**: Passwords never sent to client
-5. **CSRF Protection**: Session-based with secure cookies
-
-## Mobile Optimization
-- Bottom navigation for easy thumb access
-- Responsive design (mobile-first)
-- Touch targets minimum 44x44px
-- Viewport optimized for mobile browsers
-- Dark mode respects system preferences
-- PWA-ready meta tags
-
-## Future Enhancements
-- [ ] Admin dashboard for user management
-- [ ] Role-based access control
-- [ ] Email verification
-- [ ] Password reset flow
-- [ ] Two-factor authentication
-- [ ] Actual content for the 5 sections
+## External Dependencies
+-   **Database:** PostgreSQL (specifically Neon for serverless PostgreSQL)
+-   **ORM:** Drizzle ORM
+-   **Frontend Framework:** React
+-   **Styling:** Tailwind CSS
+-   **Routing:** Wouter
+-   **Backend Framework:** Express.js
+-   **Authentication:** bcrypt (for password hashing), express-session (for session management)
+-   **Object Storage:** Replit Object Storage (for component images)
