@@ -1,31 +1,41 @@
-import { useState, useRef } from 'react';
-import { PageHeader } from '@/components/PageHeader';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Avatar } from '@/components/Avatar';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeProvider';
-import { useToast } from '@/hooks/use-toast';
-import { Camera, LogOut, Moon, Sun, Bell, Lock, HelpCircle, Info, ChevronRight } from 'lucide-react';
+import { useState, useRef } from "react";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar } from "@/components/Avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeProvider";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Camera,
+  LogOut,
+  Moon,
+  Sun,
+  Bell,
+  Lock,
+  HelpCircle,
+  Info,
+  ChevronRight,
+} from "lucide-react";
 
 export default function Profile() {
   const { user, logout, updateProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
+
+  const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveName = async () => {
     if (!displayName.trim()) {
       toast({
-        title: 'Error',
-        description: 'Name cannot be empty',
-        variant: 'destructive',
+        title: "Error",
+        description: "Name cannot be empty",
+        variant: "destructive",
       });
       return;
     }
@@ -35,14 +45,14 @@ export default function Profile() {
       await updateProfile({ displayName: displayName.trim() });
       setIsEditingName(false);
       toast({
-        title: 'Success',
-        description: 'Display name updated',
+        title: "Success",
+        description: "Display name updated",
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to update name',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update name",
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
@@ -55,9 +65,9 @@ export default function Profile() {
 
     if (file.size > 500000) {
       toast({
-        title: 'Error',
-        description: 'Image must be less than 500KB',
-        variant: 'destructive',
+        title: "Error",
+        description: "Image must be less than 500KB",
+        variant: "destructive",
       });
       return;
     }
@@ -68,14 +78,14 @@ export default function Profile() {
       try {
         await updateProfile({ photoURL });
         toast({
-          title: 'Success',
-          description: 'Profile picture updated',
+          title: "Success",
+          description: "Profile picture updated",
         });
       } catch (error) {
         toast({
-          title: 'Error',
-          description: 'Failed to upload photo',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to upload photo",
+          variant: "destructive",
         });
       }
     };
@@ -86,14 +96,14 @@ export default function Profile() {
     try {
       await logout();
       toast({
-        title: 'Logged out',
-        description: 'Come back soon!',
+        title: "Logged out",
+        description: "Come back soon!",
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to logout',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive",
       });
     }
   };
@@ -107,15 +117,15 @@ export default function Profile() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Profile" />
-      
+      <PageHeader title="Profilo" />
+
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
         <Card className="p-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
               <Avatar
                 src={user?.photoURL}
-                alt={user?.displayName || 'User'}
+                alt={user?.displayName || "User"}
                 size="xl"
               />
               <button
@@ -138,7 +148,10 @@ export default function Profile() {
               <h2 className="text-xl font-bold" data-testid="text-display-name">
                 {user?.displayName}
               </h2>
-              <p className="text-sm text-muted-foreground" data-testid="text-email">
+              <p
+                className="text-sm text-muted-foreground"
+                data-testid="text-email"
+              >
                 {user?.email}
               </p>
             </div>
@@ -146,11 +159,11 @@ export default function Profile() {
         </Card>
 
         <Card className="p-6 space-y-4">
-          <h3 className="font-semibold">Edit Display Name</h3>
+          <h3 className="font-semibold">Modifica nome</h3>
           {isEditingName ? (
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
+                <Label htmlFor="displayName">Nome</Label>
                 <Input
                   id="displayName"
                   value={displayName}
@@ -168,13 +181,13 @@ export default function Profile() {
                   className="flex-1"
                   data-testid="button-save-name"
                 >
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? "Saving..." : "Save"}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => {
                     setIsEditingName(false);
-                    setDisplayName(user?.displayName || '');
+                    setDisplayName(user?.displayName || "");
                   }}
                   disabled={isSaving}
                   data-testid="button-cancel-edit"
@@ -190,14 +203,14 @@ export default function Profile() {
               className="w-full"
               data-testid="button-edit-name"
             >
-              Edit Name
+              Modifica nome
             </Button>
           )}
         </Card>
 
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">
-            Appearance
+            Tema applicazione
           </h2>
           <Card className="p-4">
             <button
@@ -206,7 +219,7 @@ export default function Profile() {
               data-testid="button-toggle-theme"
             >
               <div className="flex items-center gap-3">
-                {theme === 'dark' ? (
+                {theme === "dark" ? (
                   <Moon className="w-5 h-5 text-muted-foreground" />
                 ) : (
                   <Sun className="w-5 h-5 text-muted-foreground" />
@@ -215,12 +228,12 @@ export default function Profile() {
               </div>
               <div
                 className={`w-12 h-6 rounded-full transition-colors ${
-                  theme === 'dark' ? 'bg-primary' : 'bg-muted'
+                  theme === "dark" ? "bg-primary" : "bg-muted"
                 }`}
               >
                 <div
                   className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                    theme === 'dark' ? 'translate-x-6' : 'translate-x-0.5'
+                    theme === "dark" ? "translate-x-6" : "translate-x-0.5"
                   } mt-0.5`}
                 />
               </div>
@@ -234,17 +247,17 @@ export default function Profile() {
           </h2>
           <Card className="divide-y divide-border">
             <button
-              onClick={() => handleSettingClick('Notifications')}
+              onClick={() => handleSettingClick("Notifications")}
               className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
               data-testid="button-notifications"
             >
               <Bell className="w-5 h-5 text-muted-foreground" />
-              <span className="flex-1 font-medium">Notifications</span>
+              <span className="flex-1 font-medium">Notifiche</span>
               <span className="text-sm text-muted-foreground">On</span>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
             <button
-              onClick={() => handleSettingClick('Privacy')}
+              onClick={() => handleSettingClick("Privacy")}
               className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
               data-testid="button-privacy"
             >
@@ -261,7 +274,7 @@ export default function Profile() {
           </h2>
           <Card className="divide-y divide-border">
             <button
-              onClick={() => handleSettingClick('Help Center')}
+              onClick={() => handleSettingClick("Help Center")}
               className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
               data-testid="button-help-center"
             >
@@ -270,13 +283,13 @@ export default function Profile() {
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
             <button
-              onClick={() => handleSettingClick('About')}
+              onClick={() => handleSettingClick("About")}
               className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
               data-testid="button-about"
             >
               <Info className="w-5 h-5 text-muted-foreground" />
               <span className="flex-1 font-medium">About</span>
-              <span className="text-sm text-muted-foreground">v1.0.0</span>
+              <span className="text-sm text-muted-foreground">v0.1</span>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
           </Card>

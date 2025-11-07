@@ -1,18 +1,18 @@
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Redirect } from 'wouter';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useTheme } from '@/contexts/ThemeProvider';
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Redirect } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/contexts/ThemeProvider";
 
 export default function Login() {
   const { user, login } = useAuth();
   const { toast } = useToast();
   const { theme } = useTheme();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   if (user) {
@@ -21,12 +21,12 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast({
-        title: 'Error',
-        description: 'Please enter both email and password',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please enter both email and password",
+        variant: "destructive",
       });
       return;
     }
@@ -35,14 +35,14 @@ export default function Login() {
     try {
       await login(email, password);
       toast({
-        title: 'Welcome!',
-        description: 'Successfully logged in',
+        title: "Welcome!",
+        description: "Successfully logged in",
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to login',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to login",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ export default function Login() {
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center text-center space-y-3">
           <img
-            src={theme === 'dark' ? '/meta logoWhite.svg' : '/meta logo.svg'}
+            src={theme === "dark" ? "/meta logoWhite.svg" : "/meta logo.svg"}
             alt="Logo"
             className="h-20 w-auto"
             data-testid="img-logo"
@@ -68,7 +68,7 @@ export default function Login() {
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="you@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-12"
@@ -97,7 +97,7 @@ export default function Login() {
             disabled={loading}
             data-testid="button-login"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
 

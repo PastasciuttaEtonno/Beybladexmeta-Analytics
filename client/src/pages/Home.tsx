@@ -84,7 +84,7 @@ export default function Home() {
               className="h-12 w-auto"
               data-testid="img-home-logo"
             />
-            <h1 className="text-xl font-bold" data-testid="text-page-title">Il Meta in Sintesi</h1>
+            {/* <h1 className="text-xl font-bold" data-testid="text-page-title">Il Meta in Sintesi</h1> */}
           </div>
         </div>
       </header>

@@ -1,17 +1,35 @@
-import { useState } from 'react';
-import { PageHeader } from '@/components/PageHeader';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Star, Plus, Trash2, Layers } from 'lucide-react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { queryClient, apiRequest } from '@/lib/queryClient';
-import type { FavoriteCombo, FavoriteDeck, FavoriteDeckCombo } from '@shared/schema';
+import { useState } from "react";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Star, Plus, Trash2, Layers } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type {
+  FavoriteCombo,
+  FavoriteDeck,
+  FavoriteDeckCombo,
+} from "@shared/schema";
 
 type Components = {
   blades: string[];
@@ -31,131 +49,137 @@ export default function Favorites() {
   const [deckModalOpen, setDeckModalOpen] = useState(false);
 
   // Combo form state
-  const [blade, setBlade] = useState('');
-  const [assistBlade, setAssistBlade] = useState('');
-  const [ratchet, setRatchet] = useState('');
-  const [bit, setBit] = useState('');
-  const [lockChip, setLockChip] = useState('');
+  const [blade, setBlade] = useState("");
+  const [assistBlade, setAssistBlade] = useState("");
+  const [ratchet, setRatchet] = useState("");
+  const [bit, setBit] = useState("");
+  const [lockChip, setLockChip] = useState("");
 
   // Deck form state
-  const [deckName, setDeckName] = useState('');
-  const [deckCombos, setDeckCombos] = useState<Array<{
-    blade: string;
-    assistBlade: string;
-    ratchet: string;
-    bit: string;
-    lockChip: string;
-  }>>([
-    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
-    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
-    { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+  const [deckName, setDeckName] = useState("");
+  const [deckCombos, setDeckCombos] = useState<
+    Array<{
+      blade: string;
+      assistBlade: string;
+      ratchet: string;
+      bit: string;
+      lockChip: string;
+    }>
+  >([
+    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
   ]);
 
   const { data: components } = useQuery<Components>({
-    queryKey: ['/api/components'],
+    queryKey: ["/api/components"],
   });
 
-  const { data: combosData, isLoading: combosLoading } = useQuery<{ combos: FavoriteCombo[] }>({
-    queryKey: ['/api/favorites/combos'],
+  const { data: combosData, isLoading: combosLoading } = useQuery<{
+    combos: FavoriteCombo[];
+  }>({
+    queryKey: ["/api/favorites/combos"],
   });
 
-  const { data: decksData, isLoading: decksLoading } = useQuery<{ decks: DeckWithCombos[] }>({
-    queryKey: ['/api/favorites/decks'],
+  const { data: decksData, isLoading: decksLoading } = useQuery<{
+    decks: DeckWithCombos[];
+  }>({
+    queryKey: ["/api/favorites/decks"],
   });
 
   const addComboMutation = useMutation({
-    mutationFn: async (combo: Omit<FavoriteCombo, 'id' | 'userId'>) => {
-      return apiRequest('POST', '/api/favorites/combos', combo);
+    mutationFn: async (combo: Omit<FavoriteCombo, "id" | "userId">) => {
+      return apiRequest("POST", "/api/favorites/combos", combo);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/favorites/combos'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites/combos"] });
       setComboModalOpen(false);
       resetComboForm();
       toast({
-        title: 'Success',
-        description: 'Combo added to favorites',
+        title: "Success",
+        description: "Combo added to favorites",
       });
     },
     onError: () => {
       toast({
-        title: 'Error',
-        description: 'Failed to add combo',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add combo",
+        variant: "destructive",
       });
     },
   });
 
   const deleteComboMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest('DELETE', `/api/favorites/combos/${id}`);
+      return apiRequest("DELETE", `/api/favorites/combos/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/favorites/combos'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites/combos"] });
       toast({
-        title: 'Success',
-        description: 'Combo removed from favorites',
+        title: "Success",
+        description: "Combo removed from favorites",
       });
     },
   });
 
   const addDeckMutation = useMutation({
     mutationFn: async (deck: { name: string; combos: any[] }) => {
-      return apiRequest('POST', '/api/favorites/decks', deck);
+      return apiRequest("POST", "/api/favorites/decks", deck);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/favorites/decks'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites/decks"] });
       setDeckModalOpen(false);
       resetDeckForm();
       toast({
-        title: 'Success',
-        description: 'Deck created successfully',
+        title: "Success",
+        description: "Deck created successfully",
       });
     },
     onError: () => {
       toast({
-        title: 'Error',
-        description: 'Failed to create deck',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to create deck",
+        variant: "destructive",
       });
     },
   });
 
   const deleteDeckMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest('DELETE', `/api/favorites/decks/${id}`);
+      return apiRequest("DELETE", `/api/favorites/decks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/favorites/decks'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites/decks"] });
       toast({
-        title: 'Success',
-        description: 'Deck deleted successfully',
+        title: "Success",
+        description: "Deck deleted successfully",
       });
     },
   });
 
   const resetComboForm = () => {
-    setBlade('');
-    setAssistBlade('');
-    setRatchet('');
-    setBit('');
-    setLockChip('');
+    setBlade("");
+    setAssistBlade("");
+    setRatchet("");
+    setBit("");
+    setLockChip("");
   };
 
   const resetDeckForm = () => {
-    setDeckName('');
+    setDeckName("");
     setDeckCombos([
-      { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
-      { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
-      { blade: '', assistBlade: '', ratchet: '', bit: '', lockChip: '' },
+      { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+      { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+      { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
     ]);
   };
 
   const handleAddCombo = () => {
     if (!blade || !assistBlade || !ratchet || !bit || !lockChip) {
       toast({
-        title: 'Error',
-        description: 'Please select all components',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please select all components",
+        variant: "destructive",
       });
       return;
     }
@@ -166,22 +190,27 @@ export default function Favorites() {
   const handleAddDeck = () => {
     if (!deckName.trim()) {
       toast({
-        title: 'Error',
-        description: 'Please enter a deck name',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please enter a deck name",
+        variant: "destructive",
       });
       return;
     }
 
     const allCombosComplete = deckCombos.every(
-      (combo) => combo.blade && combo.assistBlade && combo.ratchet && combo.bit && combo.lockChip
+      (combo) =>
+        combo.blade &&
+        combo.assistBlade &&
+        combo.ratchet &&
+        combo.bit &&
+        combo.lockChip,
     );
 
     if (!allCombosComplete) {
       toast({
-        title: 'Error',
-        description: 'Please complete all 3 combos',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please complete all 3 combos",
+        variant: "destructive",
       });
       return;
     }
@@ -202,9 +231,9 @@ export default function Favorites() {
 
     if (hasDuplicates) {
       toast({
-        title: 'Error',
-        description: 'All parts must be different across the 3 combos',
-        variant: 'destructive',
+        title: "Error",
+        description: "All parts must be different across the 3 combos",
+        variant: "destructive",
       });
       return;
     }
@@ -220,7 +249,7 @@ export default function Favorites() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Favorites" />
+      <PageHeader title="Preferiti" />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
         <Tabs defaultValue="combos" className="w-full">
@@ -237,7 +266,7 @@ export default function Favorites() {
 
           <TabsContent value="combos" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Favorite Combos</h2>
+              <h2 className="text-lg font-semibold">Combo preferite</h2>
               <Dialog open={comboModalOpen} onOpenChange={setComboModalOpen}>
                 <DialogTrigger asChild>
                   <Button size="icon" data-testid="button-add-combo">
@@ -246,9 +275,9 @@ export default function Favorites() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Add Favorite Combo</DialogTitle>
+                    <DialogTitle>Aggiungi combo preferita</DialogTitle>
                     <DialogDescription>
-                      Select all 5 components to create your favorite combo
+                      Seleziona i 5 componenti della tua combo preferita.
                     </DialogDescription>
                   </DialogHeader>
 
@@ -271,8 +300,14 @@ export default function Favorites() {
 
                     <div className="space-y-2">
                       <Label htmlFor="assistBlade">Assist Blade</Label>
-                      <Select value={assistBlade} onValueChange={setAssistBlade}>
-                        <SelectTrigger id="assistBlade" data-testid="select-assist-blade">
+                      <Select
+                        value={assistBlade}
+                        onValueChange={setAssistBlade}
+                      >
+                        <SelectTrigger
+                          id="assistBlade"
+                          data-testid="select-assist-blade"
+                        >
                           <SelectValue placeholder="Select assist blade..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -288,7 +323,10 @@ export default function Favorites() {
                     <div className="space-y-2">
                       <Label htmlFor="ratchet">Ratchet</Label>
                       <Select value={ratchet} onValueChange={setRatchet}>
-                        <SelectTrigger id="ratchet" data-testid="select-ratchet">
+                        <SelectTrigger
+                          id="ratchet"
+                          data-testid="select-ratchet"
+                        >
                           <SelectValue placeholder="Select ratchet..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -320,7 +358,10 @@ export default function Favorites() {
                     <div className="space-y-2">
                       <Label htmlFor="lockChip">Lock Chip</Label>
                       <Select value={lockChip} onValueChange={setLockChip}>
-                        <SelectTrigger id="lockChip" data-testid="select-lock-chip">
+                        <SelectTrigger
+                          id="lockChip"
+                          data-testid="select-lock-chip"
+                        >
                           <SelectValue placeholder="Select lock chip..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -352,13 +393,20 @@ export default function Favorites() {
             {combosLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-32 bg-muted/30 rounded-lg animate-pulse"
+                  />
                 ))}
               </div>
             ) : combosData?.combos && combosData.combos.length > 0 ? (
               <div className="space-y-3">
                 {combosData.combos.map((combo, index) => (
-                  <Card key={combo.id} className="p-4" data-testid={`card-combo-${index}`}>
+                  <Card
+                    key={combo.id}
+                    className="p-4"
+                    data-testid={`card-combo-${index}`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 grid grid-cols-2 gap-2">
                         <div>
@@ -366,11 +414,17 @@ export default function Favorites() {
                           <p className="text-sm font-medium">{combo.blade}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Assist Blade</p>
-                          <p className="text-sm font-medium">{combo.assistBlade}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Assist Blade
+                          </p>
+                          <p className="text-sm font-medium">
+                            {combo.assistBlade}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Ratchet</p>
+                          <p className="text-xs text-muted-foreground">
+                            Ratchet
+                          </p>
                           <p className="text-sm font-medium">{combo.ratchet}</p>
                         </div>
                         <div>
@@ -378,8 +432,12 @@ export default function Favorites() {
                           <p className="text-sm font-medium">{combo.bit}</p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground">Lock Chip</p>
-                          <p className="text-sm font-medium">{combo.lockChip}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Lock Chip
+                          </p>
+                          <p className="text-sm font-medium">
+                            {combo.lockChip}
+                          </p>
                         </div>
                       </div>
                       <Button
@@ -397,9 +455,9 @@ export default function Favorites() {
             ) : (
               <Card className="p-12 text-center">
                 <Star className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No favorite combos yet</p>
+                <p className="text-muted-foreground">Nessuna combo preferita</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Tap the + button to add your first favorite combo
+                  Tocca il bottone + per creare il tuo primo deck
                 </p>
               </Card>
             )}
@@ -416,9 +474,10 @@ export default function Favorites() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Create Deck</DialogTitle>
+                    <DialogTitle>Crea Deck</DialogTitle>
                     <DialogDescription>
-                      Create a deck with 3 combos. All parts must be different across combos.
+                      Crea un deck con 3 combo. Ogni combo deve avere componenti
+                      diversi.
                     </DialogDescription>
                   </DialogHeader>
 
@@ -435,75 +494,110 @@ export default function Favorites() {
                     </div>
 
                     {deckCombos.map((combo, index) => (
-                      <div key={index} className="space-y-3 p-4 border rounded-lg">
-                        <p className="font-semibold text-sm">Combo {index + 1}</p>
-                        
+                      <div
+                        key={index}
+                        className="space-y-3 p-4 border rounded-lg"
+                      >
+                        <p className="font-semibold text-sm">
+                          Combo {index + 1}
+                        </p>
+
                         <Select
                           value={combo.blade}
-                          onValueChange={(val) => updateDeckCombo(index, 'blade', val)}
+                          onValueChange={(val) =>
+                            updateDeckCombo(index, "blade", val)
+                          }
                         >
-                          <SelectTrigger data-testid={`select-deck-blade-${index}`}>
+                          <SelectTrigger
+                            data-testid={`select-deck-blade-${index}`}
+                          >
                             <SelectValue placeholder="Select blade..." />
                           </SelectTrigger>
                           <SelectContent>
                             {components?.blades.map((b) => (
-                              <SelectItem key={b} value={b}>{b}</SelectItem>
+                              <SelectItem key={b} value={b}>
+                                {b}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
 
                         <Select
                           value={combo.assistBlade}
-                          onValueChange={(val) => updateDeckCombo(index, 'assistBlade', val)}
+                          onValueChange={(val) =>
+                            updateDeckCombo(index, "assistBlade", val)
+                          }
                         >
-                          <SelectTrigger data-testid={`select-deck-assist-blade-${index}`}>
+                          <SelectTrigger
+                            data-testid={`select-deck-assist-blade-${index}`}
+                          >
                             <SelectValue placeholder="Select assist blade..." />
                           </SelectTrigger>
                           <SelectContent>
                             {components?.assistBlades.map((b) => (
-                              <SelectItem key={b} value={b}>{b}</SelectItem>
+                              <SelectItem key={b} value={b}>
+                                {b}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
 
                         <Select
                           value={combo.ratchet}
-                          onValueChange={(val) => updateDeckCombo(index, 'ratchet', val)}
+                          onValueChange={(val) =>
+                            updateDeckCombo(index, "ratchet", val)
+                          }
                         >
-                          <SelectTrigger data-testid={`select-deck-ratchet-${index}`}>
+                          <SelectTrigger
+                            data-testid={`select-deck-ratchet-${index}`}
+                          >
                             <SelectValue placeholder="Select ratchet..." />
                           </SelectTrigger>
                           <SelectContent>
                             {components?.ratchets.map((r) => (
-                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                              <SelectItem key={r} value={r}>
+                                {r}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
 
                         <Select
                           value={combo.bit}
-                          onValueChange={(val) => updateDeckCombo(index, 'bit', val)}
+                          onValueChange={(val) =>
+                            updateDeckCombo(index, "bit", val)
+                          }
                         >
-                          <SelectTrigger data-testid={`select-deck-bit-${index}`}>
+                          <SelectTrigger
+                            data-testid={`select-deck-bit-${index}`}
+                          >
                             <SelectValue placeholder="Select bit..." />
                           </SelectTrigger>
                           <SelectContent>
                             {components?.bits.map((b) => (
-                              <SelectItem key={b} value={b}>{b}</SelectItem>
+                              <SelectItem key={b} value={b}>
+                                {b}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
 
                         <Select
                           value={combo.lockChip}
-                          onValueChange={(val) => updateDeckCombo(index, 'lockChip', val)}
+                          onValueChange={(val) =>
+                            updateDeckCombo(index, "lockChip", val)
+                          }
                         >
-                          <SelectTrigger data-testid={`select-deck-lock-chip-${index}`}>
+                          <SelectTrigger
+                            data-testid={`select-deck-lock-chip-${index}`}
+                          >
                             <SelectValue placeholder="Select lock chip..." />
                           </SelectTrigger>
                           <SelectContent>
                             {components?.lockChips.map((c) => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -529,13 +623,20 @@ export default function Favorites() {
             {decksLoading ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
-                  <div key={i} className="h-48 bg-muted/30 rounded-lg animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-48 bg-muted/30 rounded-lg animate-pulse"
+                  />
                 ))}
               </div>
             ) : decksData?.decks && decksData.decks.length > 0 ? (
               <div className="space-y-3">
                 {decksData.decks.map((deck, deckIndex) => (
-                  <Card key={deck.id} className="p-4" data-testid={`card-deck-${deckIndex}`}>
+                  <Card
+                    key={deck.id}
+                    className="p-4"
+                    data-testid={`card-deck-${deckIndex}`}
+                  >
                     <div className="flex items-start justify-between mb-4">
                       <h3 className="font-semibold">{deck.name}</h3>
                       <Button
@@ -549,25 +650,43 @@ export default function Favorites() {
                     </div>
                     <div className="space-y-3">
                       {deck.combos.map((combo, comboIndex) => (
-                        <div key={combo.id} className="p-3 bg-muted/50 rounded-lg">
+                        <div
+                          key={combo.id}
+                          className="p-3 bg-muted/50 rounded-lg"
+                        >
                           <p className="text-xs font-semibold text-muted-foreground mb-2">
                             Combo {comboIndex + 1}
                           </p>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <span className="text-muted-foreground">Blade:</span> {combo.blade}
+                              <span className="text-muted-foreground">
+                                Blade:
+                              </span>{" "}
+                              {combo.blade}
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Assist:</span> {combo.assistBlade}
+                              <span className="text-muted-foreground">
+                                Assist:
+                              </span>{" "}
+                              {combo.assistBlade}
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Ratchet:</span> {combo.ratchet}
+                              <span className="text-muted-foreground">
+                                Ratchet:
+                              </span>{" "}
+                              {combo.ratchet}
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Bit:</span> {combo.bit}
+                              <span className="text-muted-foreground">
+                                Bit:
+                              </span>{" "}
+                              {combo.bit}
                             </div>
                             <div className="col-span-2">
-                              <span className="text-muted-foreground">Chip:</span> {combo.lockChip}
+                              <span className="text-muted-foreground">
+                                Chip:
+                              </span>{" "}
+                              {combo.lockChip}
                             </div>
                           </div>
                         </div>
@@ -579,9 +698,9 @@ export default function Favorites() {
             ) : (
               <Card className="p-12 text-center">
                 <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No favorite decks yet</p>
+                <p className="text-muted-foreground">Nessun deck preferito</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Tap the + button to create your first deck
+                  Tocca il bottone + per creare il tuo primo deck
                 </p>
               </Card>
             )}
