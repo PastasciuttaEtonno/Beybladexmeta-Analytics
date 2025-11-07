@@ -14,11 +14,14 @@ A modern, responsive web application optimized for mobile browsers with secure a
 2. ✅ Session-based auth with express-session (7-day sessions)
 3. ✅ Protected routes (redirect to login if not authenticated)
 4. ✅ Mobile-first bottom navigation bar with 5 sections
-5. ✅ 5 content sections: Home, Analytics, Schedule, Messages, Profile
+5. ✅ 5 content sections: Home, Analytics, Favorites, Messages, Profile
 6. ✅ Profile management (edit display name, upload profile picture)
 7. ✅ Comprehensive profile page with settings (appearance, preferences, support)
 8. ✅ Dark mode with system preference detection
 9. ✅ PostgreSQL database with secure password hashing
+10. ✅ Favorites management: Save individual combos and create decks (3-combo groups)
+11. ✅ Deck validation: All 15 parts must be unique across 3 combos (enforced server-side)
+12. ✅ Component dropdowns: Select from available tournament-tested parts
 
 ## Database Schema
 
@@ -67,6 +70,49 @@ Each of these tables follows the same structure:
   punteggio_totale: double precision (default 0)
 }
 ```
+
+### Favorites Tables
+
+**Favorite Combos** (User-saved combinations)
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key to users.id)
+  blade: text
+  assistBlade: text
+  ratchet: text
+  bit: text
+  lockChip: text
+}
+```
+
+**Favorite Decks** (Named groups of 3 combos)
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key to users.id)
+  name: text
+}
+```
+
+**Favorite Deck Combos** (Individual combos within decks)
+```typescript
+{
+  id: varchar (UUID, primary key)
+  deckId: varchar (foreign key to favorite_decks.id, cascade delete)
+  comboNumber: integer (1, 2, or 3 - order within deck)
+  blade: text
+  assistBlade: text
+  ratchet: text
+  bit: text
+  lockChip: text
+}
+```
+
+**Deck Validation Rules:**
+- Decks must contain exactly 3 combos
+- All 15 parts (5 parts × 3 combos) must be unique across the deck
+- Server-side validation prevents invalid decks from being saved
 
 ## Authentication Flow
 
@@ -146,6 +192,99 @@ Response: {
 }
 ```
 Default sorting: punteggio_totale (descending)
+
+### Favorites Endpoints
+
+**GET /api/favorites/combos**
+Get all favorite combos for authenticated user
+```json
+Response: { 
+  "combos": [
+    {
+      "id": "uuid",
+      "userId": "uuid",
+      "blade": "Phoenix Wing",
+      "assistBlade": "Blaze",
+      "ratchet": "9-60",
+      "bit": "High Needle",
+      "lockChip": "Phoenix"
+    },
+    ...
+  ]
+}
+```
+
+**POST /api/favorites/combos**
+Add a new favorite combo
+```json
+Request: {
+  "blade": "Phoenix Wing",
+  "assistBlade": "Blaze",
+  "ratchet": "9-60",
+  "bit": "High Needle",
+  "lockChip": "Phoenix"
+}
+Response: { "combo": { ... } }
+```
+
+**DELETE /api/favorites/combos/:id**
+Delete a favorite combo
+```json
+Response: { "success": true }
+```
+
+**GET /api/favorites/decks**
+Get all decks with combos for authenticated user
+```json
+Response: {
+  "decks": [
+    {
+      "id": "uuid",
+      "userId": "uuid",
+      "name": "My Tournament Deck",
+      "combos": [
+        { "comboNumber": 1, "blade": "...", "assistBlade": "...", ... },
+        { "comboNumber": 2, "blade": "...", "assistBlade": "...", ... },
+        { "comboNumber": 3, "blade": "...", "assistBlade": "...", ... }
+      ]
+    },
+    ...
+  ]
+}
+```
+
+**POST /api/favorites/decks**
+Create a new deck with 3 combos (all 15 parts must be unique)
+```json
+Request: {
+  "name": "My Tournament Deck",
+  "combos": [
+    { "blade": "A", "assistBlade": "B", "ratchet": "C", "bit": "D", "lockChip": "E" },
+    { "blade": "F", "assistBlade": "G", "ratchet": "H", "bit": "I", "lockChip": "J" },
+    { "blade": "K", "assistBlade": "L", "ratchet": "M", "bit": "N", "lockChip": "O" }
+  ]
+}
+Response: { "deck": { ... } }
+Validation: All parts must be different, returns 400 if duplicates found
+```
+
+**DELETE /api/favorites/decks/:id**
+Delete a deck
+```json
+Response: { "success": true }
+```
+
+**GET /api/components**
+Get lists of all available components for dropdowns
+```json
+Response: {
+  "blades": ["Phoenix Wing", "Dran Sword", ...],
+  "assistBlades": ["Blaze", "Tusk", ...],
+  "ratchets": ["9-60", "5-60", ...],
+  "bits": ["High Needle", "Low Flat", ...],
+  "lockChips": ["Phoenix", "Dran", ...]
+}
+```
 
 ## Admin: Creating Users
 
@@ -257,6 +396,15 @@ Images are served via the `/public-objects/:filePath` endpoint:
   - Active filter badges displayed below header showing current filters
   - Backend validates sort parameters and ensures consistent ordering
   - Query refetches automatically when filters are applied
+- ✅ Implemented Favorites feature
+  - Replaced Schedule section with Favorites in bottom navigation (Star icon)
+  - Created 3 database tables: favorite_combos, favorite_decks, favorite_deck_combos
+  - Built Favorites page with tabs for Combos and Decks
+  - Add/delete favorite combos with component selection dropdowns
+  - Create/delete decks with exactly 3 combos
+  - Server-side validation ensures all 15 parts are unique across deck combos
+  - Component dropdown data sourced from combo_stats table
+  - All CRUD operations protected by authentication
 
 ## Security Features
 1. **Password Security**: bcrypt hashing with 10 salt rounds

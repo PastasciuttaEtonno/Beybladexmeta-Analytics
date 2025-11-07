@@ -216,6 +216,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Deck must have a name and exactly 3 combos' });
       }
 
+      // Validate that all 15 parts are unique across all combos
+      const allParts: string[] = [];
+      for (const combo of combos) {
+        if (!combo.blade || !combo.assistBlade || !combo.ratchet || !combo.bit || !combo.lockChip) {
+          return res.status(400).json({ error: 'All combo components must be filled' });
+        }
+        allParts.push(combo.blade, combo.assistBlade, combo.ratchet, combo.bit, combo.lockChip);
+      }
+
+      // Check for duplicates
+      const uniqueParts = new Set(allParts);
+      if (uniqueParts.size !== allParts.length) {
+        return res.status(400).json({ error: 'All parts must be different across all combos in the deck' });
+      }
+
       const deckData = insertFavoriteDeckSchema.parse({
         name,
         userId: req.session.userId,
