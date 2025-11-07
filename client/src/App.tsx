@@ -1,30 +1,85 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { Switch, Route, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeProvider";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { BottomNav } from "@/components/BottomNav";
+import Login from "@/pages/Login";
+import Home from "@/pages/Home";
+import Analytics from "@/pages/Analytics";
+import Schedule from "@/pages/Schedule";
+import Messages from "@/pages/Messages";
+import Settings from "@/pages/Settings";
+import Profile from "@/pages/Profile";
 
-function Router() {
+function AppRoutes() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
+      <Route path="/login" component={Login} />
+      
+      <Route path="/">
+        <ProtectedRoute>
+          <Home />
+          <BottomNav />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/analytics">
+        <ProtectedRoute>
+          <Analytics />
+          <BottomNav />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/schedule">
+        <ProtectedRoute>
+          <Schedule />
+          <BottomNav />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/messages">
+        <ProtectedRoute>
+          <Messages />
+          <BottomNav />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/settings">
+        <ProtectedRoute>
+          <Settings />
+          <BottomNav />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/profile">
+        <ProtectedRoute>
+          <Profile />
+          <BottomNav />
+        </ProtectedRoute>
+      </Route>
+
+      <Route>
+        <Redirect to="/" />
+      </Route>
     </Switch>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <ThemeProvider>
+          <AuthProvider>
+            <AppRoutes />
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;
