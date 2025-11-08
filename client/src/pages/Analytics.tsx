@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
-import { PageHeader } from "@/components/PageHeader";
-import { HeaderLogo } from "@/components/HeaderLogo";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// Switched to relative paths to avoid build errors with aliases
+import { PageHeader } from "../components/PageHeader";
+import { HeaderLogo } from "../components/HeaderLogo";
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "../components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from "../components/ui/dialog";
 import {
   Trophy,
   Medal,
@@ -36,7 +37,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import type { ComboStats } from "@shared/schema";
+import type { ComboStats } from "../../shared/schema"; // Adjusted path for shared schema
 
 interface PaginationMeta {
   page: number;
@@ -48,6 +49,20 @@ interface PaginationMeta {
 interface ComboResponse {
   combos: ComboStats[];
   pagination: PaginationMeta;
+}
+
+// Get the public MinIO URL from the environment variables
+// This should be the host, e.g., https://minio.vasquezlisciotto.dev
+// We remove any trailing slash to make joining paths easier
+const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(
+  /\/$/,
+  "",
+);
+
+if (!PUBLIC_MINIO_URL) {
+  console.error(
+    "VITE_PUBLIC_MINIO_URL is not set. Please set this environment variable in Coolify.",
+  );
 }
 
 function ComponentImage({ folder, name }: { folder: string; name: string }) {
@@ -62,7 +77,12 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
         .toLowerCase()
         .replace(/\s+/g, "-"),
     ];
-    return variations.map((v) => `/public-objects/${folder}/${v}.${format}`);
+    // --- THIS IS THE CORRECTED PART ---
+    // We now build the full, direct URL to your public MinIO bucket
+    // Structure: {HOST}/{BUCKET}/{FOLDER}/{FILENAME}
+    return variations.map(
+      (v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`,
+    );
   };
 
   const allAttempts = [
