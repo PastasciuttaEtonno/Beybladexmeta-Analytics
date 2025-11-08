@@ -56,3 +56,26 @@ The application follows a mobile-first, full-stack architecture.
 -   **Backend Framework:** Express.js
 -   **Authentication:** bcrypt (for password hashing), express-session (for session management)
 -   **Object Storage:** Replit Object Storage (for component images)
+
+## Setup & Development Scripts
+
+**Database Management:**
+-   `tsx scripts/db-status.ts` - Show database tables, row counts, and size
+-   `tsx scripts/db-reset.ts` - Drop all tables and recreate schema (⚠️ destructive)
+-   `tsx scripts/seed-sample-data.ts` - Populate database with sample tournament data
+-   `tsx server/create-user.ts` - Interactive CLI to create admin users
+-   `npm run db:push` - Push Drizzle schema changes to database
+
+**Setup Documentation:**
+-   `SETUP.md` - Comprehensive setup guide for Replit and local development
+-   `SCRIPTS.md` - Detailed documentation of all database scripts and workflows
+
+**Image Caching:**
+-   Component images cached for 30 days by browsers
+-   Cache headers: `public, max-age=2592000`
+-   Reduces backend load and improves performance
+
+**Deck Validation Rules:**
+-   All parts must be unique across 3 combos in a deck
+-   Exception: "None" can be repeated for Assist Blade and Lock Chip
+-   This allows multi-word blades (which require "None") in decks
