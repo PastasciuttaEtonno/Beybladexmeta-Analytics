@@ -9,11 +9,26 @@ import { LeaderboardDialog } from '@/components/LeaderboardDialog';
 import { useState } from 'react';
 import type { BladeStats, RatchetStats, BitStats } from '@shared/schema';
 
-const getImageUrls = (component: string, type: string): string[] => {
-  const normalized = component.toLowerCase().replace(/\s+/g, '-');
+// Use the public MinIO URL like in Analytics.tsx
+const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || '').replace(/\/$/, '');
+
+if (!PUBLIC_MINIO_URL) {
+  console.error('VITE_PUBLIC_MINIO_URL is not set. Please set this environment variable in Coolify.');
+}
+
+const getImageUrls = (component: string, folder: string): string[] => {
+  // Try multiple filename variations for robustness
+  const attempts = [
+    component.toLowerCase().replace(/\s+/g, ''), // cobaltdragoon
+    component.toLowerCase().replace(/\s+/g, '-'), // cobalt-dragoon
+    component
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .toLowerCase()
+      .replace(/\s+/g, '-') // CobaltDragoon -> cobalt-dragoon
+  ];
   return [
-    `/public-objects/${type}/${normalized}.webp`,
-    `/public-objects/${type}/${normalized}.png`,
+    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`),
+    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.png`),
   ];
 };
 
@@ -32,7 +47,9 @@ function ComponentImage({
   const imageUrls = getImageUrls(name, type);
 
   const handleImageError = () => {
-    setAttemptIndex(attemptIndex + 1);
+    if (attemptIndex < imageUrls.length - 1) {
+      setAttemptIndex(attemptIndex + 1);
+    }
   };
 
   return (

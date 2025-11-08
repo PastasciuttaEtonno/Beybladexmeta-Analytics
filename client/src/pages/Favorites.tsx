@@ -50,6 +50,15 @@ const isSingleWordBlade = (bladeName: string): boolean => {
   return !hasMultipleCapitals;
 };
 
+// Use the public MinIO URL like in Analytics.tsx
+const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
+
+if (!PUBLIC_MINIO_URL) {
+  console.error(
+    "VITE_PUBLIC_MINIO_URL is not set. Please set this environment variable in Coolify.",
+  );
+}
+
 function ComponentImage({ folder, name }: { folder: string; name: string }) {
   const [attemptIndex, setAttemptIndex] = useState(0);
 
@@ -62,7 +71,8 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
         .toLowerCase()
         .replace(/\s+/g, "-"),
     ];
-    return variations.map((v) => `/public-objects/${folder}/${v}.${format}`);
+    // Build full URL to public MinIO bucket
+    return variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`);
   };
 
   const allAttempts = [
