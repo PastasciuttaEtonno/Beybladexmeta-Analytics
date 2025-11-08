@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,12 @@ type Components = {
 
 type DeckWithCombos = FavoriteDeck & {
   combos: FavoriteDeckCombo[];
+};
+
+const isSingleWordBlade = (bladeName: string): boolean => {
+  if (!bladeName) return true;
+  const hasMultipleCapitals = /[A-Z].*[A-Z]/.test(bladeName);
+  return !hasMultipleCapitals;
 };
 
 export default function Favorites() {
@@ -86,6 +92,13 @@ export default function Favorites() {
   }>({
     queryKey: ["/api/favorites/decks"],
   });
+
+  useEffect(() => {
+    if (blade && !isSingleWordBlade(blade)) {
+      setAssistBlade("None");
+      setLockChip("None");
+    }
+  }, [blade]);
 
   const addComboMutation = useMutation({
     mutationFn: async (combo: Omit<FavoriteCombo, "id" | "userId">) => {
@@ -244,6 +257,12 @@ export default function Favorites() {
   const updateDeckCombo = (index: number, field: string, value: string) => {
     const newCombos = [...deckCombos];
     newCombos[index] = { ...newCombos[index], [field]: value };
+    
+    if (field === "blade" && !isSingleWordBlade(value)) {
+      newCombos[index].assistBlade = "None";
+      newCombos[index].lockChip = "None";
+    }
+    
     setDeckCombos(newCombos);
   };
 
@@ -303,6 +322,7 @@ export default function Favorites() {
                       <Select
                         value={assistBlade}
                         onValueChange={setAssistBlade}
+                        disabled={!isSingleWordBlade(blade)}
                       >
                         <SelectTrigger
                           id="assistBlade"
@@ -311,6 +331,7 @@ export default function Favorites() {
                           <SelectValue placeholder="Select assist blade..." />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="None">None</SelectItem>
                           {components?.assistBlades.map((b) => (
                             <SelectItem key={b} value={b}>
                               {b}
@@ -318,6 +339,11 @@ export default function Favorites() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {!isSingleWordBlade(blade) && blade && (
+                        <p className="text-xs text-muted-foreground">
+                          Multi-word blades cannot use Assist Blades
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -357,7 +383,11 @@ export default function Favorites() {
 
                     <div className="space-y-2">
                       <Label htmlFor="lockChip">Lock Chip</Label>
-                      <Select value={lockChip} onValueChange={setLockChip}>
+                      <Select
+                        value={lockChip}
+                        onValueChange={setLockChip}
+                        disabled={!isSingleWordBlade(blade)}
+                      >
                         <SelectTrigger
                           id="lockChip"
                           data-testid="select-lock-chip"
@@ -365,6 +395,7 @@ export default function Favorites() {
                           <SelectValue placeholder="Select lock chip..." />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="None">None</SelectItem>
                           {components?.lockChips.map((c) => (
                             <SelectItem key={c} value={c}>
                               {c}
@@ -372,6 +403,11 @@ export default function Favorites() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {!isSingleWordBlade(blade) && blade && (
+                        <p className="text-xs text-muted-foreground">
+                          Multi-word blades cannot use Lock Chips
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -527,6 +563,7 @@ export default function Favorites() {
                           onValueChange={(val) =>
                             updateDeckCombo(index, "assistBlade", val)
                           }
+                          disabled={!isSingleWordBlade(combo.blade)}
                         >
                           <SelectTrigger
                             data-testid={`select-deck-assist-blade-${index}`}
@@ -534,6 +571,7 @@ export default function Favorites() {
                             <SelectValue placeholder="Select assist blade..." />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="None">None</SelectItem>
                             {components?.assistBlades.map((b) => (
                               <SelectItem key={b} value={b}>
                                 {b}
@@ -541,6 +579,11 @@ export default function Favorites() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {!isSingleWordBlade(combo.blade) && combo.blade && (
+                          <p className="text-xs text-muted-foreground">
+                            Multi-word blades cannot use Assist Blades
+                          </p>
+                        )}
 
                         <Select
                           value={combo.ratchet}
@@ -587,6 +630,7 @@ export default function Favorites() {
                           onValueChange={(val) =>
                             updateDeckCombo(index, "lockChip", val)
                           }
+                          disabled={!isSingleWordBlade(combo.blade)}
                         >
                           <SelectTrigger
                             data-testid={`select-deck-lock-chip-${index}`}
@@ -594,6 +638,7 @@ export default function Favorites() {
                             <SelectValue placeholder="Select lock chip..." />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="None">None</SelectItem>
                             {components?.lockChips.map((c) => (
                               <SelectItem key={c} value={c}>
                                 {c}
@@ -601,6 +646,11 @@ export default function Favorites() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {!isSingleWordBlade(combo.blade) && combo.blade && (
+                          <p className="text-xs text-muted-foreground">
+                            Multi-word blades cannot use Lock Chips
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>

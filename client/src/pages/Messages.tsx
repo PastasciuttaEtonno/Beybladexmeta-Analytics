@@ -25,6 +25,12 @@ type ComboForm = {
   lockChip: string;
 };
 
+const isSingleWordBlade = (bladeName: string): boolean => {
+  if (!bladeName) return true;
+  const hasMultipleCapitals = /[A-Z].*[A-Z]/.test(bladeName);
+  return !hasMultipleCapitals;
+};
+
 export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -114,6 +120,12 @@ export default function Messages() {
 
     const newCombos = [...combos];
     newCombos[index] = { ...newCombos[index], [field]: value };
+    
+    if (field === "blade" && !isSingleWordBlade(value)) {
+      newCombos[index].assistBlade = "None";
+      newCombos[index].lockChip = "None";
+    }
+    
     setter(newCombos);
   };
 
@@ -291,6 +303,7 @@ export default function Messages() {
                 onValueChange={(val) =>
                   updateCombo(position, idx, "assistBlade", val)
                 }
+                disabled={!isSingleWordBlade(combo.blade)}
               >
                 <SelectTrigger
                   id={`${position}-${idx}-assistBlade`}
@@ -307,6 +320,11 @@ export default function Messages() {
                   ))}
                 </SelectContent>
               </Select>
+              {!isSingleWordBlade(combo.blade) && combo.blade && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Multi-word blades cannot use Assist Blades
+                </p>
+              )}
             </div>
 
             <div>
@@ -362,6 +380,7 @@ export default function Messages() {
                 onValueChange={(val) =>
                   updateCombo(position, idx, "lockChip", val)
                 }
+                disabled={!isSingleWordBlade(combo.blade)}
               >
                 <SelectTrigger
                   id={`${position}-${idx}-lockChip`}
@@ -378,6 +397,11 @@ export default function Messages() {
                   ))}
                 </SelectContent>
               </Select>
+              {!isSingleWordBlade(combo.blade) && combo.blade && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Multi-word blades cannot use Lock Chips
+                </p>
+              )}
             </div>
           </div>
         ))}
