@@ -192,7 +192,7 @@ export default function Analytics() {
             <div className="flex items-center gap-3">
               <TrendingUp className="w-6 h-6 text-primary" />
               <div>
-                <h2 className="text-lg font-semibold">Top Combos</h2>
+                <h2 className="text-lg font-semibold">Top Combo</h2>
                 <p className="text-sm text-muted-foreground">
                   Classifica combo tornei
                 </p>
@@ -439,9 +439,9 @@ export default function Analytics() {
           ) : (
             <div className="py-12 text-center">
               <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No tournament data yet</p>
+              <p className="text-muted-foreground">Dati assenti</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Dati apparirano una volta che i tornei verranno registrati
+                I dati apparirano una volta che i tornei verranno registrati
               </p>
             </div>
           )}
