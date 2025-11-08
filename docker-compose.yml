@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Servizio Database PostgreSQL
+  postgres:
+    image: postgres:18  # Puoi scegliere la versione di Postgres che preferisci
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin           # Scegli il tuo nome utente
+      POSTGRES_PASSWORD: "Ciaone123"        # Scegli la tua password
+      POSTGRES_DB: mydatabase        # Scegli il nome del tuo database
+    ports:
+      - "5432:5432"  # Mappa la porta del container alla tua macchina host
+    volumes:
+      - pgdata:/var/lib/postgresql  # Persistenza dei dati
+    networks:
+      - postgres-net
+
+  # Servizio pgAdmin
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com  # Email per il login a pgAdmin
+      PGADMIN_DEFAULT_PASSWORD: "Ciaone123"             # Password per il login a pgAdmin
+    ports:
+      - "5050:80"  # Accedi a pgAdmin su http://localhost:5050
+    depends_on:
+      - postgres     # Attende che il database sia avviato prima di partire
+    networks:
+      - postgres-net
+
+# Definiamo la rete e il volume
+networks:
+  postgres-net:
+    driver: bridge
+
+volumes:
+  pgdata: # Il volume gestito da Docker per i dati del DB

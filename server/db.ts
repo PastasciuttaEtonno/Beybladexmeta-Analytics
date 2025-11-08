@@ -1,10 +1,24 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import "dotenv/config";
 import * as schema from "@shared/schema";
 
-if (!process.env.DATABASE_URL) {
+const url = process.env.DATABASE_URL;
+if (!url) {
   throw new Error("DATABASE_URL must be set");
 }
 
-const sql = neon(process.env.DATABASE_URL);
-export const db = drizzle(sql, { schema });
+const isNeon = /neon\.tech/.test(url) || /sslmode=require/.test(url);
+
+let db: any;
+if (isNeon) {
+  const { drizzle } = await import("drizzle-orm/neon-http");
+  const { neon } = await import("@neondatabase/serverless");
+  const sql = neon(url);
+  db = drizzle(sql, { schema });
+} else {
+  const { drizzle } = await import("drizzle-orm/node-postgres");
+  const { Pool } = await import("pg");
+  const pool = new Pool({ connectionString: url });
+  db = drizzle(pool, { schema });
+}
+
+export { db };

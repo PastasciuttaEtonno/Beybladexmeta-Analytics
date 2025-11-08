@@ -14,6 +14,7 @@ import Favorites from "@/pages/Favorites";
 import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
 import ComboDetail from "@/pages/ComboDetail";
+import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
 
 function AppRoutes() {
   return (
@@ -58,6 +59,13 @@ function AppRoutes() {
       <Route path="/combo/:id">
         <ProtectedRoute>
           <ComboDetail />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/leaderboard/:type">
+        <ProtectedRoute>
+          <ComponentLeaderboard />
+          <BottomNav />
         </ProtectedRoute>
       </Route>
 

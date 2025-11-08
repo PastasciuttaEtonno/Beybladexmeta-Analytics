@@ -272,6 +272,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Leaderboard for individual component types (blade, ratchet, bit)
+  app.get('/api/stats/leaderboard/:type', requireAuth, async (req, res) => {
+    try {
+      const type = String(req.params.type || '').toLowerCase();
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 50)) : 10;
+
+      let rows: any[] = [];
+      if (type === 'blade') {
+        rows = await db.select()
+          .from(bladeStats)
+          .orderBy(desc(bladeStats.punteggioTotale))
+          .limit(limit);
+      } else if (type === 'ratchet') {
+        rows = await db.select()
+          .from(ratchetStats)
+          .orderBy(desc(ratchetStats.punteggioTotale))
+          .limit(limit);
+      } else if (type === 'bit') {
+        rows = await db.select()
+          .from(bitStats)
+          .orderBy(desc(bitStats.punteggioTotale))
+          .limit(limit);
+      } else {
+        return res.status(400).json({ error: 'Invalid type. Use blade, ratchet, or bit.' });
+      }
+
+      res.json({ items: rows, type, limit });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch leaderboard' });
+    }
+  });
+
   // Get user's favorite combos
   app.get('/api/favorites/combos', requireAuth, async (req, res) => {
     try {
@@ -563,7 +596,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY top_component_snapshot`);
       } catch (refreshError) {
-        console.error('Failed to refresh materialized view:', refreshError);
+        // Fallback to non-concurrent refresh if MV lacks a unique index or backend doesn't support CONCURRENTLY
+        console.warn('Refresh CONCURRENTLY failed, falling back to regular refresh:', refreshError);
+        try {
+          await db.execute(sql`REFRESH MATERIALIZED VIEW top_component_snapshot`);
+        } catch (fallbackError) {
+          console.error('Failed to refresh materialized view:', fallbackError);
+        }
       }
 
       res.json({ success: true, message: 'Tournament results submitted successfully' });

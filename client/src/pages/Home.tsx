@@ -3,6 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Trophy, TrendingUp, Shield, Cog, Zap } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/contexts/ThemeProvider';
+import { PageHeader } from '@/components/PageHeader';
+import { HeaderLogo } from '@/components/HeaderLogo';
+import { LeaderboardDialog } from '@/components/LeaderboardDialog';
 import { useState } from 'react';
 import type { BladeStats, RatchetStats, BitStats } from '@shared/schema';
 
@@ -60,6 +63,8 @@ interface TopComponentsResponse {
 
 export default function Home() {
   const { theme } = useTheme();
+  const [leaderboardType, setLeaderboardType] = useState<"blade"|"ratchet"|"bit"|null>(null);
+  const dialogOpen = leaderboardType !== null;
   
   const { data: topComponents, isLoading } = useQuery<TopComponentsResponse>({
     queryKey: ['/api/stats/top/components'],
@@ -75,19 +80,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="flex items-center justify-between h-16 px-4 max-w-2xl mx-auto">
-          <div className="flex items-center gap-3">
-            <img
-              src={theme === 'dark' ? '/meta logoWhite.svg' : '/meta logo.svg'}
-              alt="Logo"
-              className="h-12 w-auto"
-              data-testid="img-home-logo"
-            />
-            {/* <h1 className="text-xl font-bold" data-testid="text-page-title">Il Meta in Sintesi</h1> */}
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Home" action={<HeaderLogo />} />
       
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
 
@@ -97,7 +90,7 @@ export default function Home() {
               <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
             </Card>
           ) : !topBlade ? (
-            <Card className="p-6" data-testid="card-top-blade-empty">
+            <Card className="p-6 cursor-pointer" data-testid="card-top-blade-empty" onClick={() => setLeaderboardType('blade')}>
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-5 h-5 text-yellow-500" />
                 <h2 className="text-lg font-semibold">Top Blade</h2>
@@ -110,7 +103,7 @@ export default function Home() {
               </div>
             </Card>
           ) : (
-            <Card className="p-6 space-y-4" data-testid="card-top-blade">
+            <Card className="p-6 space-y-4 cursor-pointer" data-testid="card-top-blade" onClick={() => setLeaderboardType('blade')}>
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-5 h-5 text-yellow-500" />
                 <h2 className="text-lg font-semibold">Top Blade</h2>
@@ -146,7 +139,7 @@ export default function Home() {
               <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
             </Card>
           ) : !topRatchet ? (
-            <Card className="p-6" data-testid="card-top-ratchet-empty">
+            <Card className="p-6 cursor-pointer" data-testid="card-top-ratchet-empty" onClick={() => setLeaderboardType('ratchet')}>
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-5 h-5 text-gray-400" />
                 <h2 className="text-lg font-semibold">Top Ratchet</h2>
@@ -159,7 +152,7 @@ export default function Home() {
               </div>
             </Card>
           ) : (
-            <Card className="p-6 space-y-4" data-testid="card-top-ratchet">
+            <Card className="p-6 space-y-4 cursor-pointer" data-testid="card-top-ratchet" onClick={() => setLeaderboardType('ratchet')}>
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-5 h-5 text-gray-400" />
                 <h2 className="text-lg font-semibold">Top Ratchet</h2>
@@ -195,7 +188,7 @@ export default function Home() {
               <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
             </Card>
           ) : !topBit ? (
-            <Card className="p-6" data-testid="card-top-bit-empty">
+            <Card className="p-6 cursor-pointer" data-testid="card-top-bit-empty" onClick={() => setLeaderboardType('bit')}>
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-5 h-5 text-amber-600" />
                 <h2 className="text-lg font-semibold">Top Bit</h2>
@@ -208,7 +201,7 @@ export default function Home() {
               </div>
             </Card>
           ) : (
-            <Card className="p-6 space-y-4" data-testid="card-top-bit">
+            <Card className="p-6 space-y-4 cursor-pointer" data-testid="card-top-bit" onClick={() => setLeaderboardType('bit')}>
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-5 h-5 text-amber-600" />
                 <h2 className="text-lg font-semibold">Top Bit</h2>
@@ -240,6 +233,13 @@ export default function Home() {
           )}
         </div>
       </main>
+      <LeaderboardDialog
+        type={leaderboardType}
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) setLeaderboardType(null);
+        }}
+      />
     </div>
   );
 }

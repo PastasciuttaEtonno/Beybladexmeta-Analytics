@@ -56,7 +56,7 @@ export default function Login() {
           <img
             src={theme === "dark" ? "/meta logoWhite.svg" : "/meta logo.svg"}
             alt="Logo"
-            className="h-20 w-auto"
+            className="h-28 w-18"
             data-testid="img-logo"
           />
           <p className="text-sm text-muted-foreground">Sign in to continue</p>

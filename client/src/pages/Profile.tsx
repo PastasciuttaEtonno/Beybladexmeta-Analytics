@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,7 +118,7 @@ export default function Profile() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Profilo" />
+      <PageHeader title="Profilo" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
         <Card className="p-6">
