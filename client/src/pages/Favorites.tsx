@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Star, Plus, Trash2, Layers } from "lucide-react";
+import { Star, Plus, Trash2, Layers, Eye } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -49,10 +49,57 @@ const isSingleWordBlade = (bladeName: string): boolean => {
   return !hasMultipleCapitals;
 };
 
+function ComponentImage({ folder, name }: { folder: string; name: string }) {
+  const [attemptIndex, setAttemptIndex] = useState(0);
+
+  const getImageVariations = (name: string, format: "png" | "webp") => {
+    const variations = [
+      name.toLowerCase().replace(/\s+/g, ""),
+      name.toLowerCase().replace(/\s+/g, "-"),
+      name
+        .replace(/([a-z])([A-Z])/g, "$1-$2")
+        .toLowerCase()
+        .replace(/\s+/g, "-"),
+    ];
+    return variations.map((v) => `/public-objects/${folder}/${v}.${format}`);
+  };
+
+  const allAttempts = [
+    ...getImageVariations(name, "webp"),
+    ...getImageVariations(name, "png"),
+  ];
+
+  const handleImageError = () => {
+    if (attemptIndex < allAttempts.length - 1) {
+      setAttemptIndex(attemptIndex + 1);
+    }
+  };
+
+  return (
+    <div className="aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
+      {attemptIndex >= allAttempts.length ? (
+        <div className="text-center p-4">
+          <p className="text-sm text-muted-foreground">Image not available</p>
+        </div>
+      ) : (
+        <img
+          key={attemptIndex}
+          src={allAttempts[attemptIndex]}
+          alt={name}
+          className="w-full h-full object-contain"
+          onError={handleImageError}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function Favorites() {
   const { toast } = useToast();
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [deckModalOpen, setDeckModalOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedCombo, setSelectedCombo] = useState<FavoriteCombo | null>(null);
 
   // Combo form state
   const [blade, setBlade] = useState("");
@@ -266,6 +313,11 @@ export default function Favorites() {
     setDeckCombos(newCombos);
   };
 
+  const handleViewCombo = (combo: FavoriteCombo) => {
+    setSelectedCombo(combo);
+    setDetailModalOpen(true);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <PageHeader title="Preferiti" />
@@ -440,8 +492,9 @@ export default function Favorites() {
                 {combosData.combos.map((combo, index) => (
                   <Card
                     key={combo.id}
-                    className="p-4"
+                    className="p-4 hover-elevate cursor-pointer"
                     data-testid={`card-combo-${index}`}
+                    onClick={() => handleViewCombo(combo)}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 grid grid-cols-2 gap-2">
@@ -476,14 +529,30 @@ export default function Favorites() {
                           </p>
                         </div>
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => deleteComboMutation.mutate(combo.id)}
-                        data-testid={`button-delete-combo-${index}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewCombo(combo);
+                          }}
+                          data-testid={`button-view-combo-${index}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteComboMutation.mutate(combo.id);
+                          }}
+                          data-testid={`button-delete-combo-${index}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -757,6 +826,66 @@ export default function Favorites() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Dettagli combo</DialogTitle>
+            <DialogDescription>
+              Visualizza i componenti della tua combo preferita
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCombo && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Blade", value: selectedCombo.blade, folder: "blades" },
+                  {
+                    label: "Assist Blade",
+                    value: selectedCombo.assistBlade,
+                    folder: "assist-blades",
+                  },
+                  { label: "Ratchet", value: selectedCombo.ratchet, folder: "ratchets" },
+                  { label: "Bit", value: selectedCombo.bit, folder: "bits" },
+                  { label: "Lock Chip", value: selectedCombo.lockChip, folder: "chips" },
+                ]
+                  .filter((component) => {
+                    const value = component.value;
+                    return (
+                      value !== null &&
+                      value !== undefined &&
+                      value !== "" &&
+                      value.toUpperCase() !== "NONE" &&
+                      value !== "-"
+                    );
+                  })
+                  .map((component) => (
+                    <Card key={component.label} className="overflow-hidden">
+                      <CardHeader className="space-y-0.5 pb-2">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">
+                          {component.label}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 pb-3">
+                        <ComponentImage
+                          folder={component.folder}
+                          name={component.value}
+                        />
+                        <p
+                          className="text-center text-sm font-medium truncate"
+                          data-testid={`text-detail-${component.label.toLowerCase().replace(/\s+/g, "-")}`}
+                        >
+                          {component.value}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
