@@ -49,6 +49,51 @@ interface ComboResponse {
   pagination: PaginationMeta;
 }
 
+function ComponentImage({ folder, name }: { folder: string; name: string }) {
+  const [attemptIndex, setAttemptIndex] = useState(0);
+
+  const getImageVariations = (name: string, format: "png" | "webp") => {
+    const variations = [
+      name.toLowerCase().replace(/\s+/g, ""),
+      name.toLowerCase().replace(/\s+/g, "-"),
+      name
+        .replace(/([a-z])([A-Z])/g, "$1-$2")
+        .toLowerCase()
+        .replace(/\s+/g, "-"),
+    ];
+    return variations.map((v) => `/public-objects/${folder}/${v}.${format}`);
+  };
+
+  const allAttempts = [
+    ...getImageVariations(name, "webp"),
+    ...getImageVariations(name, "png"),
+  ];
+
+  const handleImageError = () => {
+    if (attemptIndex < allAttempts.length - 1) {
+      setAttemptIndex(attemptIndex + 1);
+    }
+  };
+
+  return (
+    <div className="aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
+      {attemptIndex >= allAttempts.length ? (
+        <div className="text-center p-1">
+          <p className="text-xs text-muted-foreground">N/A</p>
+        </div>
+      ) : (
+        <img
+          key={attemptIndex}
+          src={allAttempts[attemptIndex]}
+          alt={name}
+          className="w-full h-full object-contain"
+          onError={handleImageError}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function Analytics() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -309,8 +354,11 @@ export default function Analytics() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-16 h-16 shrink-0">
+                          <ComponentImage folder="blades" name={combo.blade} />
+                        </div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-xs text-muted-foreground">Blade</p>
                           <p
                             className="text-sm font-medium truncate"
@@ -319,6 +367,9 @@ export default function Analytics() {
                             {combo.blade}
                           </p>
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mb-3">
                         <div>
                           <p className="text-xs text-muted-foreground">
                             Assist Blade
