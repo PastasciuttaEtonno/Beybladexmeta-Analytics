@@ -6,6 +6,15 @@ import { Badge } from "@/components/ui/badge";
 
 type LeaderboardType = "blade" | "ratchet" | "bit";
 
+// Use the public MinIO URL like in Analytics.tsx
+const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
+
+if (!PUBLIC_MINIO_URL) {
+  console.error(
+    "VITE_PUBLIC_MINIO_URL is not set. Please set this environment variable in Coolify.",
+  );
+}
+
 export function LeaderboardDialog({
   type,
   open,
@@ -102,8 +111,9 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
       ?.replace(/\s+/g, "-"),
   ].filter(Boolean) as string[];
   const sources = [
-    ...attempts.map((v) => `/public-objects/${folder}/${v}.webp`),
-    ...attempts.map((v) => `/public-objects/${folder}/${v}.png`),
+    // Build full URLs to the public MinIO bucket
+    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`),
+    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.png`),
   ];
 
   return (
@@ -111,8 +121,8 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
       src={sources[0]}
       onError={(e) => {
         const img = e.currentTarget;
-        const current = img.src.replace(window.location.origin, "");
-        const idx = sources.indexOf(current);
+        // Find the current src in our sources and try the next one
+        const idx = sources.indexOf(img.src);
         const next = sources[idx + 1];
         if (next) img.src = next;
       }}
