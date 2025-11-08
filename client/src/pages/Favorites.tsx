@@ -497,36 +497,44 @@ export default function Favorites() {
                     onClick={() => handleViewCombo(combo)}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Blade</p>
-                          <p className="text-sm font-medium">{combo.blade}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-16 h-16 shrink-0">
+                            <ComponentImage folder="blades" name={combo.blade} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground">Blade</p>
+                            <p className="text-sm font-medium truncate">{combo.blade}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Assist Blade
-                          </p>
-                          <p className="text-sm font-medium">
-                            {combo.assistBlade}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Ratchet
-                          </p>
-                          <p className="text-sm font-medium">{combo.ratchet}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Bit</p>
-                          <p className="text-sm font-medium">{combo.bit}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground">
-                            Lock Chip
-                          </p>
-                          <p className="text-sm font-medium">
-                            {combo.lockChip}
-                          </p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Assist Blade
+                            </p>
+                            <p className="text-sm font-medium truncate">
+                              {combo.assistBlade}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Ratchet
+                            </p>
+                            <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Bit</p>
+                            <p className="text-sm font-medium truncate">{combo.bit}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground">
+                              Lock Chip
+                            </p>
+                            <p className="text-sm font-medium truncate">
+                              {combo.lockChip}
+                            </p>
+                          </div>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -776,13 +784,18 @@ export default function Favorites() {
                           <p className="text-xs font-semibold text-muted-foreground mb-2">
                             Combo {comboIndex + 1}
                           </p>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-muted-foreground">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-12 h-12 shrink-0">
+                              <ComponentImage folder="blades" name={combo.blade} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs text-muted-foreground">
                                 Blade:
                               </span>{" "}
-                              {combo.blade}
+                              <span className="text-xs font-medium">{combo.blade}</span>
                             </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
                               <span className="text-muted-foreground">
                                 Assist:
