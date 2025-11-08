@@ -60,7 +60,7 @@ app.use(session({
   rolling: true, // Reset expiration on every request
   proxy: true, // Trust the proxy for secure cookies
   cookie: {
-    secure: 'auto', // Automatically detect HTTPS
+    secure: process.env.REPL_SLUG ? true : false, // Secure in production (published)
     httpOnly: true,
     sameSite: 'lax', // Important for mobile browsers
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
