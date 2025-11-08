@@ -111,20 +111,23 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
       ?.replace(/\s+/g, "-"),
   ].filter(Boolean) as string[];
   const sources = [
-    // Build full URLs to the public MinIO bucket
-    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`),
+    // Prefer PNG first, then fallback to WEBP
     ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.png`),
+    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`),
   ];
 
   return (
     <img
       src={sources[0]}
+      data-current-index={0}
       onError={(e) => {
         const img = e.currentTarget;
-        // Find the current src in our sources and try the next one
-        const idx = sources.indexOf(img.src);
-        const next = sources[idx + 1];
-        if (next) img.src = next;
+        const currentIndex = Number(img.getAttribute('data-current-index') || '0');
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < sources.length) {
+          img.setAttribute('data-current-index', String(nextIndex));
+          img.src = sources[nextIndex];
+        }
       }}
       alt={name}
       className="w-14 h-14 object-contain"
