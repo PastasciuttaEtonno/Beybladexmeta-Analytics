@@ -139,7 +139,7 @@ export default function Analytics() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Meta-Game" />
+      <PageHeader title="Classifiche" />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
         <Card className="p-4">
@@ -209,7 +209,7 @@ export default function Analytics() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="order">Sort order</Label>
+                    <Label htmlFor="order">Ordine</Label>
                     <Select
                       value={tempSortOrder}
                       onValueChange={(value) =>
