@@ -582,7 +582,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!file) {
         return res.status(404).json({ error: "File not found" });
       }
-      objectStorageService.downloadObject(file, res, 3600, true);
+      // Cache for 30 days (2592000 seconds) - component images are static
+      objectStorageService.downloadObject(file, res, 2592000, true);
     } catch (error) {
       console.error("Error searching for public object:", error);
       return res.status(500).json({ error: "Internal server error" });
