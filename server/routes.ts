@@ -353,19 +353,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Deck must have a name and exactly 3 combos' });
       }
 
-      // Validate that all 15 parts are unique across all combos
+      // Validate that all parts are unique across all combos (except "None" for Assist Blade and Lock Chip)
       const allParts: string[] = [];
       for (const combo of combos) {
         if (!combo.blade || !combo.assistBlade || !combo.ratchet || !combo.bit || !combo.lockChip) {
           return res.status(400).json({ error: 'All combo components must be filled' });
         }
-        allParts.push(combo.blade, combo.assistBlade, combo.ratchet, combo.bit, combo.lockChip);
+        // Add all parts, but exclude "None" for assistBlade and lockChip from uniqueness check
+        allParts.push(combo.blade, combo.ratchet, combo.bit);
+        if (combo.assistBlade !== "None") {
+          allParts.push(combo.assistBlade);
+        }
+        if (combo.lockChip !== "None") {
+          allParts.push(combo.lockChip);
+        }
       }
 
       // Check for duplicates
       const uniqueParts = new Set(allParts);
       if (uniqueParts.size !== allParts.length) {
-        return res.status(400).json({ error: 'All parts must be different across all combos in the deck' });
+        return res.status(400).json({ error: 'All parts must be different across all combos in the deck (except None for Assist Blade and Lock Chip)' });
       }
 
       const deckData = insertFavoriteDeckSchema.parse({

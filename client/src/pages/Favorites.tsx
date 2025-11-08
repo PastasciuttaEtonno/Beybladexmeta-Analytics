@@ -275,13 +275,13 @@ export default function Favorites() {
       return;
     }
 
-    // Validate all parts are different
+    // Validate all parts are different (except "None" for Assist Blade and Lock Chip)
     const allParts = {
       blades: deckCombos.map((c) => c.blade),
-      assistBlades: deckCombos.map((c) => c.assistBlade),
+      assistBlades: deckCombos.map((c) => c.assistBlade).filter((ab) => ab !== "None"),
       ratchets: deckCombos.map((c) => c.ratchet),
       bits: deckCombos.map((c) => c.bit),
-      lockChips: deckCombos.map((c) => c.lockChip),
+      lockChips: deckCombos.map((c) => c.lockChip).filter((lc) => lc !== "None"),
     };
 
     const hasDuplicates = Object.values(allParts).some((parts) => {
@@ -292,7 +292,7 @@ export default function Favorites() {
     if (hasDuplicates) {
       toast({
         title: "Error",
-        description: "All parts must be different across the 3 combos",
+        description: "All parts must be different across the 3 combos (except None for Assist Blade and Lock Chip)",
         variant: "destructive",
       });
       return;
