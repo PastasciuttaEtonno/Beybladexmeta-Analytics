@@ -120,12 +120,12 @@ export default function Messages() {
 
     const newCombos = [...combos];
     newCombos[index] = { ...newCombos[index], [field]: value };
-    
+
     if (field === "blade" && !isSingleWordBlade(value)) {
       newCombos[index].assistBlade = "None";
       newCombos[index].lockChip = "None";
     }
-    
+
     setter(newCombos);
   };
 
@@ -430,7 +430,7 @@ export default function Messages() {
                   onChange={(e) =>
                     setParticipants(parseInt(e.target.value) || 0)
                   }
-                  placeholder="Enter number of participants"
+                  placeholder="da 6 a 126"
                   data-testid="input-participants"
                 />
               </div>
