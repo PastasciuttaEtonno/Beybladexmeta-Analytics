@@ -4,11 +4,13 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install OS packages if needed (none for now)
+# Install git and configure safe.directory to avoid git safety errors during builds
+RUN apk add --no-cache git \
+ && git config --global --add safe.directory /app
 
 # Copy package manifests and install all deps (including dev)
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -27,7 +29,7 @@ ENV PORT=5000
 
 # Install only production dependencies
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
