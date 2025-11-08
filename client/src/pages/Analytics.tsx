@@ -180,7 +180,7 @@ export default function Analytics() {
 
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="search">Search</Label>
+                    <Label htmlFor="search">Cerca</Label>
                     <Input
                       id="search"
                       placeholder="Search by blade, assist blade, ratchet, bit, or chip..."
@@ -194,7 +194,7 @@ export default function Analytics() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="sort">Sort by</Label>
+                    <Label htmlFor="sort">Filtra in base a</Label>
                     <Select value={tempSortBy} onValueChange={setTempSortBy}>
                       <SelectTrigger id="sort" data-testid="select-modal-sort">
                         <SelectValue />
@@ -209,7 +209,7 @@ export default function Analytics() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="order">Ordine</Label>
+                    <Label htmlFor="order">Ordine visualizzazione</Label>
                     <Select
                       value={tempSortOrder}
                       onValueChange={(value) =>
