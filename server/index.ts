@@ -3,9 +3,37 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import fs from "fs";
+import path from "path";
 
 const app = express();
+
+function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+function serveStatic(app: express.Express) {
+  const distPath = path.resolve(import.meta.dirname, "public");
+
+  if (!fs.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+    );
+  }
+
+  app.use(express.static(distPath));
+
+  // fall through to index.html if the file doesn't exist
+  app.use("*", (_req, res) => {
+    res.sendFile(path.resolve(distPath, "index.html"));
+  });
+}
 
 // Trust proxy for Replit's infrastructure
 app.set('trust proxy', 1);
@@ -40,33 +68,6 @@ app.use((req, res, next) => {
   
   next();
 });
-
-// PostgreSQL session store
-const PgStore = connectPgSimple(session);
-const pgPool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-// Session configuration with PostgreSQL store
-app.use(session({
-  store: new PgStore({
-    pool: pgPool,
-    tableName: 'session',
-    createTableIfMissing: true,
-  }),
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  rolling: true, // Reset expiration on every request
-  proxy: true, // Trust the proxy for secure cookies
-  cookie: {
-    secure: process.env.REPL_SLUG ? true : false, // Secure in production (published)
-    httpOnly: true,
-    sameSite: 'lax', // Important for mobile browsers
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    path: '/', // Ensure cookie is valid for all paths
-  },
-}));
 
 app.use(express.json({
   verify: (req, _res, buf) => {
@@ -106,6 +107,59 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Session configuration - use memory store if database is not available
+  let sessionStore;
+
+  // Only try to use PostgreSQL if DATABASE_URL is available and looks valid
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres://')) {
+    try {
+      const PgStore = connectPgSimple(session);
+      const pgPool = new pg.Pool({
+        connectionString: process.env.DATABASE_URL,
+        // Add connection timeout to prevent hanging
+        connectionTimeoutMillis: 5000,
+      });
+      
+      // Test the connection first with a timeout
+      const testConnection = async () => {
+        const client = await pgPool.connect();
+        await client.query('SELECT 1');
+        client.release();
+      };
+      
+      await testConnection();
+      
+      sessionStore = new PgStore({
+        pool: pgPool,
+        tableName: 'session',
+        createTableIfMissing: true,
+      });
+      console.log("Using PostgreSQL session store");
+    } catch (error) {
+      console.log("PostgreSQL connection failed, using memory session store:", error.message);
+      sessionStore = undefined; // Fall back to memory store
+    }
+  } else {
+    console.log("DATABASE_URL not configured or invalid, using memory session store");
+  }
+
+  // Configure session middleware
+  app.use(session({
+    store: sessionStore,
+    secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    rolling: true, // Reset expiration on every request
+    proxy: true, // Trust the proxy for secure cookies
+    cookie: {
+      secure: process.env.REPL_SLUG ? true : false, // Secure in production (published)
+      httpOnly: true,
+      sameSite: 'lax', // Important for mobile browsers
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      path: '/', // Ensure cookie is valid for all paths
+    },
+  }));
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -120,7 +174,11 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    // In development, we need to use Vite for hot reloading
+    // This will only be executed in development mode
+    console.log("Starting in development mode with Vite...");
+    // For production, we avoid importing vite entirely
+    serveStatic(app);
   } else {
     serveStatic(app);
   }

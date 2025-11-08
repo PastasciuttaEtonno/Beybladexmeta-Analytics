@@ -1,4 +1,11 @@
-import "dotenv/config";
+// Load .env only in non-production environments; production should use real env vars
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    await import('dotenv/config');
+  } catch {
+    // dotenv is optional in development; ignore if not installed
+  }
+}
 import * as schema from "@shared/schema";
 
 const url = process.env.DATABASE_URL;
