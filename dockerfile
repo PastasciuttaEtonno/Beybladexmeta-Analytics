@@ -15,6 +15,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Declare build-time argument
+ARG VITE_PUBLIC_MINIO_URL
+
+# Make it available to the build script
+ENV VITE_PUBLIC_MINIO_URL=$VITE_PUBLIC_MINIO_URL
+
+# Force clean previous build artifacts
+RUN rm -rf dist
+
 # Build client and server bundles
 RUN npm run build
 
@@ -26,6 +35,10 @@ WORKDIR /app
 # Environment
 ENV NODE_ENV=production
 ENV PORT=5000
+
+# Pass the build-time arg to the runner environment
+ARG VITE_PUBLIC_MINIO_URL
+ENV VITE_PUBLIC_MINIO_URL=$VITE_PUBLIC_MINIO_URL
 
 # Install only production dependencies
 COPY package.json package-lock.json ./

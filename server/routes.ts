@@ -612,22 +612,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve public objects from storage (component images)
-  app.get("/public-objects/:filePath(*)", async (req, res) => {
-    const filePath = req.params.filePath;
-    const objectStorageService = new ObjectStorageService();
-    try {
-      const objectInfo = await objectStorageService.searchPublicObject(filePath);
-      if (!objectInfo) {
-        return res.status(404).json({ error: "File not found" });
-      }
-      // Cache for 30 days (2592000 seconds) - component images are static
-      objectStorageService.downloadObject(objectInfo, res, 2592000, true);
-    } catch (error) {
-      console.error("Error searching for public object:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  });
+  // // Serve public objects from storage (component images)
+  // app.get("/public-objects/:filePath(*)", async (req, res) => {
+  //   const filePath = req.params.filePath;
+  //   const objectStorageService = new ObjectStorageService();
+  //   try {
+  //     const objectInfo = await objectStorageService.searchPublicObject(filePath);
+  //     if (!objectInfo) {
+  //       return res.status(404).json({ error: "File not found" });
+  //     }
+  //     // Cache for 30 days (2592000 seconds) - component images are static
+  //     objectStorageService.downloadObject(objectInfo, res, 2592000, true);
+  //   } catch (error) {
+  //     console.error("Error searching for public object:", error);
+  //     return res.status(500).json({ error: "Internal server error" });
+  //   }
+  // });
 
   const httpServer = createServer(app);
 
