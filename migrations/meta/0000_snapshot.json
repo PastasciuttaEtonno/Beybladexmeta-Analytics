@@ -1,0 +1,679 @@
+{
+  "id": "a6db6b4a-5f57-40e2-83ac-6e11742aa076",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.assist_blade_stats": {
+      "name": "assist_blade_stats",
+      "schema": "",
+      "columns": {
+        "assist_blade": {
+          "name": "assist_blade",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "primi_posti": {
+          "name": "primi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "secondi_posti": {
+          "name": "secondi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "terzi_posti": {
+          "name": "terzi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "punteggio_totale": {
+          "name": "punteggio_totale",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bit_stats": {
+      "name": "bit_stats",
+      "schema": "",
+      "columns": {
+        "bit": {
+          "name": "bit",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "primi_posti": {
+          "name": "primi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "secondi_posti": {
+          "name": "secondi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "terzi_posti": {
+          "name": "terzi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "punteggio_totale": {
+          "name": "punteggio_totale",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.blade_stats": {
+      "name": "blade_stats",
+      "schema": "",
+      "columns": {
+        "blade": {
+          "name": "blade",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "primi_posti": {
+          "name": "primi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "secondi_posti": {
+          "name": "secondi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "terzi_posti": {
+          "name": "terzi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "punteggio_totale": {
+          "name": "punteggio_totale",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.combo_stats": {
+      "name": "combo_stats",
+      "schema": "",
+      "columns": {
+        "blade": {
+          "name": "blade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assist_blade": {
+          "name": "assist_blade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ratchet": {
+          "name": "ratchet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bit": {
+          "name": "bit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lock_chip": {
+          "name": "lock_chip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "primi_posti": {
+          "name": "primi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "secondi_posti": {
+          "name": "secondi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "terzi_posti": {
+          "name": "terzi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "punteggio_totale": {
+          "name": "punteggio_totale",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "combo_stats_blade_assist_blade_ratchet_bit_lock_chip_pk": {
+          "name": "combo_stats_blade_assist_blade_ratchet_bit_lock_chip_pk",
+          "columns": [
+            "blade",
+            "assist_blade",
+            "ratchet",
+            "bit",
+            "lock_chip"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.favorite_combos": {
+      "name": "favorite_combos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blade": {
+          "name": "blade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assist_blade": {
+          "name": "assist_blade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ratchet": {
+          "name": "ratchet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bit": {
+          "name": "bit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lock_chip": {
+          "name": "lock_chip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "favorite_combos_user_id_users_id_fk": {
+          "name": "favorite_combos_user_id_users_id_fk",
+          "tableFrom": "favorite_combos",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.favorite_deck_combos": {
+      "name": "favorite_deck_combos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "deck_id": {
+          "name": "deck_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "combo_number": {
+          "name": "combo_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blade": {
+          "name": "blade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assist_blade": {
+          "name": "assist_blade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ratchet": {
+          "name": "ratchet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bit": {
+          "name": "bit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lock_chip": {
+          "name": "lock_chip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "favorite_deck_combos_deck_id_favorite_decks_id_fk": {
+          "name": "favorite_deck_combos_deck_id_favorite_decks_id_fk",
+          "tableFrom": "favorite_deck_combos",
+          "tableTo": "favorite_decks",
+          "columnsFrom": [
+            "deck_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.favorite_decks": {
+      "name": "favorite_decks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "favorite_decks_user_id_users_id_fk": {
+          "name": "favorite_decks_user_id_users_id_fk",
+          "tableFrom": "favorite_decks",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lock_chip_stats": {
+      "name": "lock_chip_stats",
+      "schema": "",
+      "columns": {
+        "lock_chip": {
+          "name": "lock_chip",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "primi_posti": {
+          "name": "primi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "secondi_posti": {
+          "name": "secondi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "terzi_posti": {
+          "name": "terzi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "punteggio_totale": {
+          "name": "punteggio_totale",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.login_attempts": {
+      "name": "login_attempts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempted_at": {
+          "name": "attempted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "success": {
+          "name": "success",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "login_attempts_ip_idx": {
+          "name": "login_attempts_ip_idx",
+          "columns": [
+            {
+              "expression": "ip_address",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "login_attempts_email_idx": {
+          "name": "login_attempts_email_idx",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "login_attempts_attempted_at_idx": {
+          "name": "login_attempts_attempted_at_idx",
+          "columns": [
+            {
+              "expression": "attempted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ratchet_stats": {
+      "name": "ratchet_stats",
+      "schema": "",
+      "columns": {
+        "ratchet": {
+          "name": "ratchet",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "primi_posti": {
+          "name": "primi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "secondi_posti": {
+          "name": "secondi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "terzi_posti": {
+          "name": "terzi_posti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "punteggio_totale": {
+          "name": "punteggio_totale",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "photo_url": {
+          "name": "photo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_admin": {
+          "name": "is_admin",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

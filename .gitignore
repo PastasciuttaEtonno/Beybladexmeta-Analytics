@@ -36,3 +36,5 @@ coverage/
 
 # Package artifacts
 *.tgz
+keygen.js
+test-minio.cjs
