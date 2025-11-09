@@ -103,11 +103,6 @@ export default function Login() {
   const [regEmailError, setRegEmailError] = useState<string | null>(null);
   const [regPasswordError, setRegPasswordError] = useState<string | null>(null);
   const [regDisplayNameError, setRegDisplayNameError] = useState<string | null>(null);
-
-  if (user) {
-    return <Redirect to="/" />;
-  }
-
   // Show a message when coming from email verification link
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -120,22 +115,25 @@ export default function Login() {
   }, []);
 
   // Preload reCAPTCHA on mount to avoid submit delays
-  // Ignora eventuali errori: saranno gestiti al submit
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useState(() => {
+  useEffect(() => {
+    let isMounted = true;
     (async () => {
       try {
         setRecaptchaLoading(true);
         await ensureRecaptchaReady(15000);
-        setRecaptchaReady(true);
+        if (isMounted) setRecaptchaReady(true);
       } catch {
-        setRecaptchaReady(false);
+        if (isMounted) setRecaptchaReady(false);
       } finally {
-        setRecaptchaLoading(false);
+        if (isMounted) setRecaptchaLoading(false);
       }
     })();
-    return undefined;
-  });
+    return () => { isMounted = false; };
+  }, []);
+
+  if (user) {
+    return <Redirect to="/" />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
