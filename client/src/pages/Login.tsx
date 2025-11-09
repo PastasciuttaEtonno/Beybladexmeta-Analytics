@@ -99,10 +99,6 @@ export default function Login() {
     return () => { mounted = false; };
   }, []);
 
-  if (user) {
-    return <Redirect to="/" />;
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
