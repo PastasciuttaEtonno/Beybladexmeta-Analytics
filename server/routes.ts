@@ -143,15 +143,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const RESEND_API_KEY = process.env.RESEND_API_KEY;
       const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || '5000'}`;
       const verifyUrl = `${APP_BASE_URL}/api/auth/verify?token=${verificationToken}`;
+      const escapeHtml = (s: string) => s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+      const safeDisplayName = escapeHtml(displayName || "");
       if (RESEND_API_KEY) {
         try {
           const resend = new Resend(RESEND_API_KEY);
-          await resend.emails.send({
-            from: 'no-reply@beybladexmeta.com',
+          const { data, error } = await resend.emails.send({
+            from: 'no-reply@v2.beybladexmeta.com',
             to: email,
             subject: 'Verifica il tuo account',
-            html: `<p>Ciao ${displayName},</p><p>Per completare la registrazione, verifica la tua email cliccando il link seguente:</p><p><a href="${verifyUrl}">Verifica il tuo account</a></p><p>Se non hai richiesto questa registrazione, ignora questa email.</p>`,
+            html: `<p>Ciao ${safeDisplayName},</p><p>Per completare la registrazione, verifica la tua email cliccando il link seguente:</p><p><a href="${verifyUrl}">Verifica il tuo account</a></p><p>Se non hai richiesto questa registrazione, ignora questa email.</p>`,
           });
+          if (error) {
+            console.error('Invio email di verifica fallito:', error);
+          } else if (data?.id) {
+            console.log('Email di verifica inviata, id:', data.id);
+          } else {
+            console.warn('Invio email: risposta inattesa da Resend:', { data, error });
+          }
         } catch (e: any) {
           console.error('Invio email di verifica fallito:', e?.message || e);
         }

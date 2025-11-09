@@ -10,7 +10,7 @@ import { useTheme } from "@/contexts/ThemeProvider";
 
 // Helpers for sanitization and validation
 const normalizeEmail = (s: string) => s.trim().toLowerCase();
-const RECAPTCHA_SITE_KEY = "6LeEJAcsAAAAAHr-qKaPVofkEylZNDrOTk02vJVh";
+const RECAPTCHA_SITE_KEY = process.env.VITE_RECAPTCHA_SITE_KEY;
 
 async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
   const w = window as any;
@@ -292,7 +292,7 @@ export default function Login() {
                   }
                   toast({
                     title: "Account created",
-                    description: "You can now sign in",
+                    description: "Check your email for confirmation",
                   });
                   setRegisterOpen(false);
                   // Prefill email field on login for convenience
