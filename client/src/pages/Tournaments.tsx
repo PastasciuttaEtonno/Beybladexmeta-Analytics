@@ -568,22 +568,20 @@ export default function Tournaments() {
               className="h-9 text-sm"
             />
           </div>
-          <div className="w-[160px]">
-            <Label htmlFor="filter-start" className="sr-only">From date</Label>
+          <div className="w-[160px] space-y-1">
             <Input
               id="filter-start"
-              aria-label="From date"
+              aria-label="Dal"
               type="date"
               value={startDateFilter}
               onChange={(e) => setStartDateFilter(e.target.value)}
               className="h-9 text-sm"
             />
           </div>
-          <div className="w-[160px]">
-            <Label htmlFor="filter-end" className="sr-only">To date</Label>
+          <div className="w-[160px] space-y-1">
             <Input
               id="filter-end"
-              aria-label="To date"
+              aria-label="Al"
               type="date"
               value={endDateFilter}
               onChange={(e) => setEndDateFilter(e.target.value)}
