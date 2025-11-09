@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      const isValid = await verifyPassword(password, user.password);
+      const isValid = await verifyPassword(password, (user as any).password_hash ?? user.password);
       if (!isValid) {
         await loginRateLimiter.recordFailedAttempt(clientIp, email);
         return res.status(401).json({ error: 'Invalid credentials' });
@@ -82,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = user.id;
       
       // Don't send password hash to client
-      const { password: _, ...userWithoutPassword } = user;
+      const { password_hash: _, password: __, ...userWithoutPassword } = user as any;
       res.json({ user: userWithoutPassword });
     } catch (error) {
       res.status(400).json({ error: 'Invalid request' });
@@ -107,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const { password: _, ...userWithoutPassword } = user;
+      const { password_hash: _, password: __, ...userWithoutPassword } = user as any;
       res.json({ user: userWithoutPassword });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get user' });
@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const { password: _, ...userWithoutPassword } = user;
+      const { password_hash: _, password: __, ...userWithoutPassword } = user as any;
       res.json({ user: userWithoutPassword });
     } catch (error) {
       res.status(400).json({ error: 'Invalid request' });

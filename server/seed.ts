@@ -10,7 +10,7 @@ async function seed() {
   
   await db.insert(users).values({
     email: 'demo@example.com',
-    password: hashedPassword,
+    password_hash: hashedPassword,
     displayName: 'Demo User',
     photoURL: null,
   }).onConflictDoNothing();

@@ -26,7 +26,7 @@ async function createUser() {
     
     const [newUser] = await db.insert(users).values({
       email,
-      password: hashedPassword,
+      password_hash: hashedPassword,
       displayName,
       photoURL: null,
     }).returning();

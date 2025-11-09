@@ -4,12 +4,31 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
+  // --- Colonne esistenti ---
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+
+  // 1. MODIFICATA: Rinominata da 'password'
+  password_hash: text("password_hash").notNull(),
+
   displayName: text("display_name").notNull(),
   photoURL: text("photo_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
+
+  // 2. AGGIUNTE: Nuove colonne per la verifica
+  is_verified: boolean("is_verified").notNull().default(false),
+  verification_token: text("verification_token"),
+  verification_token_expires_at: timestamp("verification_token_expires_at", {
+    withTimezone: true,
+  }),
+}, (table) => {
+  // 3. AGGIUNTI: Indici per le performance
+  return {
+    // L'indice su 'email' è già gestito da .unique()
+    // ma aggiungerlo qui si allinea agli indici creati manualmente.
+    emailIdx: index("users_email_idx").on(table.email),
+    tokenIdx: index("users_token_idx").on(table.verification_token),
+  };
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
