@@ -10,7 +10,22 @@ import { useTheme } from "@/contexts/ThemeProvider";
 
 // Helpers for sanitization and validation
 const normalizeEmail = (s: string) => s.trim().toLowerCase();
-const RECAPTCHA_SITE_KEY = process.env.VITE_RECAPTCHA_SITE_KEY;
+const RECAPTCHA_SITE_KEY: string | undefined = process.env.VITE_RECAPTCHA_SITE_KEY;
+
+function resolveRecaptchaSiteKey(): string | null {
+  if (RECAPTCHA_SITE_KEY && typeof RECAPTCHA_SITE_KEY === "string" && RECAPTCHA_SITE_KEY.length > 0) {
+    return RECAPTCHA_SITE_KEY;
+  }
+  const script = document.querySelector('script[src*="https://www.google.com/recaptcha/api.js"]') as HTMLScriptElement | null;
+  if (script?.src) {
+    try {
+      const url = new URL(script.src);
+      const key = url.searchParams.get("render");
+      if (key) return key;
+    } catch {}
+  }
+  return null;
+}
 
 async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
   const w = window as any;
@@ -255,7 +270,14 @@ export default function Login() {
                     setRecaptchaLoading(false);
                   }
                   const grecaptcha = (window as any).grecaptcha;
-                  const captchaToken: string = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: "register" });
+                  if (!grecaptcha || typeof grecaptcha.execute !== "function") {
+                    throw new Error("reCAPTCHA client not available. Check ad-blockers or CSP.");
+                  }
+                  const siteKey = resolveRecaptchaSiteKey();
+                  if (!siteKey) {
+                    throw new Error("Missing reCAPTCHA site key. Configure VITE_RECAPTCHA_SITE_KEY or script render.");
+                  }
+                  const captchaToken: string = await grecaptcha.execute(siteKey, { action: "register" });
 
                   const res = await fetch("/api/auth/register", {
                     method: "POST",
