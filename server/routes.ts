@@ -1,8 +1,9 @@
 import type { Express, Request, Response } from "express";
+import { RecaptchaEnterpriseServiceClient } from "@google-cloud/recaptcha-enterprise";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
-import { loginSchema, updateProfileSchema } from "@shared/schema";
+import { loginSchema, updateProfileSchema, registerSchema, users } from "@shared/schema";
 import { db } from "./db";
 import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, tornei, risultatiTorneo } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
@@ -48,6 +49,93 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register endpoint with reCAPTCHA verification
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { email, password, displayName, captchaToken } = registerSchema.parse(req.body);
+      const clientIp = getClientIp(req);
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+      const siteKey = process.env.RECAPTCHA_SITE_KEY;
+      const hasEnterpriseConfig = !!(projectId && siteKey && process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
+      if (hasEnterpriseConfig) {
+        try {
+          const recaptchaClient = new RecaptchaEnterpriseServiceClient();
+          const parent = recaptchaClient.projectPath(projectId!);
+          const [assessment] = await recaptchaClient.createAssessment({
+            parent,
+            assessment: {
+              event: {
+                token: captchaToken,
+                siteKey: siteKey!,
+                userIpAddress: clientIp,
+              },
+            },
+          });
+
+          const valid = assessment.tokenProperties?.valid;
+          const action = assessment.tokenProperties?.action;
+          const score = assessment.riskAnalysis?.score ?? 0;
+
+          if (!valid) {
+            const reason = assessment.tokenProperties?.invalidReason ?? 'UNKNOWN';
+            return res.status(400).json({ error: `Verifica anti-bot fallita (token non valido: ${reason}).` });
+          }
+          if (action && action !== 'register') {
+            return res.status(400).json({ error: 'Azione reCAPTCHA non corrispondente.' });
+          }
+          if (score < 0.5) {
+            return res.status(400).json({ error: 'Rischio elevato rilevato dal controllo anti-bot.' });
+          }
+        } catch (err) {
+          // Fallback su siteverify se Enterprise fallisce per motivi di configurazione o runtime
+          const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
+          if (!RECAPTCHA_SECRET_KEY) {
+            return res.status(500).json({ error: 'Server misconfiguration: missing reCAPTCHA secret' });
+          }
+          const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(RECAPTCHA_SECRET_KEY)}&response=${encodeURIComponent(captchaToken)}&remoteip=${encodeURIComponent(clientIp)}`;
+          const recaptchaResponse = await fetch(verifyUrl, { method: 'POST' });
+          const recaptchaData = await recaptchaResponse.json();
+          if (!recaptchaData?.success || (typeof recaptchaData.score === 'number' && recaptchaData.score < 0.5)) {
+            return res.status(400).json({ error: 'Verifica anti-bot fallita.' });
+          }
+        }
+      } else {
+        // Standard reCAPTCHA v3 siteverify
+        const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
+        if (!RECAPTCHA_SECRET_KEY) {
+          return res.status(500).json({ error: 'Server misconfiguration: missing reCAPTCHA secret' });
+        }
+        const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(RECAPTCHA_SECRET_KEY)}&response=${encodeURIComponent(captchaToken)}&remoteip=${encodeURIComponent(clientIp)}`;
+        const recaptchaResponse = await fetch(verifyUrl, { method: 'POST' });
+        const recaptchaData = await recaptchaResponse.json();
+        if (!recaptchaData?.success || (typeof recaptchaData.score === 'number' && recaptchaData.score < 0.5)) {
+          return res.status(400).json({ error: 'Verifica anti-bot fallita.' });
+        }
+      }
+
+      // Check if user already exists
+      const existing = await storage.getUserByEmail(email);
+      if (existing) {
+        return res.status(409).json({ error: 'User already exists' });
+      }
+
+      const hashed = await hashPassword(password);
+      const newUser = await db.insert(users).values({
+        email,
+        password_hash: hashed,
+        displayName,
+        photoURL: null,
+        is_verified: true,
+      }).returning();
+
+      const u = newUser[0];
+      const { password_hash: _, password: __, ...userWithoutPassword } = u as any;
+      return res.status(201).json({ user: userWithoutPassword });
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid request' });
+    }
+  });
   // Login endpoint
   app.post('/api/auth/login', async (req, res) => {
     const clientIp = getClientIp(req);

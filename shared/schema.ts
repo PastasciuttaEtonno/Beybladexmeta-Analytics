@@ -36,18 +36,59 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email().max(320).transform((s) => s.trim()),
-  password: z.string().min(8).max(128).transform((s) => s.trim()),
+  email: z.string()
+    .email()
+    .max(320)
+    .transform((s) => s.trim().toLowerCase()),
+  password: z.string()
+    .min(8)
+    .max(128)
+    .transform((s) => s.trim()),
+});
+
+export const registerSchema = z.object({
+  email: z.string()
+    .email()
+    .max(320)
+    .transform((s) => s.trim().toLowerCase()),
+  password: z.string()
+    .min(8)
+    .max(128)
+    .transform((s) => s.trim())
+    .superRefine((val, ctx) => {
+      if (!/[a-z]/.test(val)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one lowercase letter" });
+      }
+      if (!/[A-Z]/.test(val)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one uppercase letter" });
+      }
+      if (!/[0-9]/.test(val)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one number" });
+      }
+      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]/.test(val)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one special character" });
+      }
+    }),
+  displayName: z.string()
+    .min(1)
+    .max(100)
+    .transform((s) => s.replace(/\s+/g, " ").trim()),
+  captchaToken: z.string().min(10).max(4000).transform((s) => s.trim()),
 });
 
 export const updateProfileSchema = z.object({
-  displayName: z.string().min(1).max(100).transform((s) => s.trim()).optional(),
+  displayName: z.string()
+    .min(1)
+    .max(100)
+    .transform((s) => s.replace(/\s+/g, " ").trim())
+    .optional(),
   photoURL: z.string().max(500).transform((s) => s.trim()).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 export const comboStats = pgTable("combo_stats", {
