@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -163,13 +164,34 @@ app.use((req, res, next) => {
     rolling: true, // Reset expiration on every request
     proxy: true, // Trust the proxy for secure cookies
     cookie: {
-      secure: process.env.REPL_SLUG ? true : false, // Secure in production (published)
+      // Prefer secure cookies when running under HTTPS or in production
+      secure: (() => {
+        const base = process.env.APP_BASE_URL || '';
+        const isHttps = base.startsWith('https://');
+        const isProd = process.env.NODE_ENV === 'production';
+        return !!(isHttps || isProd || process.env.REPL_SLUG);
+      })(),
       httpOnly: true,
       sameSite: 'lax', // Important for mobile browsers
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       path: '/', // Ensure cookie is valid for all paths
     },
   }));
+
+  // Lightweight request logging: log full URLs generally, avoid bodies and query tokens for auth
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    const host = req.get('host') || 'localhost';
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+    const fullUrl = `${proto}://${host}${req.originalUrl}`;
+    const isAuth = req.originalUrl.startsWith('/api/auth/');
+    if (isAuth) {
+      // Avoid logging sensitive query/token details
+      console.log(`[${new Date().toISOString()}] ${req.method} ${proto}://${host}${req.path}`);
+    } else {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${fullUrl}`);
+    }
+    next();
+  });
 
   const server = await registerRoutes(app);
 
@@ -209,6 +231,8 @@ app.use((req, res, next) => {
   }
 
   server.listen(listenOptions, () => {
+    const host = listenOptions.host || 'localhost';
     log(`serving on port ${port}`);
+    log(`Server URL: http://${host}:${port}/`);
   });
 })();
