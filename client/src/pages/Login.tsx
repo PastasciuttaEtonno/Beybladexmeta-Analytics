@@ -12,93 +12,30 @@ import { useTheme } from "@/contexts/ThemeProvider";
 const normalizeEmail = (s: string) => s.trim().toLowerCase();
 // Read site key and mode from environment to avoid hardcoding secrets
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
-const USE_ENTERPRISE = (import.meta.env.VITE_RECAPTCHA_USE_ENTERPRISE as string | undefined) === "true";
+// Enterprise non usato con script statico; si usa v3 standard
+const USE_ENTERPRISE = false;
 
 async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
   if (!RECAPTCHA_SITE_KEY) {
     throw new Error("Missing VITE_RECAPTCHA_SITE_KEY environment variable");
   }
   const w = window as any;
-  // Already available
-  if (USE_ENTERPRISE) {
-    if (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function") {
-      try {
-        await new Promise<void>((resolve) => w.grecaptcha.enterprise.ready(() => resolve()));
-      } catch {
-        // ignore
-      }
-      return;
-    }
-  } else {
-    if (w.grecaptcha && typeof w.grecaptcha.execute === "function") {
-      try {
-        await new Promise<void>((resolve) => w.grecaptcha.ready(() => resolve()));
-      } catch {
-        // ignore
-      }
-      return;
-    }
-  }
-
-  // Inject the appropriate script if not present, with fallback to recaptcha.net
-  const primarySrc = USE_ENTERPRISE
-    ? `https://www.google.com/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`
-    : `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
-  const fallbackSrc = USE_ENTERPRISE
-    ? `https://www.recaptcha.net/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`
-    : `https://www.recaptcha.net/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
-  const existing = document.querySelector(
-    `script[src*="recaptcha/"]`
-  ) as HTMLScriptElement | null;
-  if (!existing) {
-    const inject = (src: string) => new Promise<void>((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = src;
-      s.async = true;
-      s.defer = true;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error(`Failed to load reCAPTCHA script: ${src}`));
-      document.head.appendChild(s);
-    });
-    try {
-      await inject(primarySrc);
-    } catch {
-      // Try fallback domain immediately if primary fails to load
-      await inject(fallbackSrc);
-    }
-  }
-
-  // Poll until grecaptcha becomes available, inject fallback if it takes too long
+  // Poll until grecaptcha is available, then wait for ready
   await new Promise<void>((resolve, reject) => {
     const start = Date.now();
-    let fallbackInjected = false;
-    const timer = setInterval(async () => {
+    const timer = setInterval(() => {
       const elapsed = Date.now() - start;
-      const ready = USE_ENTERPRISE
-        ? (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function")
-        : (w.grecaptcha && typeof w.grecaptcha.execute === "function");
-      if (ready) {
+      const readyApi = w.grecaptcha && typeof w.grecaptcha.execute === "function";
+      if (readyApi) {
         clearInterval(timer);
         try {
-          (USE_ENTERPRISE ? w.grecaptcha.enterprise : w.grecaptcha).ready(() => resolve());
+          w.grecaptcha.ready(() => resolve());
         } catch {
           resolve();
         }
-      } else if (!fallbackInjected && elapsed >= Math.min(5000, Math.floor(maxWaitMs / 2))) {
-        fallbackInjected = true;
-        // If no script from fallback domain, try injecting it
-        const hasFallback = !!document.querySelector(`script[src*="recaptcha.net/recaptcha/"]`);
-        if (!hasFallback) {
-          const s = document.createElement("script");
-          s.src = fallbackSrc;
-          s.async = true;
-          s.defer = true;
-          s.onload = () => {/* no-op, continue polling */};
-          document.head.appendChild(s);
-        }
       } else if (elapsed >= maxWaitMs) {
         clearInterval(timer);
-        reject(new Error("reCAPTCHA not available"));
+        reject(new Error("reCAPTCHA non disponibile"));
       }
     }, 100);
   });
@@ -329,16 +266,14 @@ export default function Login() {
                     setRecaptchaLoading(false);
                   }
                   const grecaptcha = (window as any).grecaptcha;
-                  const executor = USE_ENTERPRISE ? grecaptcha.enterprise : grecaptcha;
-                  // Ensure the internal reCAPTCHA is fully initialized before executing
                   await new Promise<void>((resolve) => {
                     try {
-                      executor.ready(() => resolve());
+                      grecaptcha.ready(() => resolve());
                     } catch {
                       resolve();
                     }
                   });
-                  const captchaToken: string = await executor.execute(RECAPTCHA_SITE_KEY, { action: "register" });
+                  const captchaToken: string = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: "register" });
 
                   const res = await fetch("/api/auth/register", {
                     method: "POST",
