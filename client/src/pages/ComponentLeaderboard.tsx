@@ -31,7 +31,6 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
       .replace(/\s+/g, "-"),
   ];
 
-  // --- THIS IS THE CORRECTED PART ---
   // We now build the full, direct URL to your public MinIO bucket
   // Structure: {HOST}/{BUCKET}/{FOLDER}/{FILENAME}
   // Example: https://minio.vasquezlisciotto.dev/beyblades/blades/cobaltdragoon.webp

@@ -11,7 +11,7 @@ import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import Analytics from "@/pages/Analytics";
 import Favorites from "@/pages/Favorites";
-import Messages from "@/pages/Messages";
+import Tournaments from "@/pages/Tournaments";
 import Profile from "@/pages/Profile";
 import ComboDetail from "@/pages/ComboDetail";
 import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
@@ -42,9 +42,9 @@ function AppRoutes() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/messages">
+      <Route path="/tournaments">
         <ProtectedRoute>
-          <Messages />
+          <Tournaments />
           <BottomNav />
         </ProtectedRoute>
       </Route>

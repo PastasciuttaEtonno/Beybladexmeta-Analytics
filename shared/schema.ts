@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -17,13 +17,13 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email().max(320).transform((s) => s.trim()),
+  password: z.string().min(8).max(128).transform((s) => s.trim()),
 });
 
 export const updateProfileSchema = z.object({
-  displayName: z.string().min(1).optional(),
-  photoURL: z.string().optional(),
+  displayName: z.string().min(1).max(100).transform((s) => s.trim()).optional(),
+  photoURL: z.string().max(500).transform((s) => s.trim()).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -132,27 +132,73 @@ export const favoriteDeckCombos = pgTable("favorite_deck_combos", {
   lockChip: text("lock_chip").notNull(),
 });
 
-export const insertFavoriteComboSchema = createInsertSchema(favoriteCombos).omit({ id: true });
-export const insertFavoriteDeckSchema = createInsertSchema(favoriteDecks).omit({ id: true });
-export const insertFavoriteDeckComboSchema = createInsertSchema(favoriteDeckCombos).omit({ id: true });
+// Safer input schemas with trimming and sane limits
+export const addFavoriteComboSchema = z.object({
+  userId: z.string().min(1).max(64).transform((s) => s.trim()),
+  blade: z.string().min(1).max(100).transform((s) => s.trim()),
+  assistBlade: z.string().min(1).max(100).transform((s) => s.trim()),
+  ratchet: z.string().min(1).max(100).transform((s) => s.trim()),
+  bit: z.string().min(1).max(100).transform((s) => s.trim()),
+  lockChip: z.string().min(1).max(100).transform((s) => s.trim()),
+});
 
-export type InsertFavoriteCombo = z.infer<typeof insertFavoriteComboSchema>;
+export const addFavoriteDeckSchema = z.object({
+  userId: z.string().min(1).max(64).transform((s) => s.trim()),
+  name: z.string().min(1).max(100).transform((s) => s.trim()),
+});
+
+export const addFavoriteDeckComboSchema = z.object({
+  deckId: z.string().min(1).max(64).transform((s) => s.trim()),
+  comboNumber: z.number().int().min(1).max(3),
+  blade: z.string().min(1).max(100).transform((s) => s.trim()),
+  assistBlade: z.string().min(1).max(100).transform((s) => s.trim()),
+  ratchet: z.string().min(1).max(100).transform((s) => s.trim()),
+  bit: z.string().min(1).max(100).transform((s) => s.trim()),
+  lockChip: z.string().min(1).max(100).transform((s) => s.trim()),
+});
+
+export type InsertFavoriteCombo = z.infer<typeof addFavoriteComboSchema>;
 export type FavoriteCombo = typeof favoriteCombos.$inferSelect;
-export type InsertFavoriteDeck = z.infer<typeof insertFavoriteDeckSchema>;
+export type InsertFavoriteDeck = z.infer<typeof addFavoriteDeckSchema>;
 export type FavoriteDeck = typeof favoriteDecks.$inferSelect;
-export type InsertFavoriteDeckCombo = z.infer<typeof insertFavoriteDeckComboSchema>;
+export type InsertFavoriteDeckCombo = z.infer<typeof addFavoriteDeckComboSchema>;
 export type FavoriteDeckCombo = typeof favoriteDeckCombos.$inferSelect;
 
 export const tournamentComboSchema = z.object({
-  blade: z.string().min(1),
-  assistBlade: z.string().min(1),
-  ratchet: z.string().min(1),
-  bit: z.string().min(1),
-  lockChip: z.string().min(1),
+  blade: z.string().min(1).max(100).transform((s) => s.trim()),
+  assistBlade: z.string().min(1).max(100).transform((s) => s.trim()),
+  ratchet: z.string().min(1).max(100).transform((s) => s.trim()),
+  bit: z.string().min(1).max(100).transform((s) => s.trim()),
+  lockChip: z.string().min(1).max(100).transform((s) => s.trim()),
 });
 
 export const tournamentResultSchema = z.object({
-  participants: z.number().int().min(1),
+  nomeTorneo: z.string().min(1).max(100).transform((s) => s.trim()),
+  dataTorneo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  descrizione: z.string().max(500).transform((s) => s.trim()).optional(),
+  participants: z.number().int().min(6).max(200),
+  regione: z.enum([
+    "Piemonte",
+    "Valle d'Aosta",
+    "Lombardia",
+    "Trentino-Alto Adige",
+    "Veneto",
+    "Friuli-Venezia Giulia",
+    "Liguria",
+    "Emilia-Romagna",
+    "Toscana",
+    "Umbria",
+    "Marche",
+    "Lazio",
+    "Abruzzo",
+    "Molise",
+    "Campania",
+    "Puglia",
+    "Basilicata",
+    "Calabria",
+    "Sicilia",
+    "Sardegna",
+  ]),
   firstPlaceCombos: z.array(tournamentComboSchema).length(3),
   secondPlaceCombos: z.array(tournamentComboSchema).length(3),
   thirdPlaceCombos: z.array(tournamentComboSchema).length(3),
@@ -160,6 +206,38 @@ export const tournamentResultSchema = z.object({
 
 export type TournamentCombo = z.infer<typeof tournamentComboSchema>;
 export type TournamentResult = z.infer<typeof tournamentResultSchema>;
+
+// Tornei (tournaments) table
+export const tornei = pgTable("tornei", {
+  torneoId: varchar("torneo_id").primaryKey().default(sql`gen_random_uuid()`),
+  nomeTorneo: text("nome_torneo").notNull(),
+  dataTorneo: date("data_torneo").notNull(),
+  numeroPartecipanti: integer("numero_partecipanti").notNull(),
+  descrizione: text("descrizione"),
+  regione: text("regione").notNull(),
+  dataInserimento: timestamp("data_inserimento", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  dataIdx: index("idx_tornei_data").on(table.dataTorneo),
+}));
+
+export type Torneo = typeof tornei.$inferSelect;
+export type InsertTorneo = typeof tornei.$inferInsert;
+
+// Risultati torneo (tournament results history)
+export const risultatiTorneo = pgTable("risultati_torneo", {
+  risultatoId: varchar("risultato_id").primaryKey().default(sql`gen_random_uuid()`),
+  torneoId: varchar("torneo_id").notNull().references(() => tornei.torneoId, { onDelete: 'cascade' }),
+  piazzamento: integer("piazzamento").notNull(),
+  blade: text("blade").notNull(),
+  assistBlade: text("assist_blade").notNull(),
+  ratchet: text("ratchet").notNull(),
+  bit: text("bit").notNull(),
+  lockChip: text("lock_chip").notNull(),
+  puntiGuadagnati: doublePrecision("punti_guadagnati").notNull(),
+});
+
+export type RisultatoTorneo = typeof risultatiTorneo.$inferSelect;
+export type InsertRisultatoTorneo = typeof risultatiTorneo.$inferInsert;
 
 export const loginAttempts = pgTable("login_attempts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

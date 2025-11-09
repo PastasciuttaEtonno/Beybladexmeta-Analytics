@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, insertFavoriteComboSchema, insertFavoriteDeckSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, tornei, risultatiTorneo } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
@@ -321,10 +321,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add a favorite combo
   app.post('/api/favorites/combos', requireAuth, async (req, res) => {
     try {
-      const comboData = insertFavoriteComboSchema.parse({
+      const comboData = addFavoriteComboSchema.parse({
         ...req.body,
         userId: req.session.userId,
       });
+
+      // Server-side existence checks against known component stats
+      const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
+        db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, comboData.blade)),
+        comboData.assistBlade === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, comboData.assistBlade)),
+        db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, comboData.ratchet)),
+        db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, comboData.bit)),
+        comboData.lockChip === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, comboData.lockChip)),
+      ]);
+
+      if (!Number(bladeExists?.count) || !Number(assistExists?.count) || !Number(ratchetExists?.count) || !Number(bitExists?.count) || !Number(lockChipExists?.count)) {
+        return res.status(400).json({ error: 'Invalid combo components' });
+      }
 
       const [newCombo] = await db.insert(favoriteCombos)
         .values(comboData)
@@ -408,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'All parts must be different across all combos in the deck (except None for Assist Blade and Lock Chip)' });
       }
 
-      const deckData = insertFavoriteDeckSchema.parse({
+      const deckData = addFavoriteDeckSchema.parse({
         name,
         userId: req.session.userId,
       });
@@ -420,12 +433,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const combosToInsert = combos.map((combo: any, index: number) => ({
         deckId: newDeck.id,
         comboNumber: index + 1,
-        blade: combo.blade,
-        assistBlade: combo.assistBlade,
-        ratchet: combo.ratchet,
-        bit: combo.bit,
-        lockChip: combo.lockChip,
+        blade: String(combo.blade ?? '').trim(),
+        assistBlade: String(combo.assistBlade ?? '').trim(),
+        ratchet: String(combo.ratchet ?? '').trim(),
+        bit: String(combo.bit ?? '').trim(),
+        lockChip: String(combo.lockChip ?? '').trim(),
       }));
+
+      // Validate each combo via schema and existence in stats tables
+      for (const c of combosToInsert) {
+        addFavoriteDeckComboSchema.parse(c);
+        const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
+          db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, c.blade)),
+          c.assistBlade === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, c.assistBlade)),
+          db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, c.ratchet)),
+          db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, c.bit)),
+          c.lockChip === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, c.lockChip)),
+        ]);
+        if (!Number(bladeExists?.count) || !Number(assistExists?.count) || !Number(ratchetExists?.count) || !Number(bitExists?.count) || !Number(lockChipExists?.count)) {
+          return res.status(400).json({ error: 'Invalid deck combo components' });
+        }
+      }
 
       const insertedCombos = await db.insert(favoriteDeckCombos)
         .values(combosToInsert)
@@ -494,7 +522,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit tournament results (admin only)
   app.post('/api/admin/tournament-results', requireAdmin, async (req, res) => {
     try {
+      // Defense-in-depth: never accept client-provided admin flags
+      if (req.body && typeof req.body.isAdmin !== 'undefined') {
+        return res.status(400).json({ error: 'Client cannot set isAdmin; admin is verified server-side.' });
+      }
+
       const data = tournamentResultSchema.parse(req.body);
+
+      // Validate that all combo components exist in stats tables (assist/lock can be 'None')
+      const validateCombo = async (combo: any) => {
+        const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
+          db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, combo.blade)),
+          combo.assistBlade === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, combo.assistBlade)),
+          db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, combo.ratchet)),
+          db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, combo.bit)),
+          combo.lockChip === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, combo.lockChip)),
+        ]);
+        return Boolean(Number(bladeExists?.count) && Number(assistExists?.count) && Number(ratchetExists?.count) && Number(bitExists?.count) && Number(lockChipExists?.count));
+      };
+
+      for (const c of [...data.firstPlaceCombos, ...data.secondPlaceCombos, ...data.thirdPlaceCombos]) {
+        const ok = await validateCombo(c);
+        if (!ok) {
+          return res.status(400).json({ error: 'Invalid tournament combo components' });
+        }
+      }
       
       const calculatePoints = (participants: number, position: number) => {
         if (position === 1) return participants * 3;
@@ -580,16 +632,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       };
 
+      // Create a tournament record
+      const [newTorneo] = await db.insert(tornei)
+        .values({
+          nomeTorneo: data.nomeTorneo,
+          dataTorneo: new Date(data.dataTorneo),
+          numeroPartecipanti: data.participants,
+          descrizione: data.descrizione,
+          regione: data.regione,
+        })
+        .returning({ torneoId: tornei.torneoId });
+
+      // Update stats and insert history results
       for (const combo of data.firstPlaceCombos) {
         await processCombo(combo, 1);
+        await db.insert(risultatiTorneo).values({
+          torneoId: newTorneo.torneoId,
+          piazzamento: 1,
+          blade: combo.blade,
+          assistBlade: combo.assistBlade,
+          ratchet: combo.ratchet,
+          bit: combo.bit,
+          lockChip: combo.lockChip,
+          puntiGuadagnati: firstPoints,
+        });
       }
 
       for (const combo of data.secondPlaceCombos) {
         await processCombo(combo, 2);
+        await db.insert(risultatiTorneo).values({
+          torneoId: newTorneo.torneoId,
+          piazzamento: 2,
+          blade: combo.blade,
+          assistBlade: combo.assistBlade,
+          ratchet: combo.ratchet,
+          bit: combo.bit,
+          lockChip: combo.lockChip,
+          puntiGuadagnati: secondPoints,
+        });
       }
 
       for (const combo of data.thirdPlaceCombos) {
         await processCombo(combo, 3);
+        await db.insert(risultatiTorneo).values({
+          torneoId: newTorneo.torneoId,
+          piazzamento: 3,
+          blade: combo.blade,
+          assistBlade: combo.assistBlade,
+          ratchet: combo.ratchet,
+          bit: combo.bit,
+          lockChip: combo.lockChip,
+          puntiGuadagnati: thirdPoints,
+        });
       }
 
       // Refresh materialized view for top components (performance optimization)
@@ -605,10 +699,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({ success: true, message: 'Tournament results submitted successfully' });
+      res.json({ success: true, message: 'Tournament results submitted successfully', torneoId: newTorneo.torneoId });
     } catch (error) {
       console.error('Tournament submission error:', error);
       res.status(400).json({ error: 'Failed to submit tournament results' });
+    }
+  });
+
+  // List tournaments (available to all authenticated users)
+  app.get('/api/admin/tournaments', requireAuth, async (req, res) => {
+    try {
+      const tournaments = await db.select().from(tornei).orderBy(desc(tornei.dataTorneo));
+      res.json({ tournaments });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch tournaments' });
+    }
+  });
+
+  // Get tournament results (top 3 placements) by tournament id (available to all authenticated users)
+  app.get('/api/admin/tournaments/:id/results', requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      if (!id) {
+        return res.status(400).json({ error: 'Missing tournament id' });
+      }
+
+      const results = await db.select().from(risultatiTorneo)
+        .where(eq(risultatiTorneo.torneoId, id))
+        .orderBy(asc(risultatiTorneo.piazzamento));
+
+      const firstPlaceCombos = results.filter(r => r.piazzamento === 1).map(r => ({
+        blade: r.blade,
+        assistBlade: r.assistBlade,
+        ratchet: r.ratchet,
+        bit: r.bit,
+        lockChip: r.lockChip,
+        puntiGuadagnati: r.puntiGuadagnati,
+      }));
+      const secondPlaceCombos = results.filter(r => r.piazzamento === 2).map(r => ({
+        blade: r.blade,
+        assistBlade: r.assistBlade,
+        ratchet: r.ratchet,
+        bit: r.bit,
+        lockChip: r.lockChip,
+        puntiGuadagnati: r.puntiGuadagnati,
+      }));
+      const thirdPlaceCombos = results.filter(r => r.piazzamento === 3).map(r => ({
+        blade: r.blade,
+        assistBlade: r.assistBlade,
+        ratchet: r.ratchet,
+        bit: r.bit,
+        lockChip: r.lockChip,
+        puntiGuadagnati: r.puntiGuadagnati,
+      }));
+
+      res.json({ firstPlaceCombos, secondPlaceCombos, thirdPlaceCombos });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch tournament results' });
     }
   });
 
