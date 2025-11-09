@@ -61,9 +61,20 @@ app.use((req, res, next) => {
   }
   
   // Content Security Policy
+  // Allow Google reCAPTCHA Enterprise resources
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+    [
+      "default-src 'self'",
+      // reCAPTCHA v3/Enterprise uses google.com and gstatic.com
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://www.google.com https://www.gstatic.com",
+      // invisible v3 may create iframes
+      "frame-src 'self' https://www.google.com https://www.gstatic.com",
+    ].join('; ')
   );
   
   next();
