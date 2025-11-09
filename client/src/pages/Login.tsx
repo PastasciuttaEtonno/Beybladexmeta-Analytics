@@ -40,27 +40,39 @@ async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
     }
   }
 
-  // Inject the appropriate script if not present
-  const scriptSrc = USE_ENTERPRISE
+  // Inject the appropriate script if not present, with fallback to recaptcha.net
+  const primarySrc = USE_ENTERPRISE
     ? `https://www.google.com/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`
     : `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
-  const existing = document.querySelector(`script[src*="${USE_ENTERPRISE ? "enterprise.js" : "api.js"}"]`);
+  const fallbackSrc = USE_ENTERPRISE
+    ? `https://www.recaptcha.net/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`
+    : `https://www.recaptcha.net/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+  const existing = document.querySelector(
+    `script[src*="recaptcha/"]`
+  ) as HTMLScriptElement | null;
   if (!existing) {
-    await new Promise<void>((resolve, reject) => {
+    const inject = (src: string) => new Promise<void>((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = scriptSrc;
+      s.src = src;
       s.async = true;
       s.defer = true;
       s.onload = () => resolve();
-      s.onerror = () => reject(new Error("Failed to load reCAPTCHA script"));
+      s.onerror = () => reject(new Error(`Failed to load reCAPTCHA script: ${src}`));
       document.head.appendChild(s);
     });
+    try {
+      await inject(primarySrc);
+    } catch {
+      // Try fallback domain immediately if primary fails to load
+      await inject(fallbackSrc);
+    }
   }
 
-  // Poll until grecaptcha becomes available
+  // Poll until grecaptcha becomes available, inject fallback if it takes too long
   await new Promise<void>((resolve, reject) => {
     const start = Date.now();
-    const timer = setInterval(() => {
+    let fallbackInjected = false;
+    const timer = setInterval(async () => {
       const elapsed = Date.now() - start;
       const ready = USE_ENTERPRISE
         ? (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function")
@@ -71,6 +83,18 @@ async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
           (USE_ENTERPRISE ? w.grecaptcha.enterprise : w.grecaptcha).ready(() => resolve());
         } catch {
           resolve();
+        }
+      } else if (!fallbackInjected && elapsed >= Math.min(5000, Math.floor(maxWaitMs / 2))) {
+        fallbackInjected = true;
+        // If no script from fallback domain, try injecting it
+        const hasFallback = !!document.querySelector(`script[src*="recaptcha.net/recaptcha/"]`);
+        if (!hasFallback) {
+          const s = document.createElement("script");
+          s.src = fallbackSrc;
+          s.async = true;
+          s.defer = true;
+          s.onload = () => {/* no-op, continue polling */};
+          document.head.appendChild(s);
         }
       } else if (elapsed >= maxWaitMs) {
         clearInterval(timer);
@@ -306,6 +330,14 @@ export default function Login() {
                   }
                   const grecaptcha = (window as any).grecaptcha;
                   const executor = USE_ENTERPRISE ? grecaptcha.enterprise : grecaptcha;
+                  // Ensure the internal reCAPTCHA is fully initialized before executing
+                  await new Promise<void>((resolve) => {
+                    try {
+                      executor.ready(() => resolve());
+                    } catch {
+                      resolve();
+                    }
+                  });
                   const captchaToken: string = await executor.execute(RECAPTCHA_SITE_KEY, { action: "register" });
 
                   const res = await fetch("/api/auth/register", {
