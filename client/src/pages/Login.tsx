@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -10,71 +10,49 @@ import { useTheme } from "@/contexts/ThemeProvider";
 
 // Helpers for sanitization and validation
 const normalizeEmail = (s: string) => s.trim().toLowerCase();
-// Read site key and mode from environment to avoid hardcoding secrets
-const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
-const USE_ENTERPRISE = (import.meta.env.VITE_RECAPTCHA_USE_ENTERPRISE as string | undefined) === "true";
+const RECAPTCHA_SITE_KEY = "6LeEJAcsAAAAAHr-qKaPVofkEylZNDrOTk02vJVh";
 
 async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
-  if (!RECAPTCHA_SITE_KEY) {
-    throw new Error("Missing VITE_RECAPTCHA_SITE_KEY environment variable");
-  }
   const w = window as any;
-  // Already available
-  if (USE_ENTERPRISE) {
-    if (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function") {
-      try {
-        await new Promise<void>((resolve) => w.grecaptcha.enterprise.ready(() => resolve()));
-      } catch {
-        // ignore
-      }
-      return;
+  // Already available (Enterprise)
+  if (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function") {
+    try {
+      await new Promise<void>((resolve) => w.grecaptcha.enterprise.ready(() => resolve()));
+    } catch {
+      // ignore
     }
-  } else {
-    if (w.grecaptcha && typeof w.grecaptcha.execute === "function") {
-      try {
-        await new Promise<void>((resolve) => w.grecaptcha.ready(() => resolve()));
-      } catch {
-        // ignore
-      }
-      return;
-    }
+    return;
   }
 
-  // Inject the appropriate script if not present
-  const scriptSrc = USE_ENTERPRISE
-    ? `https://www.google.com/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`
-    : `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
-  const existing = document.querySelector(`script[src*="${USE_ENTERPRISE ? "enterprise.js" : "api.js"}"]`);
+  // Check if the Enterprise script is already present
+  const existing = document.querySelector('script[src*="https://www.google.com/recaptcha/enterprise.js"]');
   if (!existing) {
     await new Promise<void>((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = scriptSrc;
+      s.src = `https://www.google.com/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`;
       s.async = true;
       s.defer = true;
       s.onload = () => resolve();
-      s.onerror = () => reject(new Error("Failed to load reCAPTCHA script"));
+      s.onerror = () => reject(new Error("Impossibile caricare reCAPTCHA Enterprise"));
       document.head.appendChild(s);
     });
   }
 
-  // Poll until grecaptcha becomes available
+  // Poll until grecaptcha.enterprise becomes available
   await new Promise<void>((resolve, reject) => {
     const start = Date.now();
     const timer = setInterval(() => {
       const elapsed = Date.now() - start;
-      const ready = USE_ENTERPRISE
-        ? (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function")
-        : (w.grecaptcha && typeof w.grecaptcha.execute === "function");
-      if (ready) {
+      if (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function") {
         clearInterval(timer);
         try {
-          (USE_ENTERPRISE ? w.grecaptcha.enterprise : w.grecaptcha).ready(() => resolve());
+          w.grecaptcha.enterprise.ready(() => resolve());
         } catch {
           resolve();
         }
       } else if (elapsed >= maxWaitMs) {
         clearInterval(timer);
-        reject(new Error("reCAPTCHA not available"));
+        reject(new Error("reCAPTCHA non disponibile"));
       }
     }, 100);
   });
@@ -108,18 +86,7 @@ export default function Login() {
     return <Redirect to="/" />;
   }
 
-  // Show a message when coming from email verification link
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("verified") === "true") {
-      toast({
-        title: "Email verified",
-        description: "You can now sign in",
-      });
-    }
-  }, []);
-
-  // Preload reCAPTCHA on mount to avoid submit delays
+  // Pre-carica reCAPTCHA on mount per evitare ritardi al submit
   // Ignora eventuali errori: saranno gestiti al submit
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useState(() => {
@@ -307,8 +274,7 @@ export default function Login() {
                     setRecaptchaLoading(false);
                   }
                   const grecaptcha = (window as any).grecaptcha;
-                  const executor = USE_ENTERPRISE ? grecaptcha.enterprise : grecaptcha;
-                  const captchaToken: string = await executor.execute(RECAPTCHA_SITE_KEY, { action: "register" });
+                  const captchaToken: string = await grecaptcha.enterprise.execute(RECAPTCHA_SITE_KEY, { action: "register" });
 
                   const res = await fetch("/api/auth/register", {
                     method: "POST",
@@ -326,7 +292,7 @@ export default function Login() {
                   }
                   toast({
                     title: "Account created",
-                    description: "Check your email to confirm your account, then sign in.",
+                    description: "You can now sign in",
                   });
                   setRegisterOpen(false);
                   // Prefill email field on login for convenience
