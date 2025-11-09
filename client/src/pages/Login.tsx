@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Redirect } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,7 @@ export default function Login() {
   const { user, login } = useAuth();
   const { toast } = useToast();
   const { theme } = useTheme();
+  const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -73,9 +74,11 @@ export default function Login() {
   const [regPasswordError, setRegPasswordError] = useState<string | null>(null);
   const [regDisplayNameError, setRegDisplayNameError] = useState<string | null>(null);
 
-  if (user) {
-    return <Redirect to="/" />;
-  }
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   // Pre-carica reCAPTCHA on mount per evitare ritardi al submit
   // Ignora eventuali errori: saranno gestiti al submit
