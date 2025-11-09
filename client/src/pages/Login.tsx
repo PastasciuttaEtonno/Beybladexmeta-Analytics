@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -14,39 +14,15 @@ const RECAPTCHA_SITE_KEY = process.env.VITE_RECAPTCHA_SITE_KEY;
 
 async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
   const w = window as any;
-  // Already available (Enterprise)
-  if (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function") {
-    try {
-      await new Promise<void>((resolve) => w.grecaptcha.enterprise.ready(() => resolve()));
-    } catch {
-      // ignore
-    }
-    return;
-  }
-
-  // Check if the Enterprise script is already present
-  const existing = document.querySelector('script[src*="https://www.google.com/recaptcha/enterprise.js"]');
-  if (!existing) {
-    await new Promise<void>((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = `https://www.google.com/recaptcha/enterprise.js?render=${RECAPTCHA_SITE_KEY}`;
-      s.async = true;
-      s.defer = true;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error("Impossibile caricare reCAPTCHA Enterprise"));
-      document.head.appendChild(s);
-    });
-  }
-
-  // Poll until grecaptcha.enterprise becomes available
+  // Wait for the v3 client loaded via index.html
   await new Promise<void>((resolve, reject) => {
     const start = Date.now();
     const timer = setInterval(() => {
       const elapsed = Date.now() - start;
-      if (w.grecaptcha && w.grecaptcha.enterprise && typeof w.grecaptcha.enterprise.execute === "function") {
+      if (w.grecaptcha && typeof w.grecaptcha.ready === "function") {
         clearInterval(timer);
         try {
-          w.grecaptcha.enterprise.ready(() => resolve());
+          w.grecaptcha.ready(() => resolve());
         } catch {
           resolve();
         }
@@ -89,19 +65,20 @@ export default function Login() {
   // Pre-carica reCAPTCHA on mount per evitare ritardi al submit
   // Ignora eventuali errori: saranno gestiti al submit
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useState(() => {
+  useEffect(() => {
+    let mounted = true;
     (async () => {
       try {
         setRecaptchaLoading(true);
         await ensureRecaptchaReady(15000);
-        if (isMounted) setRecaptchaReady(true);
+        if (mounted) setRecaptchaReady(true);
       } catch {
-        if (isMounted) setRecaptchaReady(false);
+        if (mounted) setRecaptchaReady(false);
       } finally {
-        if (isMounted) setRecaptchaLoading(false);
+        if (mounted) setRecaptchaLoading(false);
       }
     })();
-    return () => { isMounted = false; };
+    return () => { mounted = false; };
   }, []);
 
   if (user) {
@@ -278,7 +255,7 @@ export default function Login() {
                     setRecaptchaLoading(false);
                   }
                   const grecaptcha = (window as any).grecaptcha;
-                  const captchaToken: string = await grecaptcha.enterprise.execute(RECAPTCHA_SITE_KEY, { action: "register" });
+                  const captchaToken: string = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: "register" });
 
                   const res = await fetch("/api/auth/register", {
                     method: "POST",

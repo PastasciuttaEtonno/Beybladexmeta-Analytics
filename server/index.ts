@@ -7,6 +7,8 @@ import fs from "fs";
 import path from "path";
 
 const app = express();
+// Hide Express signature
+app.disable('x-powered-by');
 
 function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
