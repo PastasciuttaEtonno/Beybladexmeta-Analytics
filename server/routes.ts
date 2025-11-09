@@ -8,7 +8,7 @@ import { db } from "./db";
 import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, tornei, risultatiTorneo } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
-import { loginRateLimiter, LoginRateLimiter } from "./rateLimiter";
+import { loginRateLimiter } from "./rateLimiter";
 import crypto from "node:crypto";
 import { Resend } from "resend";
 
@@ -51,12 +51,6 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Separate rate limiter for registration to prevent abuse
-  const registerRateLimiter = new LoginRateLimiter({
-    maxAttempts: 10, // allow more attempts but still cap
-    windowMinutes: 60,
-    blockDurationMinutes: 60,
-  });
   // Register endpoint with reCAPTCHA verification
   app.post('/api/auth/register', async (req, res) => {
     try {
@@ -86,16 +80,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const score = assessment.riskAnalysis?.score ?? 0;
 
           if (!valid) {
-            await registerRateLimiter.recordFailedAttempt(clientIp, email);
             const reason = assessment.tokenProperties?.invalidReason ?? 'UNKNOWN';
             return res.status(400).json({ error: `Verifica anti-bot fallita (token non valido: ${reason}).` });
           }
           if (action && action !== 'register') {
-            await registerRateLimiter.recordFailedAttempt(clientIp, email);
             return res.status(400).json({ error: 'Azione reCAPTCHA non corrispondente.' });
           }
           if (score < 0.5) {
-            await registerRateLimiter.recordFailedAttempt(clientIp, email);
             return res.status(400).json({ error: 'Rischio elevato rilevato dal controllo anti-bot.' });
           }
         } catch (err) {
@@ -108,7 +99,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const recaptchaResponse = await fetch(verifyUrl, { method: 'POST' });
           const recaptchaData = await recaptchaResponse.json();
           if (!recaptchaData?.success || (typeof recaptchaData.score === 'number' && recaptchaData.score < 0.5)) {
-            await registerRateLimiter.recordFailedAttempt(clientIp, email);
             return res.status(400).json({ error: 'Verifica anti-bot fallita.' });
           }
         }
@@ -122,7 +112,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const recaptchaResponse = await fetch(verifyUrl, { method: 'POST' });
         const recaptchaData = await recaptchaResponse.json();
         if (!recaptchaData?.success || (typeof recaptchaData.score === 'number' && recaptchaData.score < 0.5)) {
-          await registerRateLimiter.recordFailedAttempt(clientIp, email);
           return res.status(400).json({ error: 'Verifica anti-bot fallita.' });
         }
       }
@@ -152,29 +141,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Invia email di verifica se possibile
       const RESEND_API_KEY = process.env.RESEND_API_KEY;
-      // Deriva il base URL dalla richiesta se APP_BASE_URL non è impostato
-      const derivedBase = `${req.protocol}://${req.get('host')}`;
-      const APP_BASE_URL = process.env.APP_BASE_URL || derivedBase;
+      const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || '5000'}`;
       const verifyUrl = `${APP_BASE_URL}/api/auth/verify?token=${verificationToken}`;
-      // Escape basic HTML entities in displayName to avoid HTML injection in emails
       const escapeHtml = (s: string) => s
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-      const safeDisplayName = escapeHtml(displayName);
+        .replace(/'/g, "&#39;");
+      const safeDisplayName = escapeHtml(displayName || "");
       if (RESEND_API_KEY) {
         try {
           const resend = new Resend(RESEND_API_KEY);
           const { data, error } = await resend.emails.send({
-            // Usa il dominio di test Resend per verificare invio
-            from: 'onboarding@resend.dev',
+            from: 'no-reply@v2.beybladexmeta.com',
             to: email,
             subject: 'Verifica il tuo account',
             html: `<p>Ciao ${safeDisplayName},</p><p>Per completare la registrazione, verifica la tua email cliccando il link seguente:</p><p><a href="${verifyUrl}">Verifica il tuo account</a></p><p>Se non hai richiesto questa registrazione, ignora questa email.</p>`,
           });
-
           if (error) {
             console.error('Invio email di verifica fallito:', error);
           } else if (data?.id) {
@@ -183,14 +167,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.warn('Invio email: risposta inattesa da Resend:', { data, error });
           }
         } catch (e: any) {
-          console.error('Invio email di verifica fallito (eccezione):', e?.message || e);
+          console.error('Invio email di verifica fallito:', e?.message || e);
         }
       } else {
         console.warn('RESEND_API_KEY non configurata: email di verifica non inviata');
       }
 
-      // Successful registration clears any previous failed attempts
-      await registerRateLimiter.recordSuccessfulLogin(clientIp, email);
       return res.status(201).json({ user: userWithoutPassword, message: 'Registrazione completata. Controlla la tua email per verificare il tuo account.' });
     } catch (error) {
       return res.status(400).json({ error: 'Invalid request' });
@@ -243,41 +225,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Endpoint di verifica email
   app.get('/api/auth/verify', async (req, res) => {
-    try {
-      const token = (req.query.token as string | undefined)?.trim();
-      if (!token) {
-        return res.status(400).send('Token di verifica mancante');
-      }
-
-      const now = new Date();
-      const result = await db.select().from(users)
-        .where(eq(users.verification_token, token))
-        .limit(1);
-      const user = result[0];
-
-      if (!user) {
-        return res.status(400).send('Token di verifica non valido');
-      }
-      if (user.verification_token_expires_at && user.verification_token_expires_at < now) {
-        return res.status(400).send('Token di verifica scaduto');
-      }
-
-      await db.update(users)
-        .set({
-          is_verified: true,
-          verification_token: null,
-          verification_token_expires_at: null,
-        })
-        .where(eq(users.id, user.id));
-
-      return res.redirect('/login?verified=true');
-    } catch (error) {
-      return res.status(500).send('Errore durante la verifica');
-    }
-  });
-
-  // Alias endpoint di verifica email secondo specifica (/api/verify)
-  app.get('/api/verify', async (req, res) => {
     try {
       const token = (req.query.token as string | undefined)?.trim();
       if (!token) {
