@@ -101,6 +101,7 @@ export const comboStats = pgTable("combo_stats", {
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
+  dataCreazione: timestamp("data_creazione", { withTimezone: true }).notNull().default(sql`now()`),
 }, (table) => ({
   pk: primaryKey({ columns: [table.blade, table.assistBlade, table.ratchet, table.bit, table.lockChip] })
 }));

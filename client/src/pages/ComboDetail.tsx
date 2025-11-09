@@ -22,6 +22,7 @@ type ComboStats = {
   secondiPosti: number;
   terziPosti: number;
   punteggioTotale: number;
+  dataCreazione: string; // Assuming it's a string in ISO format
 };
 
 // Use the public MinIO URL like in Analytics.tsx

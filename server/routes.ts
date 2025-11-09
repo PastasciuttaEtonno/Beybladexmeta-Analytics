@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limitParam = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 20;
       const offset = (page - 1) * limit;
-      
+
       const search = req.query.search as string | undefined;
       const sortByParam = (req.query.sortBy as string) || 'score';
       const sortOrder = (req.query.sortOrder as string) || 'desc';
@@ -337,12 +337,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         first: comboStats.primiPosti,
         second: comboStats.secondiPosti,
         third: comboStats.terziPosti,
+        date: comboStats.dataCreazione,
       }[sortBy];
 
       const orderFn = sortOrder === 'asc' ? asc : desc;
-      
+
       const [topCombos, countResult] = await Promise.all([
-        query.orderBy(orderFn(sortColumn!)).limit(limit).offset(offset),
+        query.orderBy(orderFn(sortColumn!), desc(comboStats.dataCreazione)).limit(limit).offset(offset),
         countQuery
       ]);
 
@@ -735,8 +736,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const terziPosti = position === 3 ? 1 : 0;
 
         await db.execute(sql`
-          INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-          VALUES (${combo.blade}, ${combo.assistBlade}, ${combo.ratchet}, ${combo.bit}, ${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+          INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione)
+          VALUES (${combo.blade}, ${combo.assistBlade}, ${combo.ratchet}, ${combo.bit}, ${combo.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points}, NOW())
           ON CONFLICT (blade, assist_blade, ratchet, bit, lock_chip)
           DO UPDATE SET
             primi_posti = combo_stats.primi_posti + ${primiPosti},

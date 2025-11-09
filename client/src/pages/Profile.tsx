@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar } from "@/components/Avatar";
+// import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ export default function Profile() {
   const { user, logout, updateProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -60,38 +60,38 @@ export default function Profile() {
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
 
-    if (file.size > 500000) {
-      toast({
-        title: "Error",
-        description: "Image must be less than 500KB",
-        variant: "destructive",
-      });
-      return;
-    }
+  //   if (file.size > 500000) {
+  //     toast({
+  //       title: "Error",
+  //       description: "Image must be less than 500KB",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const photoURL = reader.result as string;
-      try {
-        await updateProfile({ photoURL });
-        toast({
-          title: "Success",
-          description: "Profile picture updated",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to upload photo",
-          variant: "destructive",
-        });
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+  //   const reader = new FileReader();
+  //   reader.onloadend = async () => {
+  //     const photoURL = reader.result as string;
+  //     try {
+  //       await updateProfile({ photoURL });
+  //       toast({
+  //         title: "Success",
+  //         description: "Profile picture updated",
+  //       });
+  //     } catch (error) {
+  //       toast({
+  //         title: "Error",
+  //         description: "Failed to upload photo",
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   };
+  //   reader.readAsDataURL(file);
+  // };
 
   const handleLogout = async () => {
     try {
@@ -122,8 +122,8 @@ export default function Profile() {
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
         <Card className="p-6">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="relative">
+          <div className="flex flex-col items-center space-y-4 mb-2">
+            {/* <div className="relative">
               <Avatar
                 src={user?.photoURL}
                 alt={user?.displayName || "User"}
@@ -144,7 +144,7 @@ export default function Profile() {
                 className="hidden"
                 data-testid="input-photo-upload"
               />
-            </div>
+            </div> */}
             <div className="text-center">
               <h2 className="text-xl font-bold" data-testid="text-display-name">
                 {user?.displayName}
@@ -157,10 +157,6 @@ export default function Profile() {
               </p>
             </div>
           </div>
-        </Card>
-
-        <Card className="p-6 space-y-4">
-          <h3 className="font-semibold">Modifica nome</h3>
           {isEditingName ? (
             <div className="space-y-3">
               <div className="space-y-2">
