@@ -9,6 +9,8 @@ import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavor
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
+import crypto from "node:crypto";
+import { Resend } from "resend";
 
 // Extend express session type
 declare module 'express-session' {
@@ -121,17 +123,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hashed = await hashPassword(password);
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 ora
+
       const newUser = await db.insert(users).values({
         email,
         password_hash: hashed,
         displayName,
         photoURL: null,
-        is_verified: true,
+        is_verified: false,
+        verification_token: verificationToken,
+        verification_token_expires_at: expiresAt,
       }).returning();
 
       const u = newUser[0];
       const { password_hash: _, password: __, ...userWithoutPassword } = u as any;
-      return res.status(201).json({ user: userWithoutPassword });
+      
+      // Invia email di verifica se possibile
+      const RESEND_API_KEY = process.env.RESEND_API_KEY;
+      const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || '5000'}`;
+      const verifyUrl = `${APP_BASE_URL}/api/auth/verify?token=${verificationToken}`;
+      if (RESEND_API_KEY) {
+        try {
+          const resend = new Resend(RESEND_API_KEY);
+          await resend.emails.send({
+            from: 'no-reply@beybladexmeta.com',
+            to: email,
+            subject: 'Verifica il tuo account',
+            html: `<p>Ciao ${displayName},</p><p>Per completare la registrazione, verifica la tua email cliccando il link seguente:</p><p><a href="${verifyUrl}">Verifica il tuo account</a></p><p>Se non hai richiesto questa registrazione, ignora questa email.</p>`,
+          });
+        } catch (e: any) {
+          console.error('Invio email di verifica fallito:', e?.message || e);
+        }
+      } else {
+        console.warn('RESEND_API_KEY non configurata: email di verifica non inviata');
+      }
+
+      return res.status(201).json({ user: userWithoutPassword, message: 'Registrazione completata. Controlla la tua email per verificare il tuo account.' });
     } catch (error) {
       return res.status(400).json({ error: 'Invalid request' });
     }
@@ -159,6 +187,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      if (!user.is_verified) {
+        return res.status(403).json({ error: 'Email non verificata. Controlla la tua casella di posta.' });
+      }
+
       const isValid = await verifyPassword(password, (user as any).password_hash ?? user.password);
       if (!isValid) {
         await loginRateLimiter.recordFailedAttempt(clientIp, email);
@@ -174,6 +206,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ user: userWithoutPassword });
     } catch (error) {
       res.status(400).json({ error: 'Invalid request' });
+    }
+  });
+  
+  // Endpoint di verifica email
+  app.get('/api/auth/verify', async (req, res) => {
+    try {
+      const token = (req.query.token as string | undefined)?.trim();
+      if (!token) {
+        return res.status(400).send('Token di verifica mancante');
+      }
+
+      const now = new Date();
+      const result = await db.select().from(users)
+        .where(eq(users.verification_token, token))
+        .limit(1);
+      const user = result[0];
+
+      if (!user) {
+        return res.status(400).send('Token di verifica non valido');
+      }
+      if (user.verification_token_expires_at && user.verification_token_expires_at < now) {
+        return res.status(400).send('Token di verifica scaduto');
+      }
+
+      await db.update(users)
+        .set({
+          is_verified: true,
+          verification_token: null,
+          verification_token_expires_at: null,
+        })
+        .where(eq(users.id, user.id));
+
+      return res.redirect('/login?verified=true');
+    } catch (error) {
+      return res.status(500).send('Errore durante la verifica');
     }
   });
 
