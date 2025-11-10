@@ -946,6 +946,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
+  app.get("/api/trends", async (req, res) => {
+    try {
+      const query = sql`
+        SELECT
+          to_char(t.data_torneo, 'YYYY-MM-01') AS month,
+          'blade' AS component_type,
+          tr.blade AS name,
+          SUM(tr.punti_guadagnati) AS total_points
+        FROM risultati_torneo tr
+        JOIN tornei t ON tr.torneo_id = t.torneo_id
+        GROUP BY month, tr.blade
+
+        UNION ALL
+
+        SELECT
+          to_char(t.data_torneo, 'YYYY-MM-01') AS month,
+          'ratchet' AS component_type,
+          tr.ratchet AS name,
+          SUM(tr.punti_guadagnati) AS total_points
+        FROM risultati_torneo tr
+        JOIN tornei t ON tr.torneo_id = t.torneo_id
+        GROUP BY month, tr.ratchet
+
+        UNION ALL
+
+        SELECT
+          to_char(t.data_torneo, 'YYYY-MM-01') AS month,
+          'bit' AS component_type,
+          tr.bit AS name,
+          SUM(tr.punti_guadagnati) AS total_points
+        FROM risultati_torneo tr
+        JOIN tornei t ON tr.torneo_id = t.torneo_id
+        GROUP BY month, tr.bit
+      `;
+
+      const trendData = await db.execute(query);
+
+      res.json(trendData.rows);
+    } catch (error) {
+      console.error("Error fetching trend data:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+
+  app.get(
+    "/api/admin/tournament-results",
+    requireAdmin, async (req, res) => {
+      try {
+        const user = await storage.getUser(req.session.userId!);
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        const { password_hash: _, password: __, ...userWithoutPassword } = user as any;
+        res.json({ user: userWithoutPassword });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get user' });
+      }
+  });
+
+  // Synergy endpoint: compute best allies for a selected component
+  app.get('/api/synergy', requireAuth, async (req, res) => {
+    try {
+      const typeRaw = String(req.query.type || '').toLowerCase();
+      const nameRaw = String(req.query.name || '').trim();
+
+      const allowedTypes = ['blade', 'ratchet', 'bit', 'assist-blade', 'lock-chip'];
+      if (!allowedTypes.includes(typeRaw)) {
+        return res.status(400).json({ error: 'Invalid type. Use blade, ratchet, bit, assist-blade, or lock-chip.' });
+      }
+      if (!nameRaw) {
+        return res.status(400).json({ error: 'Missing name parameter' });
+      }
+
+      const typeColumnMap: Record<string, string> = {
+        'blade': 'blade',
+        'ratchet': 'ratchet',
+        'bit': 'bit',
+        'assist-blade': 'assist_blade',
+        'lock-chip': 'lock_chip',
+      };
+
+      const selectedCol = typeColumnMap[typeRaw];
+      const limit = 5;
+
+      // Helper to run a grouped SUM query against combo_stats
+      const runTopQuery = async (groupCol: string, excludeNone: boolean) => {
+        const noneFilter = excludeNone ? sql`AND ${sql.raw(groupCol)} <> 'None'` : sql``;
+        const query = sql`
+          SELECT ${sql.raw(groupCol)} AS name, SUM(punteggio_totale) AS points
+          FROM combo_stats
+          WHERE ${sql.raw(selectedCol)} = ${nameRaw}
+          ${noneFilter}
+          GROUP BY ${sql.raw(groupCol)}
+          ORDER BY points DESC
+          LIMIT ${limit}
+        `;
+        const result = await db.execute(query);
+        return (result.rows as any[]).map(r => ({ name: r.name, points: Number(r.points) }));
+      };
+
+      // Decide which categories to compute based on selected type
+      let response: any = {};
+      if (typeRaw === 'blade') {
+        response.topAssistBlades = await runTopQuery('assist_blade', true);
+        response.topRatchets = await runTopQuery('ratchet', false);
+        response.topBits = await runTopQuery('bit', false);
+        response.topLockChips = await runTopQuery('lock_chip', true);
+      } else if (typeRaw === 'ratchet') {
+        response.topBlades = await runTopQuery('blade', false);
+        response.topBits = await runTopQuery('bit', false);
+        response.topAssistBlades = await runTopQuery('assist_blade', true);
+        response.topLockChips = await runTopQuery('lock_chip', true);
+      } else if (typeRaw === 'bit') {
+        response.topBlades = await runTopQuery('blade', false);
+        response.topRatchets = await runTopQuery('ratchet', false);
+        response.topAssistBlades = await runTopQuery('assist_blade', true);
+        response.topLockChips = await runTopQuery('lock_chip', true);
+      } else if (typeRaw === 'assist-blade') {
+        response.topBlades = await runTopQuery('blade', false);
+        response.topRatchets = await runTopQuery('ratchet', false);
+        response.topBits = await runTopQuery('bit', false);
+        response.topLockChips = await runTopQuery('lock_chip', true);
+      } else if (typeRaw === 'lock-chip') {
+        response.topBlades = await runTopQuery('blade', false);
+        response.topRatchets = await runTopQuery('ratchet', false);
+        response.topBits = await runTopQuery('bit', false);
+        response.topAssistBlades = await runTopQuery('assist_blade', true);
+      }
+
+      res.json(response);
+    } catch (error) {
+      console.error('Error fetching synergy data:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

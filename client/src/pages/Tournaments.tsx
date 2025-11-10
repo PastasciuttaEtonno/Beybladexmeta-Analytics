@@ -2,6 +2,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
-import { Lock, Trophy, Medal, Award, Eraser } from "lucide-react";
+import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -44,6 +46,70 @@ const isSingleWordBlade = (bladeName: string): boolean => {
   const hasMultipleCapitals = /[A-Z].*[A-Z]/.test(bladeName);
   return !hasMultipleCapitals;
 };
+
+type SearchableSelectProps = {
+  id: string;
+  testId?: string;
+  value: string;
+  onSelect: (val: string) => void;
+  options: string[];
+  placeholder: string;
+  disabled?: boolean;
+  includeNone?: boolean;
+};
+
+function SearchableSelect({
+  id,
+  testId,
+  value,
+  onSelect,
+  options,
+  placeholder,
+  disabled = false,
+  includeNone = false,
+}: SearchableSelectProps) {
+  const [open, setOpen] = useState(false);
+  const shownOptions = includeNone ? ["None", ...options] : options;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="w-full justify-between"
+          id={id}
+          data-testid={testId}
+          disabled={disabled}
+        >
+          {value || placeholder}
+          <ChevronsUpDown className="h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[280px]">
+        <Command>
+          <CommandInput placeholder={`Search ${placeholder.toLowerCase()}...`} />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Names">
+              {shownOptions.map((opt) => (
+                <CommandItem
+                  key={opt}
+                  value={opt}
+                  onSelect={(val) => {
+                    onSelect(val);
+                    setOpen(false);
+                  }}
+                >
+                  {opt}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function Tournaments() {
   const { user } = useAuth();
@@ -352,54 +418,30 @@ export default function Tournaments() {
 
             <div>
               <Label htmlFor={`${position}-${idx}-blade`}>Blade</Label>
-              <Select
+              <SearchableSelect
+                id={`${position}-${idx}-blade`}
+                testId={`select-${position}-${idx}-blade`}
                 value={combo.blade}
-                onValueChange={(val) =>
-                  updateCombo(position, idx, "blade", val)
-                }
-              >
-                <SelectTrigger
-                  id={`${position}-${idx}-blade`}
-                  data-testid={`select-${position}-${idx}-blade`}
-                >
-                  <SelectValue placeholder="Select blade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {componentsData?.blades.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select blade"
+                options={componentsData?.blades || []}
+                onSelect={(val) => updateCombo(position, idx, "blade", val)}
+              />
             </div>
 
             <div>
               <Label htmlFor={`${position}-${idx}-assistBlade`}>
                 Assist Blade
               </Label>
-              <Select
+              <SearchableSelect
+                id={`${position}-${idx}-assistBlade`}
+                testId={`select-${position}-${idx}-assistBlade`}
                 value={combo.assistBlade}
-                onValueChange={(val) =>
-                  updateCombo(position, idx, "assistBlade", val)
-                }
+                placeholder="Select assist blade"
+                options={componentsData?.assistBlades || []}
+                includeNone
                 disabled={!isSingleWordBlade(combo.blade)}
-              >
-                <SelectTrigger
-                  id={`${position}-${idx}-assistBlade`}
-                  data-testid={`select-${position}-${idx}-assistBlade`}
-                >
-                  <SelectValue placeholder="Select assist blade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="None">None</SelectItem>
-                  {componentsData?.assistBlades.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onSelect={(val) => updateCombo(position, idx, "assistBlade", val)}
+              />
               {!isSingleWordBlade(combo.blade) && combo.blade && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Multi-word blades cannot use Assist Blades
@@ -409,74 +451,40 @@ export default function Tournaments() {
 
             <div>
               <Label htmlFor={`${position}-${idx}-ratchet`}>Ratchet</Label>
-              <Select
+              <SearchableSelect
+                id={`${position}-${idx}-ratchet`}
+                testId={`select-${position}-${idx}-ratchet`}
                 value={combo.ratchet}
-                onValueChange={(val) =>
-                  updateCombo(position, idx, "ratchet", val)
-                }
-              >
-                <SelectTrigger
-                  id={`${position}-${idx}-ratchet`}
-                  data-testid={`select-${position}-${idx}-ratchet`}
-                >
-                  <SelectValue placeholder="Select ratchet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {componentsData?.ratchets.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select ratchet"
+                options={componentsData?.ratchets || []}
+                onSelect={(val) => updateCombo(position, idx, "ratchet", val)}
+              />
             </div>
 
             <div>
               <Label htmlFor={`${position}-${idx}-bit`}>Bit</Label>
-              <Select
+              <SearchableSelect
+                id={`${position}-${idx}-bit`}
+                testId={`select-${position}-${idx}-bit`}
                 value={combo.bit}
-                onValueChange={(val) => updateCombo(position, idx, "bit", val)}
-              >
-                <SelectTrigger
-                  id={`${position}-${idx}-bit`}
-                  data-testid={`select-${position}-${idx}-bit`}
-                >
-                  <SelectValue placeholder="Select bit" />
-                </SelectTrigger>
-                <SelectContent>
-                  {componentsData?.bits.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select bit"
+                options={componentsData?.bits || []}
+                onSelect={(val) => updateCombo(position, idx, "bit", val)}
+              />
             </div>
 
             <div>
               <Label htmlFor={`${position}-${idx}-lockChip`}>Lock Chip</Label>
-              <Select
+              <SearchableSelect
+                id={`${position}-${idx}-lockChip`}
+                testId={`select-${position}-${idx}-lockChip`}
                 value={combo.lockChip}
-                onValueChange={(val) =>
-                  updateCombo(position, idx, "lockChip", val)
-                }
+                placeholder="Select lock chip"
+                options={componentsData?.lockChips || []}
+                includeNone
                 disabled={!isSingleWordBlade(combo.blade)}
-              >
-                <SelectTrigger
-                  id={`${position}-${idx}-lockChip`}
-                  data-testid={`select-${position}-${idx}-lockChip`}
-                >
-                  <SelectValue placeholder="Select lock chip" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="None">None</SelectItem>
-                  {componentsData?.lockChips.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onSelect={(val) => updateCombo(position, idx, "lockChip", val)}
+              />
               {!isSingleWordBlade(combo.blade) && combo.blade && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Multi-word blades cannot use Lock Chips
