@@ -152,9 +152,9 @@ export default function Analytics() {
   });
 
   const { data: trendsData, isLoading: trendsLoading } = useQuery({
-    queryKey: ["trends"],
+    queryKey: ["/api/trends", "count", "week"],
     queryFn: async () => {
-      const res = await fetch("/api/trends");
+      const res = await fetch("/api/trends?metric=count&granularity=week");
       return res.json();
     },
   });
@@ -662,7 +662,7 @@ export default function Analytics() {
               <div className="flex flex-col mb-4 gap-3">
                 <div>
                   <p className="text-muted-foreground">
-                    Popolarita componenti nel tempo.
+                    Utilizzo settimanale dei componenti (conteggio).
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
@@ -726,7 +726,12 @@ export default function Analytics() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip
+                      wrapperStyle={{ outline: 'none' }}
+                      contentStyle={{ backgroundColor: 'var(--popover)', borderColor: 'var(--border)', color: 'var(--popover-foreground)' }}
+                      labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+                      itemStyle={{ color: 'var(--popover-foreground)' }}
+                    />
                     <Legend content={() => null} />
                     {transformedData.length > 0 &&
                       Object.keys(transformedData[0])
@@ -752,7 +757,7 @@ export default function Analytics() {
 
                 {selectedPieceName && (
                   <div className="mt-6">
-                    <h3 className="text-muted-foreground mb-3">Sinergie</h3>
+                    <h3 className="text-muted-foreground mb-3">Componenti spesso usati assieme</h3>
                     {synergyLoading ? (
                       <div className="text-muted-foreground text-sm">Caricamento suggerimenti...</div>
                     ) : synergyData ? (

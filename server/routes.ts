@@ -1039,38 +1039,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/trends", async (req, res) => {
     try {
-      const query = sql`
-        SELECT
-          to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
-          'blade' AS component_type,
-          cm.blade AS name,
-          SUM(cm.punti_guadagnati) AS total_points
-        FROM cm_match_results cm
-        GROUP BY month, cm.blade
+      const metricParam = String((req.query.metric || 'points')).toLowerCase();
+      const granularityParam = String((req.query.granularity || 'month')).toLowerCase();
 
-        UNION ALL
+      const metric = metricParam === 'count' ? 'count' : 'points';
+      const granularity = granularityParam === 'week' ? 'week' : 'month';
 
-        SELECT
-          to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
-          'ratchet' AS component_type,
-          cm.ratchet AS name,
-          SUM(cm.punti_guadagnati) AS total_points
-        FROM cm_match_results cm
-        GROUP BY month, cm.ratchet
+      let query;
 
-        UNION ALL
+      if (granularity === 'month' && metric === 'points') {
+        query = sql`
+          SELECT
+            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            'blade' AS component_type,
+            cm.blade AS name,
+            SUM(cm.punti_guadagnati) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.blade
 
-        SELECT
-          to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
-          'bit' AS component_type,
-          cm.bit AS name,
-          SUM(cm.punti_guadagnati) AS total_points
-        FROM cm_match_results cm
-        GROUP BY month, cm.bit
-      `;
+          UNION ALL
+
+          SELECT
+            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            'ratchet' AS component_type,
+            cm.ratchet AS name,
+            SUM(cm.punti_guadagnati) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.ratchet
+
+          UNION ALL
+
+          SELECT
+            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            'bit' AS component_type,
+            cm.bit AS name,
+            SUM(cm.punti_guadagnati) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.bit
+        `;
+      } else if (granularity === 'week' && metric === 'points') {
+        query = sql`
+          SELECT
+            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            'blade' AS component_type,
+            cm.blade AS name,
+            SUM(cm.punti_guadagnati) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.blade
+
+          UNION ALL
+
+          SELECT
+            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            'ratchet' AS component_type,
+            cm.ratchet AS name,
+            SUM(cm.punti_guadagnati) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.ratchet
+
+          UNION ALL
+
+          SELECT
+            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            'bit' AS component_type,
+            cm.bit AS name,
+            SUM(cm.punti_guadagnati) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.bit
+        `;
+      } else if (granularity === 'month' && metric === 'count') {
+        query = sql`
+          SELECT
+            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            'blade' AS component_type,
+            cm.blade AS name,
+            COUNT(*) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.blade
+
+          UNION ALL
+
+          SELECT
+            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            'ratchet' AS component_type,
+            cm.ratchet AS name,
+            COUNT(*) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.ratchet
+
+          UNION ALL
+
+          SELECT
+            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            'bit' AS component_type,
+            cm.bit AS name,
+            COUNT(*) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.bit
+        `;
+      } else {
+        // week + count
+        query = sql`
+          SELECT
+            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            'blade' AS component_type,
+            cm.blade AS name,
+            COUNT(*) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.blade
+
+          UNION ALL
+
+          SELECT
+            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            'ratchet' AS component_type,
+            cm.ratchet AS name,
+            COUNT(*) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.ratchet
+
+          UNION ALL
+
+          SELECT
+            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            'bit' AS component_type,
+            cm.bit AS name,
+            COUNT(*) AS total_points
+          FROM cm_match_results cm
+          GROUP BY month, cm.bit
+        `;
+      }
 
       const trendData = await db.execute(query);
-
       res.json(trendData.rows);
     } catch (error) {
       console.error("Error fetching trend data:", error);
@@ -1327,14 +1427,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tournamentDate: tournamentDate ?? null,
       }));
       const inserted = await db.insert(externalPlayerCombos).values(values).returning();
+      // Pre-fetch existing results for this player + tournament to avoid double-counting
+      const preExisting = await db
+        .select({ comboNumber: cmMatchResults.comboNumber })
+        .from(cmMatchResults)
+        .where(and(eq(cmMatchResults.tournamentId, parsed.tournamentId), eq(cmMatchResults.playerId, parsed.playerId)));
+      const existingComboNums = new Set<number>(preExisting.map(r => Number(r.comboNumber)));
+
       // Upsert into cm_match_results so /api/trends has data (requires date)
       if (tournamentDate) {
-        // Pre-fetch existing results for this player to avoid double-counting
-        const preExisting = await db
-          .select({ comboNumber: cmMatchResults.comboNumber })
-          .from(cmMatchResults)
-          .where(and(eq(cmMatchResults.tournamentId, parsed.tournamentId), eq(cmMatchResults.playerId, parsed.playerId)));
-        const existingComboNums = new Set(preExisting.map(r => Number(r.comboNumber)));
 
         // Ensure combo_stats rows exist to satisfy fk_combo_components
         // Use defaults (zeros) for counters; ON CONFLICT DO NOTHING
