@@ -404,7 +404,7 @@ export default function Favorites() {
                       </Select>
                       {!isSingleWordBlade(blade) && blade && (
                         <p className="text-xs text-muted-foreground">
-                          Multi-word blades cannot use Assist Blades
+                          Non CX blades cannot use Assist Blades
                         </p>
                       )}
                     </div>
@@ -468,7 +468,7 @@ export default function Favorites() {
                       </Select>
                       {!isSingleWordBlade(blade) && blade && (
                         <p className="text-xs text-muted-foreground">
-                          Multi-word blades cannot use Lock Chips
+                          Non CX blades cannot use Lock Chips
                         </p>
                       )}
                     </div>
@@ -669,7 +669,7 @@ export default function Favorites() {
                         </Select>
                         {!isSingleWordBlade(combo.blade) && combo.blade && (
                           <p className="text-xs text-muted-foreground">
-                            Multi-word blades cannot use Assist Blades
+                            Non CX blades cannot use Assist Blades
                           </p>
                         )}
 
@@ -736,7 +736,7 @@ export default function Favorites() {
                         </Select>
                         {!isSingleWordBlade(combo.blade) && combo.blade && (
                           <p className="text-xs text-muted-foreground">
-                            Multi-word blades cannot use Lock Chips
+                            Non CX blades cannot use Lock Chips
                           </p>
                         )}
                       </div>

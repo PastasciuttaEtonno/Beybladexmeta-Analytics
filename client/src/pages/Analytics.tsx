@@ -159,6 +159,16 @@ export default function Analytics() {
     },
   });
 
+  // Fallback names source from backend components lists
+  const { data: componentsData } = useQuery({
+    queryKey: ["components"],
+    queryFn: async () => {
+      const res = await fetch("/api/components");
+      if (!res.ok) throw new Error("Failed to fetch components");
+      return res.json();
+    },
+  });
+
   const [selectedComponent, setSelectedComponent] = useState('blade');
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [selectedPieceName, setSelectedPieceName] = useState<string | null>(null);
@@ -172,15 +182,29 @@ export default function Analytics() {
   };
 
   const availableNames = useMemo(() => {
-    if (!trendsData) return [];
-    return Array.from(
+    const namesFromTrends = Array.from(
       new Set(
-        (trendsData as any[])
+        ((trendsData || []) as any[])
           .filter((d: any) => d.component_type === selectedComponent)
           .map((d: any) => d.name),
       ),
     ).sort();
-  }, [trendsData, selectedComponent]);
+
+    if (namesFromTrends.length > 0) return namesFromTrends;
+
+    // Fallback to components list when trends are empty for the selected type
+    if (!componentsData) return [];
+    const mapKey: Record<string, string> = {
+      blade: "blades",
+      "assist-blade": "assistBlades",
+      ratchet: "ratchets",
+      bit: "bits",
+      "lock-chip": "lockChips",
+    };
+    const key = mapKey[selectedComponent] || "blades";
+    const arr = (componentsData as any)[key] as string[] | undefined;
+    return Array.isArray(arr) ? [...arr].sort() : [];
+  }, [trendsData, componentsData, selectedComponent]);
 
   const handleComponentChange = (value: string) => {
     setSelectedComponent(value);

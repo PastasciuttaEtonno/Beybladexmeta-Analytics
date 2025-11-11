@@ -9,7 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function runMigration() {
-  const migrationFile = join(__dirname, "..", "migrations", "0000_mushy_lucky_pierre.sql");
+  // Run FK update for external_player_combos -> cm_players
+  const migrationFile = join(__dirname, "..", "migrations", "0004_update_external_player_combos_fk.sql");
   
   try {
     const sql = readFileSync(migrationFile, "utf8");

@@ -17,7 +17,7 @@ async function seed() {
   
   console.log('Seed complete! Test user created:');
   console.log('Email: demo@example.com');
-  console.log('Password: password123');
+  console.log('Password: (not displayed)');
 }
 
 seed().catch(console.error);

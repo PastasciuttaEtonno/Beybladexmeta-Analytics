@@ -268,37 +268,73 @@ export const tournamentResultSchema = z.object({
 export type TournamentCombo = z.infer<typeof tournamentComboSchema>;
 export type TournamentResult = z.infer<typeof tournamentResultSchema>;
 
-// Tornei (tournaments) table
-export const tornei = pgTable("tornei", {
-  torneoId: varchar("torneo_id").primaryKey().default(sql`gen_random_uuid()`),
-  nomeTorneo: text("nome_torneo").notNull(),
-  dataTorneo: date("data_torneo").notNull(),
-  numeroPartecipanti: integer("numero_partecipanti").notNull(),
-  descrizione: text("descrizione"),
-  regione: text("regione").notNull(),
-  dataInserimento: timestamp("data_inserimento", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  dataIdx: index("idx_tornei_data").on(table.dataTorneo),
-}));
+// Results submitted using external player combos
+export const externalTournamentResultSchema = z.object({
+  nomeTorneo: z.string().min(1).max(100).transform((s) => s.trim()),
+  dataTorneo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  descrizione: z.string().max(500).transform((s) => s.trim()).optional(),
+  participants: z.number().int().min(6).max(200),
+  regione: z.enum([
+    "Piemonte",
+    "Valle d'Aosta",
+    "Lombardia",
+    "Trentino-Alto Adige",
+    "Veneto",
+    "Friuli-Venezia Giulia",
+    "Liguria",
+    "Emilia-Romagna",
+    "Toscana",
+    "Umbria",
+    "Marche",
+    "Lazio",
+    "Abruzzo",
+    "Molise",
+    "Campania",
+    "Puglia",
+    "Basilicata",
+    "Calabria",
+    "Sicilia",
+    "Sardegna",
+  ]),
+  tournamentId: z.string().min(1).max(64).transform((s) => s.trim()),
+  firstPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()),
+  secondPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()),
+  thirdPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()),
+});
 
-export type Torneo = typeof tornei.$inferSelect;
-export type InsertTorneo = typeof tornei.$inferInsert;
+export type ExternalTournamentResult = z.infer<typeof externalTournamentResultSchema>;
 
-// Risultati torneo (tournament results history)
-export const risultatiTorneo = pgTable("risultati_torneo", {
-  risultatoId: varchar("risultato_id").primaryKey().default(sql`gen_random_uuid()`),
-  torneoId: varchar("torneo_id").notNull().references(() => tornei.torneoId, { onDelete: 'cascade' }),
-  piazzamento: integer("piazzamento").notNull(),
+// Nuove tabelle per Challengermode
+// Anagrafica giocatori (Challengermode)
+export const cmPlayers = pgTable("cm_players", {
+  id: varchar("id").primaryKey(), // Challengermode player ID
+  nickname: text("nickname").notNull(),
+  avatar: text("avatar"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+// Storico combo e risultati per torneo/giocatore
+export const cmMatchResults = pgTable("cm_match_results", {
+  tournamentId: varchar("tournament_id").notNull(),
+  playerId: varchar("player_id").notNull().references(() => cmPlayers.id, { onDelete: 'cascade' }),
+  comboNumber: integer("combo_number").notNull(),
+  // componenti della combo
   blade: text("blade").notNull(),
   assistBlade: text("assist_blade").notNull(),
   ratchet: text("ratchet").notNull(),
   bit: text("bit").notNull(),
   lockChip: text("lock_chip").notNull(),
+  // campi aggiuntivi per lo scoring
+  piazzamento: integer("piazzamento").notNull(),
+  numeroPartecipanti: integer("numero_partecipanti").notNull(),
+  dataTorneo: date("data_torneo").notNull(),
   puntiGuadagnati: doublePrecision("punti_guadagnati").notNull(),
-});
-
-export type RisultatoTorneo = typeof risultatiTorneo.$inferSelect;
-export type InsertRisultatoTorneo = typeof risultatiTorneo.$inferInsert;
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.tournamentId, table.playerId, table.comboNumber] }),
+  tournamentIdx: index("cm_match_results_tournament_idx").on(table.tournamentId),
+  playerIdx: index("cm_match_results_player_idx").on(table.playerId),
+}));
 
 export const loginAttempts = pgTable("login_attempts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -315,3 +351,45 @@ export const loginAttempts = pgTable("login_attempts", {
 export const insertLoginAttemptSchema = createInsertSchema(loginAttempts).omit({ id: true });
 export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
+
+// Players table to store references to external (Challengermode) players
+// Deprecated: players (sostituita da cm_players)
+// Manteniamo i tipi altrove ma usiamo cmPlayers
+
+// Combos per external (Challengermode) tournament and player
+export const externalPlayerCombos = pgTable("external_player_combos", {
+  tournamentId: varchar("tournament_id").notNull(),
+  playerId: varchar("player_id").notNull().references(() => cmPlayers.id, { onDelete: 'cascade' }),
+  comboNumber: integer("combo_number").notNull(),
+  blade: text("blade").notNull(),
+  assistBlade: text("assist_blade").notNull(),
+  ratchet: text("ratchet").notNull(),
+  bit: text("bit").notNull(),
+  lockChip: text("lock_chip").notNull(),
+  // Campi di scoring opzionali per supportare inserimenti diretti
+  placement: integer("placement"),
+  totalParticipants: integer("total_participants"),
+  tournamentDate: date("tournament_date"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.tournamentId, table.playerId, table.comboNumber] }),
+  tournamentIdx: index("external_player_combos_tournament_idx").on(table.tournamentId),
+  playerIdx: index("external_player_combos_player_idx").on(table.playerId),
+  comboIdx: index("external_player_combos_combo_idx").on(table.blade, table.ratchet, table.bit),
+}));
+
+// Upsert schema for editing combos for a specific player in a tournament
+export const upsertTournamentPlayerCombosSchema = z.object({
+  tournamentId: z.string().min(1).max(64).transform((s) => s.trim()),
+  playerId: z.string().min(1).max(128).transform((s) => s.trim()),
+  combos: z.array(tournamentComboSchema).min(1).max(3),
+});
+
+export type CmPlayer = typeof cmPlayers.$inferSelect;
+export type InsertCmPlayer = typeof cmPlayers.$inferInsert;
+export type ExternalPlayerCombo = typeof externalPlayerCombos.$inferSelect;
+export type InsertExternalPlayerCombo = typeof externalPlayerCombos.$inferInsert;
+export type UpsertTournamentPlayerCombos = z.infer<typeof upsertTournamentPlayerCombosSchema>;
+
+export type CmMatchResult = typeof cmMatchResults.$inferSelect;
+export type InsertCmMatchResult = typeof cmMatchResults.$inferInsert;

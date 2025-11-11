@@ -12,6 +12,7 @@ import Home from "@/pages/Home";
 import Analytics from "@/pages/Analytics";
 import Favorites from "@/pages/Favorites";
 import Tournaments from "@/pages/Tournaments";
+import TournamentDetail from "@/pages/TournamentDetail";
 import Profile from "@/pages/Profile";
 import ComboDetail from "@/pages/ComboDetail";
 import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
@@ -45,6 +46,13 @@ function AppRoutes() {
       <Route path="/tournaments">
         <ProtectedRoute>
           <Tournaments />
+          <BottomNav />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/tournaments/:id">
+        <ProtectedRoute>
+          <TournamentDetail />
           <BottomNav />
         </ProtectedRoute>
       </Route>

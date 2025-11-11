@@ -31,12 +31,12 @@ async function createUser() {
       photoURL: null,
     }).returning();
     
-    console.log('\n✅ User created successfully!');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`Email: ${newUser.email}`);
-    console.log(`Display Name: ${newUser.displayName}`);
-    console.log(`Password: ${password}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  console.log('\n✅ User created successfully!');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`Email: ${newUser.email}`);
+  console.log(`Display Name: ${newUser.displayName}`);
+  console.log('Password: (not displayed for security)');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━\n');
   } catch (error) {
     console.error('Error creating user:', error);
     process.exit(1);

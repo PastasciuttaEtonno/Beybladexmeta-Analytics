@@ -20,8 +20,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
-import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil } from "lucide-react";
+import { useLocation } from "wouter";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -114,7 +114,8 @@ function SearchableSelect({
 export default function Tournaments() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'add'|'list'>(user?.isAdmin ? 'add' : 'list');
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<'add'|'list'>('list');
   const [nomeTorneo, setNomeTorneo] = useState<string>("");
   const [dataTorneo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [descrizione, setDescrizione] = useState<string>("");
@@ -439,13 +440,11 @@ export default function Tournaments() {
                 placeholder="Select assist blade"
                 options={componentsData?.assistBlades || []}
                 includeNone
-                disabled={!isSingleWordBlade(combo.blade)}
+                disabled={editCombos[idx]?.blade?.includes(' ')}
                 onSelect={(val) => updateCombo(position, idx, "assistBlade", val)}
               />
-              {!isSingleWordBlade(combo.blade) && combo.blade && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Multi-word blades cannot use Assist Blades
-                </p>
+              {editCombos[idx]?.blade?.includes(' ') && (
+                <p className="text-xs text-muted-foreground mt-1">Multi-word blades cannot use Assist Blades</p>
               )}
             </div>
 
@@ -482,13 +481,11 @@ export default function Tournaments() {
                 placeholder="Select lock chip"
                 options={componentsData?.lockChips || []}
                 includeNone
-                disabled={!isSingleWordBlade(combo.blade)}
+                disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
                 onSelect={(val) => updateCombo(position, idx, "lockChip", val)}
               />
-              {!isSingleWordBlade(combo.blade) && combo.blade && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Multi-word blades cannot use Lock Chips
-                </p>
+              {editCombos[idx]?.blade?.includes(' ') && (
+                <p className="text-xs text-muted-foreground mt-1">Multi-word blades cannot use Lock Chips</p>
               )}
             </div>
           </div>
@@ -501,46 +498,86 @@ export default function Tournaments() {
   type TorneoCard = {
     torneoId: string;
     nomeTorneo: string;
-    dataTorneo: string | Date;
-    numeroPartecipanti: number;
-    descrizione: string | null;
-    regione: string;
+    dataTorneo?: string | Date | null;
+    description?: string;
+    state?: string;
+    contactUrl?: string;
+    idSuffix?: string | null;
+    gameTitle?: { id: string; slug: string; title: string };
   };
 
-  const { data: tournamentsData, refetch: refetchTournaments } = useQuery<{ tournaments: TorneoCard[] }>({
-    queryKey: ["/api/admin/tournaments"],
-    enabled: activeTab === 'list',
-  });
-
-  // Selection state and results fetching for dialog
-  const [selectedTournament, setSelectedTournament] = useState<TorneoCard | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  // Filters for list view
+  // Filters for list view (used for external fetch)
   const [searchTerm, setSearchTerm] = useState("");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
   const [endDateFilter, setEndDateFilter] = useState<string>("");
   const [regionFilter, setRegionFilter] = useState<string>("");
 
-  const { data: resultsData, isLoading: resultsLoading, refetch: refetchResults } = useQuery<{
-    firstPlaceCombos: any[];
-    secondPlaceCombos: any[];
-    thirdPlaceCombos: any[];
-  }>({
-    queryKey: ["/api/admin/tournaments", selectedTournament?.torneoId, "results"],
+  const { data: tournamentsData, refetch: refetchTournaments, isLoading: tournamentsLoading } = useQuery<{ tournaments: TorneoCard[] }>({
+    queryKey: ["/api/challengermode/tournaments", startDateFilter || ""],
     queryFn: async () => {
-      const id = selectedTournament?.torneoId;
-      const resp = await fetch(`/api/admin/tournaments/${id}/results`);
-      if (!resp.ok) throw new Error("Failed to fetch tournament results");
-      return resp.json();
+      const afterIso = startDateFilter
+        ? new Date(startDateFilter).toISOString()
+        : "2024-01-01T00:00:00Z";
+      const resp = await fetch(`/api/challengermode/tournaments?after=${encodeURIComponent(afterIso)}`, {
+        credentials: "include",
+      });
+      if (!resp.ok) throw new Error("Failed to fetch tournaments");
+      const json = await resp.json();
+      const ext = (json?.tournaments ?? []) as any[];
+      const mapped: TorneoCard[] = ext.map((t) => ({
+        torneoId: t.id,
+        nomeTorneo: t.name,
+        dataTorneo: null,
+        description: t.description ?? undefined,
+        state: t.state ?? undefined,
+        contactUrl: t.contactUrl ?? undefined,
+        idSuffix: t.idSuffix ?? null,
+        gameTitle: t.gameTitle ?? undefined,
+      }));
+      return { tournaments: mapped };
     },
-    enabled: dialogOpen && !!selectedTournament?.torneoId,
+    enabled: activeTab === 'list',
   });
 
+  // Selection state and dialog
+  // Dialog replaced by route-based detail page
+
+  // Admin: player combo editor state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: string; username: string } | null>(null);
+  const [editCombos, setEditCombos] = useState<ComboForm[]>([
+    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  ]);
+
+  // Admin combo editor dialog moved to TournamentDetail route
+
+  // Keep local editCombos for add-results form only
+
+  const updateEditCombo = (index: number, field: keyof ComboForm, value: string) => {
+    setEditCombos((prev) =>
+      prev.map((c, i) => {
+        if (i !== index) return c;
+        const updated = { ...c, [field]: value };
+        // If blade has a space, it's a single-piece; clear assist blade and lock chip
+        if (field === 'blade' && value.includes(' ')) {
+          updated.assistBlade = '';
+          updated.lockChip = '';
+        }
+        return updated;
+      })
+    );
+  };
+
+  // Save mutation not used on list page
+
+  // Fetch external tournament leaderboard/details when dialog opens
+  // Detail query removed; handled in TournamentDetail page
+
+
   const openTournamentDialog = (t: TorneoCard) => {
-    setSelectedTournament(t);
-    setDialogOpen(true);
-    setTimeout(() => refetchResults(), 0);
+    setLocation(`/tournaments/${t.torneoId}`);
   };
 
   useEffect(() => {
@@ -555,11 +592,12 @@ export default function Tournaments() {
       const nameOk =
         !searchTerm ||
         t.nomeTorneo.toLowerCase().includes(searchTerm.trim().toLowerCase());
-      const d = new Date(t.dataTorneo);
-      const startOk = !startDateFilter || d >= new Date(startDateFilter);
-      const endOk = !endDateFilter || d <= new Date(endDateFilter);
-      const regionOk = !regionFilter || t.regione === regionFilter;
-      return nameOk && startOk && endOk && regionOk;
+      const dVal = t.dataTorneo ? new Date(t.dataTorneo) : null;
+      const startOk = !startDateFilter || (dVal && dVal >= new Date(startDateFilter));
+      const endOk = !endDateFilter || (dVal && dVal <= new Date(endDateFilter));
+      // Region is not available from Challengermode API; ignore if absent
+      const regionOk = true;
+      return nameOk && (!!dVal ? (startOk && endOk) : true) && regionOk;
     });
     return (
       <div className="space-y-4">
@@ -631,7 +669,11 @@ export default function Tournaments() {
           </Button>
         </div>
 
-        {tournaments.length === 0 ? (
+        {tournamentsLoading ? (
+          <Card className="p-6 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </Card>
+        ) : tournaments.length === 0 ? (
           <Card className="p-6">
             <p className="text-muted-foreground">Nessun torneo trovato.</p>
           </Card>
@@ -642,20 +684,17 @@ export default function Tournaments() {
                 <CardHeader className="pb-2">
                   <h3 className="text-base font-semibold">{t.nomeTorneo}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(t.dataTorneo), 'dd MMM yyyy')}
+                    {t.dataTorneo ? format(new Date(t.dataTorneo), 'dd MMM yyyy') : (t.state || 'Completed tournament')}
                   </p>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Partecipanti</span>
-                    <span className="text-sm font-medium">{t.numeroPartecipanti}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-sm">Regione</span>
-                    <span className="text-sm font-medium">{t.regione}</span>
-                  </div>
-                  {t.descrizione && (
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{t.descrizione}</p>
+                  {t.description && (
+                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{t.description}</p>
+                  )}
+                  {t.contactUrl && (
+                    <p className="mt-2 text-xs">
+                      <a className="text-blue-600 hover:underline" href={t.contactUrl} target="_blank" rel="noreferrer">Contatti / Info</a>
+                    </p>
                   )}
                   {/* Placeholder for future filters and per-card dialog */}
                 </CardContent>
@@ -671,132 +710,7 @@ export default function Tournaments() {
           </div>
         )}
 
-        {/* Dialog with tournament combos for top placements */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedTournament ? selectedTournament.nomeTorneo : "Dettagli torneo"}
-              </DialogTitle>
-              <p className="text-xs text-muted-foreground">
-                {selectedTournament ? format(new Date(selectedTournament.dataTorneo), 'dd MMM yyyy') : ''}
-              </p>
-            </DialogHeader>
-
-            {/* Scrollable content container to handle many combos */}
-            <div className="max-h-[70vh] overflow-y-auto pr-1">
-            {resultsLoading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => (
-                  <div key={i} className="h-24 bg-muted/30 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : resultsData ? (
-              <div className="space-y-4">
-                {/* First Place */}
-                {resultsData.firstPlaceCombos.length > 0 && (
-                  <Card>
-                    <CardHeader className="space-y-0.5 pb-2">
-                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <Trophy className="w-4 h-4 text-yellow-500" /> 1° Posto
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {resultsData.firstPlaceCombos.map((combo, idx) => (
-                        <div key={`first-${idx}`} className="space-y-2 pb-3 border-b last:border-b-0 last:pb-0">
-                          <p className="text-xs font-semibold text-muted-foreground">Combo {idx + 1}</p>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-12 h-12 shrink-0">
-                              <ComponentImage folder="blades" name={combo.blade} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs text-muted-foreground">Blade:</span> <span className="text-xs font-medium">{combo.blade}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div><span className="text-muted-foreground">Assist:</span> {combo.assistBlade}</div>
-                            <div><span className="text-muted-foreground">Ratchet:</span> {combo.ratchet}</div>
-                            <div><span className="text-muted-foreground">Bit:</span> {combo.bit}</div>
-                            <div className="col-span-2"><span className="text-muted-foreground">Chip:</span> {combo.lockChip}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Second Place */}
-                {resultsData.secondPlaceCombos.length > 0 && (
-                  <Card>
-                    <CardHeader className="space-y-0.5 pb-2">
-                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <Medal className="w-4 h-4 text-gray-400" /> 2° Posto
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {resultsData.secondPlaceCombos.map((combo, idx) => (
-                        <div key={`second-${idx}`} className="space-y-2 pb-3 border-b last:border-b-0 last:pb-0">
-                          <p className="text-xs font-semibold text-muted-foreground">Combo {idx + 1}</p>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-12 h-12 shrink-0">
-                              <ComponentImage folder="blades" name={combo.blade} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs text-muted-foreground">Blade:</span> <span className="text-xs font-medium">{combo.blade}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div><span className="text-muted-foreground">Assist:</span> {combo.assistBlade}</div>
-                            <div><span className="text-muted-foreground">Ratchet:</span> {combo.ratchet}</div>
-                            <div><span className="text-muted-foreground">Bit:</span> {combo.bit}</div>
-                            <div className="col-span-2"><span className="text-muted-foreground">Chip:</span> {combo.lockChip}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Third Place */}
-                {resultsData.thirdPlaceCombos.length > 0 && (
-                  <Card>
-                    <CardHeader className="space-y-0.5 pb-2">
-                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <Award className="w-4 h-4 text-amber-600" /> 3° Posto
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {resultsData.thirdPlaceCombos.map((combo, idx) => (
-                        <div key={`third-${idx}`} className="space-y-2 pb-3 border-b last:border-b-0 last:pb-0">
-                          <p className="text-xs font-semibold text-muted-foreground">Combo {idx + 1}</p>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-12 h-12 shrink-0">
-                              <ComponentImage folder="blades" name={combo.blade} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs text-muted-foreground">Blade:</span> <span className="text-xs font-medium">{combo.blade}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div><span className="text-muted-foreground">Assist:</span> {combo.assistBlade}</div>
-                            <div><span className="text-muted-foreground">Ratchet:</span> {combo.ratchet}</div>
-                            <div><span className="text-muted-foreground">Bit:</span> {combo.bit}</div>
-                            <div className="col-span-2"><span className="text-muted-foreground">Chip:</span> {combo.lockChip}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            ) : (
-              <Card className="p-6">
-                <p className="text-sm text-muted-foreground">Nessun risultato trovato per questo torneo.</p>
-              </Card>
-            )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Tournament detail dialog removed; navigate to dedicated page */}
       </div>
     );
   };
@@ -806,124 +720,14 @@ export default function Tournaments() {
       <PageHeader title="Tournament" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
-        {/* Tabs: Add tournament / See tournaments (shared UI component) */}
-        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'add'|'list')} className="w-full">
-          {user?.isAdmin && (
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="add" data-testid="tab-add-tournament">
-                Add tournament
-              </TabsTrigger>
-              <TabsTrigger value="list" data-testid="tab-see-tournaments">
-                See tournaments
-              </TabsTrigger>
-            </TabsList>
-          )}
+        {/* Single list view; admins can edit combos from player dialog */}
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'list')} className="w-full">
 
           <TabsContent value="list" className="space-y-4">
             {renderListView()}
           </TabsContent>
 
-          {user?.isAdmin && (
-          <TabsContent value="add" className="space-y-4">
-            <form onSubmit={handleSubmit} className="space-y-6">
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold">Informazioni torneo</h3>
-              </CardHeader>
-              <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label htmlFor="nomeTorneo">Nome torneo</Label>
-                  <Input
-                    id="nomeTorneo"
-                    value={nomeTorneo}
-                    onChange={(e) => setNomeTorneo(e.target.value)}
-                    placeholder="Es. Meta Cup"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dataTorneo">Data torneo</Label>
-                  <Input
-                    id="dataTorneo"
-                    type="date"
-                    value={dataTorneo}
-                    readOnly
-                    disabled
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="regione">Regione</Label>
-                  <Select value={regione} onValueChange={(val) => setRegione(val)}>
-                    <SelectTrigger id="regione" data-testid="select-regione">
-                      <SelectValue placeholder="Seleziona regione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ITALIAN_REGIONS.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="mb-4">
-                <Label htmlFor="descrizione">Descrizione (opzionale)</Label>
-                <Input
-                  id="descrizione"
-                  value={descrizione}
-                  onChange={(e) => setDescrizione(e.target.value)}
-                  placeholder="Note o dettagli del torneo"
-                />
-              </div>
-              <div>
-                <Label htmlFor="participants">Numero dei partecipanti</Label>
-                <Input
-                  id="participants"
-                  type="number"
-                  min="6"
-                  max="200"
-                  value={participants || ""}
-                  onChange={(e) =>
-                    setParticipants(parseInt(e.target.value) || 0)
-                  }
-                  placeholder="da 6 a 200"
-                  data-testid="input-participants"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {renderComboInputs(
-            firstPlace,
-            "first",
-            <Trophy className="w-5 h-5 text-yellow-500" />,
-            "1st Place",
-          )}
-          {renderComboInputs(
-            secondPlace,
-            "second",
-            <Medal className="w-5 h-5 text-gray-400" />,
-            "2nd Place",
-          )}
-            {renderComboInputs(
-              thirdPlace,
-              "third",
-              <Award className="w-5 h-5 text-amber-600" />,
-              "3rd Place",
-            )}
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={submitMutation.isPending}
-              data-testid="button-submit-tournament"
-            >
-              {submitMutation.isPending
-                ? "Submitting..."
-                : "Submit Tournament Results"}
-            </Button>
-            </form>
-          </TabsContent>
-          )}
+          
         </Tabs>
       </main>
     </div>
