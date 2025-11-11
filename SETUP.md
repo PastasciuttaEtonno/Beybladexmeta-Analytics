@@ -241,6 +241,21 @@ npm run db:reset
 
 ---
 
+### Challengermode Integration
+
+Add these variables to enable Challengermode GraphQL and server-side caching:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CHALLENGERMODE_REFRESH_KEY` | Refresh key for access token | None |
+| `CHALLENGERMODE_GRAPHQL_URL` | GraphQL endpoint | `https://publicapi.challengermode.com/graphql` |
+| `CHALLENGERMODE_AUTH_URL` | Access key endpoint | `https://publicapi.challengermode.com/mk1/v1/auth/access_keys` |
+| `CHALLENGERMODE_CACHE_TTL_MINUTES` | Cache TTL for `external_api_cache` | `2880` (2 days) |
+
+Notes:
+- Server caches Challengermode responses in `external_api_cache` with a shared TTL.
+- Clear cache during development with `npx tsx scripts/db-clear.ts`.
+
 ## Running the Application
 
 ### Development Mode (with hot reload)
@@ -265,6 +280,8 @@ npm run dev           # Start development server with hot reload
 npm run db:push       # Push database schema changes
 npm run db:push --force  # Force push schema (ignores warnings)
 npm run create-admin  # Create an admin user (interactive CLI)
+npm run db:status     # Show tables and row counts
+npm run db:migrate:tournaments  # Import tournament definitions (if applicable)
 ```
 
 ---

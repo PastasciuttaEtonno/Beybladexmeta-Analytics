@@ -6,10 +6,11 @@ async function createUser() {
   const email = process.argv[2];
   const password = process.argv[3];
   const displayName = process.argv[4];
+  const adminFlag = process.argv[5];
 
   if (!email || !password || !displayName) {
-    console.error('Usage: npm run create-user <email> <password> <displayName>');
-    console.error('Example: npm run create-user john@example.com password123 "John Doe"');
+    console.error('Usage: npm run user:create <email> <password> <displayName> [isAdmin]');
+    console.error('Example: npm run user:create john@example.com password123 "John Doe" true');
     process.exit(1);
   }
 
@@ -23,18 +24,22 @@ async function createUser() {
     }
 
     const hashedPassword = await hashPassword(password);
-    
+
+    const isAdmin = adminFlag ? /^(true|1|yes)$/i.test(adminFlag) : false;
+
     const [newUser] = await db.insert(users).values({
       email,
       password_hash: hashedPassword,
       displayName,
       photoURL: null,
+      isAdmin,
     }).returning();
     
   console.log('\n✅ User created successfully!');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`Email: ${newUser.email}`);
   console.log(`Display Name: ${newUser.displayName}`);
+  console.log(`Admin: ${newUser.isAdmin ? 'yes' : 'no'}`);
   console.log('Password: (not displayed for security)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━\n');
   } catch (error) {

@@ -188,6 +188,15 @@ export default function TournamentDetail() {
     enabled: !!tournamentId,
   });
 
+  // Compute total players: prefer Challengermode-provided count, fallback to counting lineup members
+  const totalPlayers = (() => {
+    const userCount = detailResp?.detail?.attendance?.signups?.userCount ?? null;
+    if (typeof userCount === 'number' && userCount > 0) return userCount;
+    const lineups = detailResp?.detail?.attendance?.signups?.lineups ?? [];
+    const sum = (lineups || []).reduce((acc: number, lu: any) => acc + ((lu?.members ?? []).length), 0);
+    return sum || 0;
+  })();
+
   // Admin combo editor state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: string; username: string } | null>(null);
@@ -416,6 +425,9 @@ export default function TournamentDetail() {
             </CardTitle>
             <p className="text-xs text-muted-foreground">
               {detailResp?.detail?.state || ''}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Giocatori totali: {totalPlayers}
             </p>
             {detailResp?.detail?.contactUrl && (
               <p className="text-xs">

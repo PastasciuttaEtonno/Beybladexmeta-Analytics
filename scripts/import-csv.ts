@@ -1,9 +1,10 @@
 #!/usr/bin/env tsx
 import "dotenv/config";
-import { createReadStream } from "fs";
+import { createReadStream, existsSync } from "fs";
 import { resolve } from "path";
 import { parse } from "csv-parse";
 import { Pool } from "pg";
+import bcrypt from "bcrypt";
 
 const DATA_DIR = resolve(process.cwd(), "database_data");
 
@@ -33,6 +34,10 @@ function toNullable(v: string | undefined): string | null {
 
 async function readCsv(fileName: string): Promise<CsvRow[]> {
   const filePath = resolve(DATA_DIR, fileName);
+  if (!existsSync(filePath)) {
+    console.warn(`⚠️  CSV not found, skipping: ${filePath}`);
+    return [];
+  }
   const rows: CsvRow[] = [];
   await new Promise<void>((resolvePromise, reject) => {
     const parser = parse({ columns: true, skip_empty_lines: true, trim: true });
@@ -57,19 +62,21 @@ async function importUsers(pool: Pool) {
   try {
     await client.query("BEGIN");
     for (const r of rows) {
+      const rawPassword = r.password || "password123";
+      const hashed = await bcrypt.hash(rawPassword, 10);
       await client.query(
-        `INSERT INTO users (id, email, password, display_name, photo_url, is_admin)
+        `INSERT INTO users (id, email, password_hash, display_name, photo_url, is_admin)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (id) DO UPDATE SET
            email = EXCLUDED.email,
-           password = EXCLUDED.password,
+           password_hash = EXCLUDED.password_hash,
            display_name = EXCLUDED.display_name,
            photo_url = EXCLUDED.photo_url,
            is_admin = EXCLUDED.is_admin`,
         [
           r.id,
           r.email,
-          r.password,
+          hashed,
           r.display_name,
           toNullable(r.photo_url),
           toBool(r.is_admin),

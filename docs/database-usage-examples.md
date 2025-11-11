@@ -25,6 +25,28 @@ psql $DATABASE_URL
 
 ## Code Examples
 
+### External API Cache (server-side)
+
+```typescript
+import { db } from './server/db';
+import { externalApiCache } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+
+// Read from cache
+const key = 'cm:tournaments:beybladex:2024-10-01';
+const rows = await db.select().from(externalApiCache).where(eq(externalApiCache.cacheKey, key));
+const cached = rows[0]?.data;
+
+// Write to cache
+await db.insert(externalApiCache).values({
+  cacheKey: key,
+  data: { tournaments: [] },
+}).onConflictDoUpdate({
+  target: externalApiCache.cacheKey,
+  set: { data: { tournaments: [] } },
+});
+```
+
 ### Inserting Data
 
 ```typescript
@@ -130,6 +152,14 @@ Individual performance tracking for each component type:
 
 **Use Case**: See which individual parts are most successful across all combinations
 
+### external_api_cache
+Server-side cache for upstream API responses.
+- `cache_key` (text, primary key)
+- `data` (jsonb, not null)
+- `created_at` (timestamptz, default `now()`)
+
+**Use Case**: Reduce upstream GraphQL calls; cached JSON is reused until TTL.
+
 ## Running SQL Directly
 
 You can use the SQL runner in the database GUI or the `execute_sql_tool`:
@@ -155,3 +185,4 @@ ORDER BY punteggio_totale DESC;
 3. **Use transactions** for related updates (combo + component stats together)
 4. **Query by score** for leaderboards (indexed for performance)
 5. **View in GUI** for quick data inspection and debugging
+6. **Prefer server cache** for external API responses; clear with `db-clear.ts` when needed

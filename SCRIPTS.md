@@ -258,6 +258,38 @@ Should this user be an admin? (y/n): y
 - UUID-based user IDs
 
 ---
+### `scripts/refresh-view.ts`
+
+**Purpose:** Refresh the materialized view `top_component_snapshot`.
+
+**Usage:**
+```bash
+npx tsx scripts/refresh-view.ts
+```
+
+**Notes:** Attempts `CONCURRENTLY`, falls back to regular refresh.
+
+---
+
+### `scripts/db-clear.ts`
+
+**Purpose:** Truncate data across public tables while excluding essential ones.
+
+**Usage:**
+```bash
+npx tsx scripts/db-clear.ts
+```
+
+**Behavior:**
+- Excludes: `session`, `users`, `cm_players`
+- Truncates: stats tables, favorites, player combos, `external_api_cache`, etc.
+- Resets identities and cascades for referential integrity.
+
+**When to use:**
+- Clear server-side cache quickly (`external_api_cache`)
+- Wipe test data during development without dropping schema
+
+---
 
 ## Troubleshooting
 
@@ -340,6 +372,7 @@ npm run create-admin
 4. **Check status regularly** with `db-status.ts`
 5. **Seed sample data** for testing and development
 6. **Create admin users** via CLI, not direct SQL
+7. **Use `db-clear.ts`** to clear cached/external data without schema changes
 
 ---
 
@@ -357,4 +390,10 @@ tsx scripts/db-reset.ts
 npm run db:push
 tsx server/create-user.ts
 npm run dev
+```
+
+```bash
+# Refresh materialized view and clear cache/data
+npx tsx scripts/refresh-view.ts
+npx tsx scripts/db-clear.ts
 ```

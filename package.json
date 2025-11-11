@@ -12,7 +12,8 @@
     "db:test-conn": "tsx scripts/db-test-conn.ts",
     "db:import": "tsx scripts/import-csv.ts",
     "db:push": "drizzle-kit push",
-    "db:migrate:tournaments": "tsx scripts/db-add-tournaments.ts"
+    "db:migrate:tournaments": "tsx scripts/db-add-tournaments.ts",
+    "user:create": "tsx server/create-user.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.927.0",
