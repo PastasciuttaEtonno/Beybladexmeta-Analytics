@@ -1369,6 +1369,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tournamentDate: tournamentDate ?? null,
       }));
       const inserted = await db.insert(externalPlayerCombos).values(values).returning();
+      // Track pre-existing combo numbers to avoid double-counting in aggregates
+      let existingComboNums: Set<number> = new Set<number>();
+
       // Upsert into cm_match_results so /api/trends has data (requires date)
       if (tournamentDate) {
         // Pre-fetch existing results for this player to avoid double-counting
@@ -1376,7 +1379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .select({ comboNumber: cmMatchResults.comboNumber })
           .from(cmMatchResults)
           .where(and(eq(cmMatchResults.tournamentId, parsed.tournamentId), eq(cmMatchResults.playerId, parsed.playerId)));
-        const existingComboNums = new Set(preExisting.map(r => Number(r.comboNumber)));
+        existingComboNums = new Set(preExisting.map(r => Number(r.comboNumber)));
 
         // Ensure combo_stats rows exist to satisfy fk_combo_components
         // Use defaults (zeros) for counters; ON CONFLICT DO NOTHING

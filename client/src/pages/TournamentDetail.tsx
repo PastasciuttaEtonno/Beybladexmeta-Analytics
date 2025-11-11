@@ -80,6 +80,33 @@ const isSingleWordBlade = (bladeName: string): boolean => {
   return !hasMultipleCapitals;
 };
 
+// Build a human-friendly combo title from selected components.
+// Order: Lock Chip (if present) + Blade (+ Assist Blade if present) + Ratchet + Bit
+// If the blade is single-word and assist blade is present, concatenate without a space.
+const formatComboTitle = (combo?: ComboForm): string => {
+  if (!combo) return "";
+  const parts: string[] = [];
+
+  const lockChip = (combo.lockChip || "").trim();
+  const blade = (combo.blade || "").trim();
+  const assist = (combo.assistBlade || "").trim();
+  const ratchet = (combo.ratchet || "").trim();
+  const bit = (combo.bit || "").trim();
+
+  if (lockChip && lockChip !== 'None') parts.push(lockChip);
+
+  let bladeAssist = blade;
+  if (assist && assist !== 'None') {
+    bladeAssist = isSingleWordBlade(blade) ? `${blade}${assist}` : `${blade} ${assist}`;
+  }
+  if (bladeAssist) parts.push(bladeAssist);
+
+  if (ratchet) parts.push(ratchet);
+  if (bit) parts.push(bit);
+
+  return parts.filter(Boolean).join(" ");
+};
+
 type SearchableSelectProps = {
   id: string;
   testId?: string;
@@ -332,25 +359,34 @@ export default function TournamentDetail() {
                         <div className="mt-2 flex flex-col gap-2 max-w-full">
                           {combosList && combosList.length > 0 ? (
                             combosList.map((combo, comboIdx) => (
-                              <div key={comboIdx} className="flex items-center gap-3 flex-wrap">
-                                <span className="text-xs text-muted-foreground mr-1">combo {comboIdx + 1} :</span>
-                                <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="blades" name={combo.blade} /></div>
-                                {combo.assistBlade && combo.assistBlade !== 'None' && (
-                                  <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="assist-blades" name={combo.assistBlade} /></div>
-                                )}
-                                <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="ratchets" name={combo.ratchet} /></div>
-                                <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="bits" name={combo.bit} /></div>
+                              <div key={comboIdx} className="flex flex-col gap-1 max-w-full">
+                                <span className="text-xs sm:text-sm font-medium text-foreground truncate max-w-[240px] sm:max-w-[320px]">
+                                  {formatComboTitle(combo) || `Combo ${comboIdx + 1}`}
+                                </span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {combo.lockChip && combo.lockChip !== 'None' && (
+                                    <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="chips" name={combo.lockChip} /></div>
+                                  )}
+                                  <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="blades" name={combo.blade} /></div>
+                                  {combo.assistBlade && combo.assistBlade !== 'None' && (
+                                    <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="assist-blades" name={combo.assistBlade} /></div>
+                                  )}
+                                  <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="ratchets" name={combo.ratchet} /></div>
+                                  <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="bits" name={combo.bit} /></div>
+                                </div>
                               </div>
                             ))
                           ) : (
                             <div className="flex flex-col gap-2">
                               {[0,1,2].map((cIdx) => (
-                                <div key={cIdx} className="flex items-center gap-3 flex-wrap">
-                                  <span className="text-xs text-muted-foreground mr-1">combo {cIdx + 1} :</span>
-                                  <SvgPlaceholder />
-                                  <SvgPlaceholder />
-                                  <SvgPlaceholder />
-                                  <SvgPlaceholder />
+                                <div key={cIdx} className="flex flex-col gap-1 max-w-full">
+                                  <span className="text-xs sm:text-sm font-medium text-foreground">Combo {cIdx + 1}</span>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <SvgPlaceholder />
+                                    <SvgPlaceholder />
+                                    <SvgPlaceholder />
+                                    <SvgPlaceholder />
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -420,7 +456,12 @@ export default function TournamentDetail() {
                 <div className="space-y-6">
                   {[0, 1, 2].map((idx) => (
                     <div key={idx} className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0">
-                      <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
+                      <h4
+                        className="font-medium text-sm text-muted-foreground truncate"
+                        title={formatComboTitle(editCombos[idx]) || `Combo ${idx + 1}`}
+                      >
+                        {formatComboTitle(editCombos[idx]) || `Combo ${idx + 1}`}
+                      </h4>
 
                       <div>
                         <Label htmlFor={`edit-${idx}-blade`}>Blade</Label>
