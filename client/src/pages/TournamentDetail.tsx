@@ -163,6 +163,10 @@ export default function TournamentDetail() {
       return await resp.json();
     },
     enabled: !!tournamentId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   // Admin combo editor state

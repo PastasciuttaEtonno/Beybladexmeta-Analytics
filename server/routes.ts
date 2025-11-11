@@ -11,7 +11,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
 import crypto from "node:crypto";
 import { Resend } from "resend";
-import { fetchTournamentsForGame, fetchTournamentDetail } from "./challengermode";
+import { fetchTournamentsForGame, fetchTournamentDetail, getLeaderboards } from "./challengermode";
 import { processExternalCombo, calculatePoints as calcExternalPoints } from "./scoreExternalCombo";
 
 // Extend express session type
@@ -1175,8 +1175,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/challengermode/tournaments', requireAuth, async (req, res) => {
     try {
       const after = String(req.query.after || '2024-01-01T00:00:00Z');
-      const tournaments = await fetchTournamentsForGame(after);
-      res.json({ tournaments });
+      const tournaments = await fetchTournamentsForGame('beybladex', after);
+      const sorted = [...tournaments].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      const payload = { tournaments: sorted };
+      const etag = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+      const ifNoneMatch = req.headers['if-none-match'];
+      if (ifNoneMatch === etag) {
+        return res.status(304).end();
+      }
+      res.set('ETag', etag);
+      res.set('Cache-Control', 'public, max-age=60, must-revalidate');
+      res.json(payload);
     } catch (error: any) {
       console.error('Error fetching Challengermode tournaments:', error);
       res.status(500).json({ error: error?.message || 'Failed to fetch external tournaments' });
@@ -1218,10 +1227,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      const etag = crypto.createHash('sha256').update(JSON.stringify(detail)).digest('hex');
+      const ifNoneMatch = req.headers['if-none-match'];
+      if (ifNoneMatch === etag) {
+        return res.status(304).end();
+      }
+      res.set('ETag', etag);
+      res.set('Cache-Control', 'public, max-age=300, must-revalidate');
       res.json({ detail });
     } catch (error: any) {
       console.error('Error fetching Challengermode tournament detail:', error);
       res.status(500).json({ error: error?.message || 'Failed to fetch external tournament detail' });
+    }
+  });
+
+  // External: Aggregated leaderboards in a single GraphQL call (read-only)
+  app.get('/api/challengermode/leaderboards', requireAuth, async (req, res) => {
+    try {
+      const after = String(req.query.after || '2024-01-01T00:00:00Z');
+      const data = await getLeaderboards('beybladex', after);
+      const sorted = [...data].sort((a: any, b: any) => {
+        const as = a?.schedule?.startedAt || '';
+        const bs = b?.schedule?.startedAt || '';
+        if (as && bs) return as < bs ? -1 : as > bs ? 1 : 0;
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      });
+      const payload = { tournaments: sorted };
+      const etag = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+      const ifNoneMatch = req.headers['if-none-match'];
+      if (ifNoneMatch === etag) {
+        return res.status(304).end();
+      }
+      res.set('ETag', etag);
+      res.set('Cache-Control', 'public, max-age=120, must-revalidate');
+      res.json(payload);
+    } catch (error: any) {
+      console.error('Error fetching Challengermode leaderboards:', error);
+      res.status(500).json({ error: error?.message || 'Failed to fetch external leaderboards' });
     }
   });
 

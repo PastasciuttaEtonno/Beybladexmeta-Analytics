@@ -513,12 +513,12 @@ export default function Tournaments() {
   const [regionFilter, setRegionFilter] = useState<string>("");
 
   const { data: tournamentsData, refetch: refetchTournaments, isLoading: tournamentsLoading } = useQuery<{ tournaments: TorneoCard[] }>({
-    queryKey: ["/api/challengermode/tournaments", startDateFilter || ""],
+    queryKey: ["/api/challengermode/leaderboards", startDateFilter || ""],
     queryFn: async () => {
       const afterIso = startDateFilter
         ? new Date(startDateFilter).toISOString()
         : "2024-01-01T00:00:00Z";
-      const resp = await fetch(`/api/challengermode/tournaments?after=${encodeURIComponent(afterIso)}`, {
+      const resp = await fetch(`/api/challengermode/leaderboards?after=${encodeURIComponent(afterIso)}`, {
         credentials: "include",
       });
       if (!resp.ok) throw new Error("Failed to fetch tournaments");
@@ -527,7 +527,7 @@ export default function Tournaments() {
       const mapped: TorneoCard[] = ext.map((t) => ({
         torneoId: t.id,
         nomeTorneo: t.name,
-        dataTorneo: null,
+        dataTorneo: t?.schedule?.startedAt ? new Date(t.schedule.startedAt) : null,
         description: t.description ?? undefined,
         state: t.state ?? undefined,
         contactUrl: t.contactUrl ?? undefined,
@@ -537,6 +537,10 @@ export default function Tournaments() {
       return { tournaments: mapped };
     },
     enabled: activeTab === 'list',
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   // Selection state and dialog
