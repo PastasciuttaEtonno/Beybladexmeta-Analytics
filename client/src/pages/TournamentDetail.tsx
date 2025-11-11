@@ -65,8 +65,8 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
 // Simple SVG placeholder used when no combos are assigned
 function SvgPlaceholder() {
   return (
-    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded bg-muted flex items-center justify-center">
-      <svg viewBox="0 0 24 24" className="w-6 h-6 sm:w-6 sm:h-6 text-muted-foreground" aria-label="placeholder">
+    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded bg-muted flex items-center justify-center">
+      <svg viewBox="0 0 24 24" className="w-7 h-7 sm:w-7 sm:h-7 text-muted-foreground" aria-label="placeholder">
         <rect x="3" y="3" width="18" height="18" rx="3" ry="3" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2" />
         <path d="M9 12h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       </svg>
@@ -79,6 +79,29 @@ const isSingleWordBlade = (bladeName: string): boolean => {
   const hasMultipleCapitals = /[A-Z].*[A-Z]/.test(bladeName);
   return !hasMultipleCapitals;
 };
+
+// Format a combo title, omitting 'None' parts and keeping it concise
+function formatComboTitle(combo: ComboForm): string {
+  const blade = combo.blade?.trim() || '';
+  const assist = combo.assistBlade?.trim() || '';
+  const ratchet = combo.ratchet?.trim() || '';
+  const bit = combo.bit?.trim() || '';
+  const lockChip = combo.lockChip?.trim() || '';
+
+  // Only include assist and lock chip if not 'None'
+  const assistPart = assist && assist.toLowerCase() !== 'none' ? assist : '';
+  const lockPart = lockChip && lockChip.toLowerCase() !== 'none' ? lockChip : '';
+
+  const parts = [
+    lockPart,
+    blade + (assistPart ? `${assistPart}` : ''),
+    ratchet,
+    bit,
+  ].filter(Boolean);
+
+  const title = parts.join(' • ');
+  return title;
+}
 
 type SearchableSelectProps = {
   id: string;
@@ -328,25 +351,37 @@ export default function TournamentDetail() {
                         <div className="mt-2 flex flex-col gap-2 max-w-full">
                           {combosList && combosList.length > 0 ? (
                             combosList.map((combo, comboIdx) => (
-                              <div key={comboIdx} className="flex items-center gap-3 flex-wrap">
-                                <span className="text-xs text-muted-foreground mr-1">combo {comboIdx + 1} :</span>
-                                <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="blades" name={combo.blade} /></div>
-                                {combo.assistBlade && combo.assistBlade !== 'None' && (
-                                  <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="assist-blades" name={combo.assistBlade} /></div>
-                                )}
-                                <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="ratchets" name={combo.ratchet} /></div>
-                                <div className="w-8 h-8 sm:w-9 sm:h-9"><ComponentImage folder="bits" name={combo.bit} /></div>
+                              <div key={comboIdx} className="flex flex-col gap-1 max-w-full">
+                                <div className="text-sm font-medium text-muted-foreground truncate" title={formatComboTitle(combo)}>
+                                  {formatComboTitle(combo)}
+                                </div>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  {combo.lockChip && combo.lockChip !== 'None' && (
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="chips" name={combo.lockChip} /></div>
+                                  )}
+                                  <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="blades" name={combo.blade} /></div>
+                                  {combo.assistBlade && combo.assistBlade !== 'None' && (
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="assist-blades" name={combo.assistBlade} /></div>
+                                  )}
+                                  <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="ratchets" name={combo.ratchet} /></div>
+                                  <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="bits" name={combo.bit} /></div>
+                                  {/* {combo.lockChip && combo.lockChip !== 'None' && (
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="chips" name={combo.lockChip} /></div>
+                                  )} */}
+                                </div>
                               </div>
                             ))
                           ) : (
                             <div className="flex flex-col gap-2">
                               {[0,1,2].map((cIdx) => (
-                                <div key={cIdx} className="flex items-center gap-3 flex-wrap">
-                                  <span className="text-xs text-muted-foreground mr-1">combo {cIdx + 1} :</span>
-                                  <SvgPlaceholder />
-                                  <SvgPlaceholder />
-                                  <SvgPlaceholder />
-                                  <SvgPlaceholder />
+                                <div key={cIdx} className="flex flex-col gap-1 max-w-full">
+                                  <div className="text-sm font-medium text-muted-foreground">Combo {cIdx + 1}</div>
+                                  <div className="flex items-center gap-3 flex-wrap">
+                                    <SvgPlaceholder />
+                                    <SvgPlaceholder />
+                                    <SvgPlaceholder />
+                                    <SvgPlaceholder />
+                                  </div>
                                 </div>
                               ))}
                             </div>
