@@ -110,9 +110,25 @@ export default function Profile() {
   };
 
   const handleSettingClick = (label: string) => {
+    let description = "";
+    switch (label) {
+      case "Privacy":
+        description =
+          "No data is collected, only emails are taken to grant access to the application.";
+        break;
+      case "Help Center":
+        description = "Write to this email: beybladexmeta@outlook.it";
+        break;
+      case "About":
+        description =
+          "Images are taken from the Beyblade wiki page and are not modified. The application is still in the early stages of development.";
+        break;
+      default:
+        description = `${label} settings would open here`;
+    }
     toast({
       title: label,
-      description: `${label} settings would open here`,
+      description,
     });
   };
 
@@ -243,7 +259,7 @@ export default function Profile() {
             Preferences
           </h2>
           <Card className="divide-y divide-border">
-            <button
+            {/* <button
               onClick={() => handleSettingClick("Notifications")}
               className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
               data-testid="button-notifications"
@@ -252,7 +268,7 @@ export default function Profile() {
               <span className="flex-1 font-medium">Notifiche</span>
               <span className="text-sm text-muted-foreground">On</span>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </button>
+            </button> */}
             <button
               onClick={() => handleSettingClick("Privacy")}
               className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
