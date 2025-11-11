@@ -5,6 +5,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { db } from './db';
+import { externalApiCache } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
 
 type AccessTokenRecord = {
   token: string;
@@ -17,6 +20,9 @@ const AUTH_URL = (process.env.CHALLENGERMODE_AUTH_URL && process.env.CHALLENGERM
   ? process.env.CHALLENGERMODE_AUTH_URL
   : "https://publicapi.challengermode.com/mk1/v1/auth/access_keys";
 const GRAPHQL_URL = process.env.CHALLENGERMODE_GRAPHQL_URL || "https://publicapi.challengermode.com/graphql";
+
+// Cache TTL: default ~2 days, override via env
+const CACHE_TTL_MINUTES = Number(process.env.CHALLENGERMODE_CACHE_TTL_MINUTES ?? 1440);
 
 let cachedToken: AccessTokenRecord | null = null;
 const TOKEN_CACHE_PATH = process.env.CHALLENGERMODE_TOKEN_CACHE_PATH
@@ -146,6 +152,33 @@ export async function getAccessToken(): Promise<string> {
   return rec.token;
 }
 
+// --- External API cache helpers ---
+async function getExternalApiCache<T = any>(key: string, ttlMinutes: number = CACHE_TTL_MINUTES): Promise<T | null> {
+  try {
+    const rows = await db.select().from(externalApiCache).where(eq(externalApiCache.cacheKey, key));
+    const row = rows[0] as { data: T; createdAt: Date } | undefined;
+    if (!row) return null;
+    const created = row.createdAt instanceof Date ? row.createdAt.getTime() : new Date(row.createdAt as any).getTime();
+    const fresh = nowMs() - created < ttlMinutes * 60_000;
+    if (fresh) return row.data;
+    return null;
+  } catch (e) {
+    console.warn('[Cache] getExternalApiCache error:', (e as Error)?.message || String(e));
+    return null;
+  }
+}
+
+async function putExternalApiCache(key: string, payload: any): Promise<void> {
+  try {
+    await db
+      .insert(externalApiCache)
+      .values({ cacheKey: key, data: payload })
+      .onConflictDoUpdate({ target: externalApiCache.cacheKey, set: { data: payload, createdAt: sql`now()` } });
+  } catch (e) {
+    console.warn('[Cache] putExternalApiCache error:', (e as Error)?.message || String(e));
+  }
+}
+
 export type ExternalTournament = {
   description: string | null;
   id: string;
@@ -157,6 +190,11 @@ export type ExternalTournament = {
 };
 
 export async function fetchTournamentsForGame(afterIso: string): Promise<ExternalTournament[]> {
+  const cacheKey = `cm:tournamentsForGame:after=${afterIso}`;
+  const cached = await getExternalApiCache<ExternalTournament[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
   const token = await getAccessToken();
   const query = `query TournamentsForGame {\n  tournamentsForGame(\n    input: {\n      gameSlug: \"beybladex\"\n      tournamentFilter: {\n        completedTournamentSelector: { tournamentsAfter: \"${afterIso}\" }\n      }\n    }\n  ) {\n    description\n    id\n    name\n    state\n    contactUrl\n    idSuffix\n    gameTitle {\n      id\n      slug\n      title\n    }\n  }\n}`;
 
@@ -183,6 +221,7 @@ export async function fetchTournamentsForGame(afterIso: string): Promise<Externa
     throw new Error(`GraphQL error: ${errs[0]?.message || "unknown"}`);
   }
   const tournaments: ExternalTournament[] = data?.data?.tournamentsForGame || [];
+  await putExternalApiCache(cacheKey, tournaments);
   return tournaments;
 }
 
@@ -216,6 +255,11 @@ export type ExternalTournamentDetail = {
 };
 
 export async function fetchTournamentDetail(tournamentId: string): Promise<ExternalTournamentDetail> {
+  const cacheKey = `cm:tournamentDetail:${tournamentId}`;
+  const cached = await getExternalApiCache<ExternalTournamentDetail>(cacheKey);
+  if (cached) {
+    return cached;
+  }
   const token = await getAccessToken();
   const query = `query Tournament($tournamentId: UUID!) {\n  tournament(tournamentId: $tournamentId) {\n    id\n    name\n    state\n    contactUrl\n    schedule { startedAt }\n    stages { format lineupCount }\n    attendance {\n      availableSlotCount\n      confirmedLineupCount\n      signups {\n        userCount\n        lineupCount\n        lineups {\n          placement { displayPlacement }\n          members { user { username userId profilePicture(size: SMALL) { url width height } } }\n        }\n      }\n    }\n  }\n}`;
 
@@ -243,5 +287,6 @@ export async function fetchTournamentDetail(tournamentId: string): Promise<Exter
     console.error(`[Challengermode] GraphQL tournament detail missing data.tournament: ${text.slice(0, 600)}${text.length > 600 ? '…' : ''}`);
     throw new Error('Challengermode tournament detail missing');
   }
+  await putExternalApiCache(cacheKey, node);
   return node as ExternalTournamentDetail;
 }

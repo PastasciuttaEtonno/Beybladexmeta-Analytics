@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -351,6 +351,17 @@ export const loginAttempts = pgTable("login_attempts", {
 export const insertLoginAttemptSchema = createInsertSchema(loginAttempts).omit({ id: true });
 export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
+
+// Cache table for external API responses (e.g., Challengermode GraphQL)
+// Stores payloads with a TTL via expires_at and simple retrieval by key
+export const externalApiCache = pgTable("external_api_cache", {
+  cacheKey: text("cache_key").primaryKey(),
+  data: jsonb("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+export type ExternalApiCache = typeof externalApiCache.$inferSelect;
+export type InsertExternalApiCache = typeof externalApiCache.$inferInsert;
 
 // Players table to store references to external (Challengermode) players
 // Deprecated: players (sostituita da cm_players)
