@@ -22,16 +22,7 @@ import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil } from "lucide-react";
 import { useLocation } from "wouter";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-} from "@/components/ui/dropdown-menu";
+// Region filter UI removed
 
 type ComboForm = {
   blade: string;
@@ -510,7 +501,7 @@ export default function Tournaments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
   const [endDateFilter, setEndDateFilter] = useState<string>("");
-  const [regionFilter, setRegionFilter] = useState<string>("");
+  // Region filter removed
 
   const { data: tournamentsData, refetch: refetchTournaments, isLoading: tournamentsLoading } = useQuery<{ tournaments: TorneoCard[] }>({
     queryKey: ["/api/challengermode/tournaments", startDateFilter || ""],
@@ -634,25 +625,7 @@ export default function Tournaments() {
               className="h-9 text-sm"
             />
           </div>
-          {/* Region dropdown filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="h-9 px-3 text-sm">
-                {regionFilter ? `Regione: ${regionFilter}` : "Regioni"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Seleziona regione</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={regionFilter} onValueChange={(val) => setRegionFilter(val)}>
-                {ITALIAN_REGIONS.map((r) => (
-                  <DropdownMenuRadioItem key={r} value={r}>{r}</DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setRegionFilter("")}>Tutte le regioni</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Region filter removed */}
           <Button
             type="button"
             variant="outline"
@@ -661,7 +634,7 @@ export default function Tournaments() {
               setSearchTerm("");
               setStartDateFilter("");
               setEndDateFilter("");
-              setRegionFilter("");
+              // Region filter removed
             }}
           >
             <Eraser className="w-4 h-4" aria-label="Clear filters" />
