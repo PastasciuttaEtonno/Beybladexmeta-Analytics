@@ -391,5 +391,24 @@ export type ExternalPlayerCombo = typeof externalPlayerCombos.$inferSelect;
 export type InsertExternalPlayerCombo = typeof externalPlayerCombos.$inferInsert;
 export type UpsertTournamentPlayerCombos = z.infer<typeof upsertTournamentPlayerCombosSchema>;
 
+export const cmTournaments = pgTable("cm_tournaments", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  state: text("state").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  gameSlug: text("game_slug").notNull(),
+  cachedAt: timestamp("cached_at", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+export const cmLeaderboard = pgTable("cm_leaderboard", {
+  tournamentId: varchar("tournament_id").notNull().references(() => cmTournaments.id, { onDelete: 'cascade' }),
+  placement: integer("placement").notNull(),
+  userId: varchar("user_id").notNull(),
+  username: text("username").notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.tournamentId, table.userId] }),
+}));
+
+
 export type CmMatchResult = typeof cmMatchResults.$inferSelect;
 export type InsertCmMatchResult = typeof cmMatchResults.$inferInsert;
