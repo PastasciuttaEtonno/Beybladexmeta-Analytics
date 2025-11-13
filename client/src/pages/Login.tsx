@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -143,7 +144,18 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      {/* Top-left back button */}
+      <Button
+        type="button"
+        variant="ghost"
+        className="absolute top-4 left-4 h-9 px-3 gap-2"
+        onClick={() => setLocation("/")}
+        data-testid="button-back"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Indietro
+      </Button>
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center text-center space-y-3">
           <img
