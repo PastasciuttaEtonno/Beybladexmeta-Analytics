@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -106,6 +108,8 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
 }
 
 export default function Favorites() {
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [deckModalOpen, setDeckModalOpen] = useState(false);
@@ -137,18 +141,21 @@ export default function Favorites() {
 
   const { data: components } = useQuery<Components>({
     queryKey: ["/api/components"],
+    enabled: !!user,
   });
 
   const { data: combosData, isLoading: combosLoading } = useQuery<{
     combos: FavoriteCombo[];
   }>({
     queryKey: ["/api/favorites/combos"],
+    enabled: !!user,
   });
 
   const { data: decksData, isLoading: decksLoading } = useQuery<{
     decks: DeckWithCombos[];
   }>({
     queryKey: ["/api/favorites/decks"],
+    enabled: !!user,
   });
 
   useEffect(() => {
@@ -214,6 +221,48 @@ export default function Favorites() {
       });
     },
   });
+
+  // Gate entire Favorites section while loading or logged out
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader left={<HeaderLogo />} title="Favorites" />
+        <div className="p-4">
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 bg-muted/30 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader left={<HeaderLogo />} title="Favorites" />
+        <div className="p-4">
+          <Card className="p-4">
+            <div className="flex items-start gap-3">
+              <Star className="w-5 h-5 text-muted-foreground" />
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Login richiesto</h2>
+                <p className="text-sm text-muted-foreground">
+                  Devi essere loggato per salvare combo.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <Button onClick={() => setLocation("/profile")} data-testid="button-favorites-login">
+                Andare nel Profile per effetturare Login / Register
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const deleteDeckMutation = useMutation({
     mutationFn: async (id: string) => {
