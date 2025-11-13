@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card } from "@/components/ui/card";
@@ -25,6 +26,7 @@ export default function Profile() {
   const { user, logout, updateProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   // const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
@@ -130,6 +132,10 @@ export default function Profile() {
       title: label,
       description,
     });
+  };
+
+  const handleLoginNavigate = () => {
+    setLocation("/login");
   };
 
   return (
@@ -281,6 +287,23 @@ export default function Profile() {
           </Card>
         </div>
 
+        {!user && (
+          <div className="space-y-3">
+            <h2 className="text-sm font-medium text-muted-foreground px-1">
+              Account
+            </h2>
+            <Card className="p-4">
+              <Button
+                onClick={handleLoginNavigate}
+                className="w-full h-12"
+                data-testid="button-login"
+              >
+                Login / Register
+              </Button>
+            </Card>
+          </div>
+        )}
+
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">
             Support
@@ -308,15 +331,17 @@ export default function Profile() {
           </Card>
         </div>
 
-        <Button
-          variant="destructive"
-          onClick={handleLogout}
-          className="w-full h-12"
-          data-testid="button-logout"
-        >
-          <LogOut className="w-5 h-5 mr-2" />
-          Log Out
-        </Button>
+        {user && (
+          <Button
+            variant="destructive"
+            onClick={handleLogout}
+            className="w-full h-12"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-5 h-5 mr-2" />
+            Log Out
+          </Button>
+        )}
       </main>
     </div>
   );
