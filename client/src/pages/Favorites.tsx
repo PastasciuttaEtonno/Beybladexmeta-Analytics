@@ -25,6 +25,8 @@ import {
 import { Star, Plus, Trash2, Layers, Eye } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type {
   FavoriteCombo,
@@ -106,6 +108,8 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
 }
 
 export default function Favorites() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [deckModalOpen, setDeckModalOpen] = useState(false);
@@ -143,12 +147,14 @@ export default function Favorites() {
     combos: FavoriteCombo[];
   }>({
     queryKey: ["/api/favorites/combos"],
+    enabled: !!user,
   });
 
   const { data: decksData, isLoading: decksLoading } = useQuery<{
     decks: DeckWithCombos[];
   }>({
     queryKey: ["/api/favorites/decks"],
+    enabled: !!user,
   });
 
   useEffect(() => {
@@ -328,6 +334,22 @@ export default function Favorites() {
     setSelectedCombo(combo);
     setDetailModalOpen(true);
   };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background pb-20">
+        <PageHeader title="Preferiti" action={<HeaderLogo />} />
+        <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
+          <Card className="p-6 mb-6 text-center">
+            <p className="text-sm text-muted-foreground">Accedi per usare i Preferiti</p>
+            <div className="mt-3">
+              <Button onClick={() => setLocation('/profile')}>Vai al Profilo</Button>
+            </div>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">

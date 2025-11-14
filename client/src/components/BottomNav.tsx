@@ -6,9 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 const navItems = [
   { path: '/', icon: Home, label: 'Home', adminOnly: false },
   { path: '/analytics', icon: BarChart3, label: 'Analytics', adminOnly: false },
-  { path: '/favorites', icon: Star, label: 'Favorites', adminOnly: false },
-  { path: '/tournaments', icon: Trophy, label: 'Tournament', adminOnly: false },
-  { path: '/profile', icon: User, label: 'Profile', adminOnly: false },
+  { path: '/favorites', icon: Star, label: 'Preferiti', adminOnly: false },
+  { path: '/tournaments', icon: Trophy, label: 'Tornei', adminOnly: false },
+  { path: '/profile', icon: User, label: 'Profilo', adminOnly: false },
 ];
 
 export function BottomNav() {

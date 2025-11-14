@@ -21,60 +21,44 @@ function AppRoutes() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      
+
       <Route path="/">
-        <ProtectedRoute>
-          <Home />
-          <BottomNav />
-        </ProtectedRoute>
+        <Home />
+        <BottomNav />
       </Route>
       
       <Route path="/analytics">
-        <ProtectedRoute>
-          <Analytics />
-          <BottomNav />
-        </ProtectedRoute>
+        <Analytics />
+        <BottomNav />
       </Route>
       
       <Route path="/favorites">
-        <ProtectedRoute>
-          <Favorites />
-          <BottomNav />
-        </ProtectedRoute>
+        <Favorites />
+        <BottomNav />
       </Route>
       
       <Route path="/tournaments">
-        <ProtectedRoute>
-          <Tournaments />
-          <BottomNav />
-        </ProtectedRoute>
+        <Tournaments />
+        <BottomNav />
       </Route>
       
       <Route path="/tournaments/:id">
-        <ProtectedRoute>
-          <TournamentDetail />
-          <BottomNav />
-        </ProtectedRoute>
+        <TournamentDetail />
+        <BottomNav />
       </Route>
       
       <Route path="/profile">
-        <ProtectedRoute>
-          <Profile />
-          <BottomNav />
-        </ProtectedRoute>
+        <Profile />
+        <BottomNav />
       </Route>
 
       <Route path="/combo/:id">
-        <ProtectedRoute>
-          <ComboDetail />
-        </ProtectedRoute>
+        <ComboDetail />
       </Route>
 
       <Route path="/leaderboard/:type">
-        <ProtectedRoute>
-          <ComponentLeaderboard />
-          <BottomNav />
-        </ProtectedRoute>
+        <ComponentLeaderboard />
+        <BottomNav />
       </Route>
 
       <Route>

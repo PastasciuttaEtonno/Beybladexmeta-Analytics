@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -25,11 +26,13 @@ export default function Profile() {
   const { user, logout, updateProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   // const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
 
   const handleSaveName = async () => {
     if (!displayName.trim()) {
@@ -137,89 +140,69 @@ export default function Profile() {
       <PageHeader title="Profilo" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
-        <Card className="p-6">
-          <div className="flex flex-col items-center space-y-4 mb-2">
-            {/* <div className="relative">
-              <Avatar
-                src={user?.photoURL}
-                alt={user?.displayName || "User"}
-                size="xl"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center hover-elevate active-elevate-2"
-                data-testid="button-upload-photo"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="hidden"
-                data-testid="input-photo-upload"
-              />
-            </div> */}
-            <div className="text-center">
-              <h2 className="text-xl font-bold" data-testid="text-display-name">
-                {user?.displayName}
-              </h2>
-              <p
-                className="text-sm text-muted-foreground"
-                data-testid="text-email"
-              >
-                {user?.email}
-              </p>
-            </div>
-          </div>
-          {isEditingName ? (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Nome</Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Enter your name"
-                  className="h-12"
-                  data-testid="input-display-name"
-                  disabled={isSaving}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleSaveName}
-                  disabled={isSaving}
-                  className="flex-1"
-                  data-testid="button-save-name"
+        {user && (
+          <Card className="p-6">
+            <div className="flex flex-col items-center space-y-4 mb-2">
+              <div className="text-center">
+                <h2 className="text-xl font-bold" data-testid="text-display-name">
+                  {user.displayName}
+                </h2>
+                <p
+                  className="text-sm text-muted-foreground"
+                  data-testid="text-email"
                 >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditingName(false);
-                    setDisplayName(user?.displayName || "");
-                  }}
-                  disabled={isSaving}
-                  data-testid="button-cancel-edit"
-                >
-                  Cancel
-                </Button>
+                  {user.email}
+                </p>
               </div>
             </div>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => setIsEditingName(true)}
-              className="w-full"
-              data-testid="button-edit-name"
-            >
-              Modifica nome
-            </Button>
-          )}
-        </Card>
+            {isEditingName ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Nome</Label>
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="h-12"
+                    data-testid="input-display-name"
+                    disabled={isSaving}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveName}
+                    disabled={isSaving}
+                    className="flex-1"
+                    data-testid="button-save-name"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditingName(false);
+                      setDisplayName(user.displayName || "");
+                    }}
+                    disabled={isSaving}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => setIsEditingName(true)}
+                className="w-full"
+                data-testid="button-edit-name"
+              >
+                Modifica nome
+              </Button>
+            )}
+          </Card>
+        )}
 
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">
@@ -308,15 +291,25 @@ export default function Profile() {
           </Card>
         </div>
 
-        <Button
-          variant="destructive"
-          onClick={handleLogout}
-          className="w-full h-12"
-          data-testid="button-logout"
-        >
-          <LogOut className="w-5 h-5 mr-2" />
-          Log Out
-        </Button>
+        {user ? (
+          <Button
+            variant="destructive"
+            onClick={handleLogout}
+            className="w-full h-12"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-5 h-5 mr-2" />
+            Log Out
+          </Button>
+        ) : (
+          <Button
+            onClick={() => setLocation("/login")}
+            className="w-full h-12"
+            data-testid="button-login-register"
+          >
+            Login / Register
+          </Button>
+        )}
       </main>
     </div>
   );

@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get top combos leaderboard
-  app.get('/api/stats/combos', requireAuth, async (req, res) => {
+  app.get('/api/stats/combos', async (req, res) => {
     try {
       const pageParam = req.query.page ? parseInt(req.query.page as string) : 1;
       const page = Number.isFinite(pageParam) ? Math.max(1, pageParam) : 1;
@@ -367,7 +367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all top components in a single query (OPTIMIZED)
-  app.get('/api/stats/top/components', requireAuth, async (req, res) => {
+  app.get('/api/stats/top/components', async (req, res) => {
     try {
       // Pick top per component_type by #1 placements, then points
       const result = await db.execute(sql`
@@ -397,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Legacy endpoints (kept for backwards compatibility, but use /api/stats/top/components for better performance)
-  app.get('/api/stats/top/blade', requireAuth, async (req, res) => {
+  app.get('/api/stats/top/blade', async (req, res) => {
     try {
       const topBlade = await db.select()
         .from(bladeStats)
@@ -410,7 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/stats/top/ratchet', requireAuth, async (req, res) => {
+  app.get('/api/stats/top/ratchet', async (req, res) => {
     try {
       const topRatchet = await db.select()
         .from(ratchetStats)
@@ -423,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/stats/top/bit', requireAuth, async (req, res) => {
+  app.get('/api/stats/top/bit', async (req, res) => {
     try {
       const topBit = await db.select()
         .from(bitStats)
@@ -437,7 +437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Leaderboard for individual component types (blade, ratchet, bit)
-  app.get('/api/stats/leaderboard/:type', requireAuth, async (req, res) => {
+  app.get('/api/stats/leaderboard/:type', async (req, res) => {
     try {
       const type = String(req.params.type || '').toLowerCase();
       const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all unique components from stats tables (for dropdowns)
-  app.get('/api/components', requireAuth, async (req, res) => {
+  app.get('/api/components', async (req, res) => {
     try {
       // Fetch from individual component stats tables instead of combo_stats
       const blades = await db.select({ name: bladeStats.blade })
@@ -1195,7 +1195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Synergy endpoint: compute best allies for a selected component
-  app.get('/api/synergy', requireAuth, async (req, res) => {
+  app.get('/api/synergy', async (req, res) => {
     try {
       const typeRaw = String(req.query.type || '').toLowerCase();
       const nameRaw = String(req.query.name || '').trim();
@@ -1272,7 +1272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // External: Challengermode tournaments list (read-only)
-  app.get('/api/challengermode/tournaments', requireAuth, async (req, res) => {
+  app.get('/api/challengermode/tournaments', async (req, res) => {
     try {
       const after = String(req.query.after || '2024-01-01T00:00:00Z');
       const tournaments = await fetchTournamentsForGame(after);
@@ -1284,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // External: Challengermode tournament detail with attendance/placements (read-only)
-  app.get('/api/challengermode/tournaments/:id', requireAuth, async (req, res) => {
+  app.get('/api/challengermode/tournaments/:id', async (req, res) => {
     try {
       const id = String(req.params.id || '');
       if (!id) return res.status(400).json({ error: 'Missing tournament id' });

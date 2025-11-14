@@ -58,6 +58,13 @@ export default function Login() {
   const { toast } = useToast();
   const { theme } = useTheme();
   const [, setLocation] = useLocation();
+  const goBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      setLocation("/");
+    }
+  };
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -218,6 +225,16 @@ export default function Login() {
             Register / Create account
           </button>
         </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-10"
+          onClick={goBack}
+          data-testid="button-back"
+        >
+          Back
+        </Button>
 
         <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
           <DialogContent className="sm:max-w-md">
