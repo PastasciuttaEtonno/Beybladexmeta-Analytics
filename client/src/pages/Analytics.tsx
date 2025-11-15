@@ -507,14 +507,16 @@ export default function Analytics() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 mb-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Assist Blade
-                            </p>
-                            <p className="text-sm font-medium truncate">
-                              {combo.assistBlade}
-                            </p>
-                          </div>
+                          {combo.assistBlade !== "None" && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                Assist Blade
+                              </p>
+                              <p className="text-sm font-medium truncate">
+                                {combo.assistBlade}
+                              </p>
+                            </div>
+                          )}
                           <div>
                             <p className="text-xs text-muted-foreground">
                               Ratchet
@@ -531,14 +533,16 @@ export default function Analytics() {
                               {combo.bit}
                             </p>
                           </div>
-                          <div className="col-span-2">
-                            <p className="text-xs text-muted-foreground">
-                              Lock Chip
-                            </p>
-                            <p className="text-sm font-medium truncate">
-                              {combo.lockChip}
-                            </p>
-                          </div>
+                          {combo.lockChip !== "None" && (
+                            <div className="col-span-2">
+                              <p className="text-xs text-muted-foreground">
+                                Lock Chip
+                              </p>
+                              <p className="text-sm font-medium truncate">
+                                {combo.lockChip}
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-4 pt-3 border-t border-border">

@@ -542,14 +542,16 @@ export default function Favorites() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Assist Blade
-                            </p>
-                            <p className="text-sm font-medium truncate">
-                              {combo.assistBlade}
-                            </p>
-                          </div>
+                          {combo.assistBlade !== "None" && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                Assist Blade
+                              </p>
+                              <p className="text-sm font-medium truncate">
+                                {combo.assistBlade}
+                              </p>
+                            </div>
+                          )}
                           <div>
                             <p className="text-xs text-muted-foreground">
                               Ratchet
@@ -560,14 +562,16 @@ export default function Favorites() {
                             <p className="text-xs text-muted-foreground">Bit</p>
                             <p className="text-sm font-medium truncate">{combo.bit}</p>
                           </div>
-                          <div className="col-span-2">
-                            <p className="text-xs text-muted-foreground">
-                              Lock Chip
-                            </p>
-                            <p className="text-sm font-medium truncate">
-                              {combo.lockChip}
-                            </p>
-                          </div>
+                          {combo.lockChip !== "None" && (
+                            <div className="col-span-2">
+                              <p className="text-xs text-muted-foreground">
+                                Lock Chip
+                              </p>
+                              <p className="text-sm font-medium truncate">
+                                {combo.lockChip}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -829,12 +833,14 @@ export default function Favorites() {
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-muted-foreground">
-                                Assist:
-                              </span>{" "}
-                              {combo.assistBlade}
-                            </div>
+                            {combo.assistBlade !== "None" && (
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Assist:
+                                </span>{" "}
+                                {combo.assistBlade}
+                              </div>
+                            )}
                             <div>
                               <span className="text-muted-foreground">
                                 Ratchet:
@@ -847,12 +853,14 @@ export default function Favorites() {
                               </span>{" "}
                               {combo.bit}
                             </div>
-                            <div className="col-span-2">
-                              <span className="text-muted-foreground">
-                                Chip:
-                              </span>{" "}
-                              {combo.lockChip}
-                            </div>
+                            {combo.lockChip !== "None" && (
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">
+                                  Chip:
+                                </span>{" "}
+                                {combo.lockChip}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
