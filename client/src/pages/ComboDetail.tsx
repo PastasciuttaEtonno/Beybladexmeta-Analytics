@@ -87,20 +87,23 @@ export default function ComboDetail() {
 
   const comboId = params?.id;
 
-  const { data, isLoading } = useQuery<{ combos: ComboStats[] }>({
-    queryKey: ["/api/stats/combos"],
+  const decodedId = params?.id ? decodeURIComponent(params.id) : null;
+
+  const { data, isLoading } = useQuery<{ combo: ComboStats; rank: number }>({
+    queryKey: ["/api/stats/combos/by-key", decodedId],
+    enabled: !!decodedId,
+    queryFn: async () => {
+      const resp = await fetch(`/api/stats/combos/by-key?key=${encodeURIComponent(decodedId!)}`);
+      if (!resp.ok) throw new Error("Failed to fetch combo");
+      return resp.json();
+    },
   });
 
   if (!comboId) {
     return null;
   }
 
-  const decodedId = decodeURIComponent(comboId);
-  const combo = data?.combos.find(
-    (c) =>
-      `${c.blade}|${c.assistBlade}|${c.ratchet}|${c.bit}|${c.lockChip}` ===
-      decodedId,
-  );
+  const combo = data?.combo;
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="w-8 h-8 text-yellow-500" />;
@@ -109,14 +112,7 @@ export default function ComboDetail() {
     return null;
   };
 
-  const rank =
-    combo && data
-      ? data.combos.findIndex(
-          (c) =>
-            `${c.blade}|${c.assistBlade}|${c.ratchet}|${c.bit}|${c.lockChip}` ===
-            decodedId,
-        ) + 1
-      : 0;
+  const rank = data?.rank ?? 0;
 
   if (isLoading) {
     return (

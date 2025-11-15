@@ -366,6 +366,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/stats/combos/by-key', async (req, res) => {
+    try {
+      const key = String(req.query.key || '').trim();
+      if (!key) return res.status(400).json({ error: 'Missing key' });
+      const parts = key.split('|');
+      if (parts.length !== 5) return res.status(400).json({ error: 'Invalid key format' });
+      const [blade, assistBlade, ratchet, bit, lockChip] = parts;
+
+      const result = await db.execute(sql`
+        WITH ranked AS (
+          SELECT blade, assist_blade, ratchet, bit, lock_chip,
+                 primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione,
+                 ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
+          FROM combo_stats
+        )
+        SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
+               primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti",
+               punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
+        FROM ranked
+        WHERE blade = ${blade}
+          AND assist_blade = ${assistBlade}
+          AND ratchet = ${ratchet}
+          AND bit = ${bit}
+          AND lock_chip = ${lockChip}
+        LIMIT 1
+      `);
+
+      const row = (result.rows as any[])[0];
+      if (!row) return res.status(404).json({ error: 'Combo not found' });
+      return res.json({ combo: {
+        blade: row.blade,
+        assistBlade: row.assistBlade,
+        ratchet: row.ratchet,
+        bit: row.bit,
+        lockChip: row.lockChip,
+        primiPosti: row.primiPosti,
+        secondiPosti: row.secondiPosti,
+        terziPosti: row.terziPosti,
+        punteggioTotale: row.punteggioTotale,
+        dataCreazione: row.dataCreazione,
+      }, rank: Number(row.rank) });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch combo by key' });
+    }
+  });
+
   // Get all top components in a single query (OPTIMIZED)
   app.get('/api/stats/top/components', async (req, res) => {
     try {
