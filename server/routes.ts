@@ -1326,7 +1326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get combos for a specific player in a tournament (authenticated users)
-  app.get('/api/tournaments/:id/players/:playerId/combos', requireAuth, async (req, res) => {
+  app.get('/api/tournaments/:id/players/:playerId/combos', async (req, res) => {
     try {
       const tournamentId = String(req.params.id || '').trim();
       const playerId = String(req.params.playerId || '').trim();
