@@ -488,7 +488,7 @@ export default function TournamentDetail() {
                           onSelect={(val) => updateEditCombo(idx, 'assistBlade', val)}
                         />
                         {!isSingleWordBlade(editCombos[idx]?.blade || '') && (
-                          <p className="text-xs text-muted-foreground mt-1">Multi-word blades cannot use Assist Blades</p>
+                          <p className="text-xs text-muted-foreground mt-1">Non CX blades non supportano Assist Blades</p>
                         )}
                       </div>
 
@@ -526,7 +526,7 @@ export default function TournamentDetail() {
                           onSelect={(val) => updateEditCombo(idx, 'lockChip', val)}
                         />
                         {!isSingleWordBlade(editCombos[idx]?.blade || '') && (
-                          <p className="text-xs text-muted-foreground mt-1">Multi-word blades cannot use Lock Chips</p>
+                          <p className="text-xs text-muted-foreground mt-1">Non CX blades non supportano Lock Chips</p>
                         )}
                       </div>
                     </div>
