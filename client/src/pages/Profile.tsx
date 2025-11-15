@@ -119,7 +119,7 @@ export default function Profile() {
         description =
           "No data is collected, only emails are taken to grant access to the application.";
         break;
-      case "Supporto":
+      case "Help Center":
         description = "Write to this email: beybladexmeta@outlook.it";
         break;
       case "About":
