@@ -20,7 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
-import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil } from "lucide-react";
+import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil, CheckCircle, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   Pagination,
@@ -416,6 +416,7 @@ export default function Tournaments() {
     contactUrl?: string;
     idSuffix?: string | null;
     gameTitle?: { id: string; slug: string; title: string };
+    hasCombos?: boolean;
   };
 
   // Filters for list view (used for external fetch)
@@ -445,6 +446,7 @@ export default function Tournaments() {
         contactUrl: t.contactUrl ?? undefined,
         idSuffix: t.idSuffix ?? null,
         gameTitle: t.gameTitle ?? undefined,
+        hasCombos: !!t.hasCombos,
       }));
       return { tournaments: mapped };
     },
@@ -587,9 +589,16 @@ export default function Tournaments() {
               <Card key={t.torneoId} className="overflow-hidden cursor-pointer" onClick={() => openTournamentDialog(t)}>
                 <CardHeader className="pb-2">
                   <h3 className="text-base font-semibold">{t.nomeTorneo}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {t.dataTorneo ? format(new Date(t.dataTorneo), 'dd MMM yyyy') : (t.state || 'Completed tournament')}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground">
+                      {t.dataTorneo ? format(new Date(t.dataTorneo), 'dd MMM yyyy') : (t.state || 'Completed tournament')}
+                    </p>
+                    {t.hasCombos ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-0">
                   {t.description && (

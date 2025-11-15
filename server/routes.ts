@@ -1275,7 +1275,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/challengermode/tournaments', async (req, res) => {
     try {
       const after = String(req.query.after || '2024-01-01T00:00:00Z');
-      const tournaments = await fetchTournamentsForGame(after);
+      const nodes = await fetchTournamentsForGame(after);
+      const rows = await db.execute(sql`SELECT DISTINCT tournament_id FROM cm_match_results`);
+      const idSet = new Set<string>((rows.rows as any[]).map((r) => String((r as any).tournament_id || (r as any).tournamentId)));
+      const tournaments = (nodes as any[]).map((n) => ({ ...n, hasCombos: idSet.has(String((n as any).id)) }));
       res.json({ tournaments });
     } catch (error: any) {
       console.error('Error fetching Challengermode tournaments:', error);
