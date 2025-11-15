@@ -210,40 +210,41 @@ export default function Tournaments() {
     queryKey: ["/api/components"],
   });
 
-  const submitMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/admin/tournament-results", data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Tournament results submitted successfully",
-      });
-      setParticipants(0);
-      setFirstPlace([
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-      ]);
-      setSecondPlace([
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-      ]);
-      setThirdPlace([
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-        { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-      ]);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit tournament results",
-        variant: "destructive",
-      });
-    },
-  });
+  // Deprecated admin batch submission (frontend not using; Challengermode flow in use)
+  // const submitMutation = useMutation({
+  //   mutationFn: async (data: any) => {
+  //     return apiRequest("POST", "/api/admin/tournament-results", data);
+  //   },
+  //   onSuccess: () => {
+  //     toast({
+  //       title: "Success",
+  //       description: "Tournament results submitted successfully",
+  //     });
+  //     setParticipants(0);
+  //     setFirstPlace([
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //     ]);
+  //     setSecondPlace([
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //     ]);
+  //     setThirdPlace([
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
+  //     ]);
+  //   },
+  //   onError: (error: any) => {
+  //     toast({
+  //       title: "Error",
+  //       description: error.message || "Failed to submit tournament results",
+  //       variant: "destructive",
+  //     });
+  //   },
+  // });
 
   const updateCombo = (
     position: "first" | "second" | "third",
@@ -397,103 +398,13 @@ export default function Tournaments() {
 
   // Non-admins can access list view; add tab is gated below
 
-  const renderComboInputs = (
-    combos: ComboForm[],
-    position: "first" | "second" | "third",
-    icon: React.ReactNode,
-    title: string,
-  ) => (
-    <Card>
-      <CardHeader className="flex flex-row items-center gap-2 pb-4">
-        {icon}
-        <h3 className="text-lg font-semibold">{title}</h3>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {combos.map((combo, idx) => (
-          <div
-            key={idx}
-            className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0"
-          >
-            <h4 className="font-medium text-sm text-muted-foreground">
-              Combo {idx + 1}
-            </h4>
-
-            <div>
-              <Label htmlFor={`${position}-${idx}-blade`}>Blade</Label>
-              <SearchableSelect
-                id={`${position}-${idx}-blade`}
-                testId={`select-${position}-${idx}-blade`}
-                value={combo.blade}
-                placeholder="Select blade"
-                options={componentsData?.blades || []}
-                onSelect={(val) => updateCombo(position, idx, "blade", val)}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor={`${position}-${idx}-assistBlade`}>
-                Assist Blade
-              </Label>
-              <SearchableSelect
-                id={`${position}-${idx}-assistBlade`}
-                testId={`select-${position}-${idx}-assistBlade`}
-                value={combo.assistBlade}
-                placeholder="Select assist blade"
-                options={componentsData?.assistBlades || []}
-                includeNone
-                disabled={editCombos[idx]?.blade?.includes(' ')}
-                onSelect={(val) => updateCombo(position, idx, "assistBlade", val)}
-              />
-              {editCombos[idx]?.blade?.includes(' ') && (
-                <p className="text-xs text-muted-foreground mt-1">Multi-word blades cannot use Assist Blades</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor={`${position}-${idx}-ratchet`}>Ratchet</Label>
-              <SearchableSelect
-                id={`${position}-${idx}-ratchet`}
-                testId={`select-${position}-${idx}-ratchet`}
-                value={combo.ratchet}
-                placeholder="Select ratchet"
-                options={componentsData?.ratchets || []}
-                onSelect={(val) => updateCombo(position, idx, "ratchet", val)}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor={`${position}-${idx}-bit`}>Bit</Label>
-              <SearchableSelect
-                id={`${position}-${idx}-bit`}
-                testId={`select-${position}-${idx}-bit`}
-                value={combo.bit}
-                placeholder="Select bit"
-                options={componentsData?.bits || []}
-                onSelect={(val) => updateCombo(position, idx, "bit", val)}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor={`${position}-${idx}-lockChip`}>Lock Chip</Label>
-              <SearchableSelect
-                id={`${position}-${idx}-lockChip`}
-                testId={`select-${position}-${idx}-lockChip`}
-                value={combo.lockChip}
-                placeholder="Select lock chip"
-                options={componentsData?.lockChips || []}
-                includeNone
-                disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
-                onSelect={(val) => updateCombo(position, idx, "lockChip", val)}
-              />
-              {editCombos[idx]?.blade?.includes(' ') && (
-                <p className="text-xs text-muted-foreground mt-1">Multi-word blades cannot use Lock Chips</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
+  // Deprecated add-results form UI (not rendered; Challengermode data entry supersedes this)
+  // const renderComboInputs = (
+  //   combos: ComboForm[],
+  //   position: "first" | "second" | "third",
+  //   icon: React.ReactNode,
+  //   title: string,
+  // ) => (/* form UI omitted */);
 
   // List view state and data
   type TorneoCard = {
