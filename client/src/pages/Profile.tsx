@@ -119,7 +119,7 @@ export default function Profile() {
         description =
           "No data is collected, only emails are taken to grant access to the application.";
         break;
-      case "Help Center":
+      case "Supporto":
         description = "Write to this email: beybladexmeta@outlook.it";
         break;
       case "About":
@@ -239,7 +239,7 @@ export default function Profile() {
 
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">
-            Preferences
+            Preferenze
           </h2>
           <Card className="divide-y divide-border">
             {/* <button
@@ -266,7 +266,7 @@ export default function Profile() {
 
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">
-            Support
+            Supporto
           </h2>
           <Card className="divide-y divide-border">
             <button
@@ -275,7 +275,7 @@ export default function Profile() {
               data-testid="button-help-center"
             >
               <HelpCircle className="w-5 h-5 text-muted-foreground" />
-              <span className="flex-1 font-medium">Help Center</span>
+              <span className="flex-1 font-medium">Centro Supporto</span>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
             <button
