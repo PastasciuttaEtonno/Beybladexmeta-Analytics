@@ -101,3 +101,139 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
     `);
   });
 };
+
+export const revertExternalCombo = async (result: ExternalComboResult) => {
+  const points = calculatePoints(result.placement, result.totalParticipants);
+  if (!points) return;
+
+  const primiPosti = result.placement === 1 ? 1 : 0;
+  const secondiPosti = result.placement === 2 ? 1 : 0;
+  const terziPosti = result.placement === 3 ? 1 : 0;
+
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      UPDATE combo_stats
+      SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+          secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+          terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+          punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+      WHERE blade = ${result.blade}
+        AND assist_blade = ${result.assistBlade}
+        AND ratchet = ${result.ratchet}
+        AND bit = ${result.bit}
+        AND lock_chip = ${result.lockChip}
+    `);
+
+    await tx.execute(sql`
+      UPDATE blade_stats
+      SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+          secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+          terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+          punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+      WHERE blade = ${result.blade}
+    `);
+
+    await tx.execute(sql`
+      UPDATE assist_blade_stats
+      SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+          secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+          terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+          punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+      WHERE assist_blade = ${result.assistBlade}
+    `);
+
+    await tx.execute(sql`
+      UPDATE ratchet_stats
+      SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+          secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+          terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+          punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+      WHERE ratchet = ${result.ratchet}
+    `);
+
+    await tx.execute(sql`
+      UPDATE bit_stats
+      SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+          secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+          terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+          punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+      WHERE bit = ${result.bit}
+    `);
+
+    await tx.execute(sql`
+      UPDATE lock_chip_stats
+      SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+          secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+          terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+          punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+      WHERE lock_chip = ${result.lockChip}
+    `);
+  });
+};
+
+export const revertExternalComboTx = async (tx: any, result: ExternalComboResult) => {
+  const points = calculatePoints(result.placement, result.totalParticipants);
+  if (!points) return;
+
+  const primiPosti = result.placement === 1 ? 1 : 0;
+  const secondiPosti = result.placement === 2 ? 1 : 0;
+  const terziPosti = result.placement === 3 ? 1 : 0;
+
+  await tx.execute(sql`
+    UPDATE combo_stats
+    SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+        secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+        terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+        punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+    WHERE blade = ${result.blade}
+      AND assist_blade = ${result.assistBlade}
+      AND ratchet = ${result.ratchet}
+      AND bit = ${result.bit}
+      AND lock_chip = ${result.lockChip}
+  `);
+
+  await tx.execute(sql`
+    UPDATE blade_stats
+    SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+        secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+        terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+        punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+    WHERE blade = ${result.blade}
+  `);
+
+  await tx.execute(sql`
+    UPDATE assist_blade_stats
+    SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+        secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+        terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+        punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+    WHERE assist_blade = ${result.assistBlade}
+  `);
+
+  await tx.execute(sql`
+    UPDATE ratchet_stats
+    SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+        secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+        terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+        punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+    WHERE ratchet = ${result.ratchet}
+  `);
+
+  await tx.execute(sql`
+    UPDATE bit_stats
+    SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+        secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+        terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+        punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+    WHERE bit = ${result.bit}
+  `);
+
+  await tx.execute(sql`
+    UPDATE lock_chip_stats
+    SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),
+        secondi_posti = GREATEST(secondi_posti - ${secondiPosti}, 0),
+        terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
+        punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
+    WHERE lock_chip = ${result.lockChip}
+  `);
+};

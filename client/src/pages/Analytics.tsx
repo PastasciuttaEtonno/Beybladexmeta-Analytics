@@ -275,6 +275,7 @@ export default function Analytics() {
     searchTerm !== "" || sortBy !== "score" || sortOrder !== "desc";
 
   const getRankIcon = (index: number) => {
+    if (currentPage !== 1) return null;
     if (index === 0) return <Trophy className="w-5 h-5 text-yellow-500" />;
     if (index === 1) return <Medal className="w-5 h-5 text-gray-400" />;
     if (index === 2) return <Award className="w-5 h-5 text-amber-600" />;
@@ -282,6 +283,10 @@ export default function Analytics() {
   };
 
   const getRankBadge = (index: number) => {
+    const page = data?.pagination?.page ?? 1;
+    const limit = data?.pagination?.limit ?? 20;
+    const overall = (page - 1) * limit + index + 1;
+    if (currentPage !== 1) return <Badge variant="outline">{overall}</Badge>;
     if (index === 0)
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">1st</Badge>;
     if (index === 1)

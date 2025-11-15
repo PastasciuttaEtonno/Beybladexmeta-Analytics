@@ -12,7 +12,7 @@ import { loginRateLimiter } from "./rateLimiter";
 import crypto from "node:crypto";
 import { Resend } from "resend";
 import { fetchTournamentsForGame, fetchTournamentDetail } from "./challengermode";
-import { processExternalCombo, calculatePoints as calcExternalPoints } from "./scoreExternalCombo";
+import { processExternalCombo, calculatePoints as calcExternalPoints, revertExternalCombo, revertExternalComboTx } from "./scoreExternalCombo";
 
 // Extend express session type
 declare module 'express-session' {
@@ -1321,6 +1321,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      try {
+        const exists = await db.execute(sql`SELECT 1 FROM cm_match_results WHERE tournament_id = ${id} LIMIT 1`);
+        (detail as any).hasCombos = Array.isArray(exists.rows) && exists.rows.length > 0;
+      } catch {
+        (detail as any).hasCombos = false;
+      }
+
       res.json({ detail });
     } catch (error: any) {
       console.error('Error fetching Challengermode tournament detail:', error);
@@ -1347,6 +1354,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/admin/tournaments/:id/combos/reset', requireAdmin, async (req, res) => {
+    try {
+      const tournamentId = String(req.params.id || '').trim();
+      if (!tournamentId) {
+        return res.status(400).json({ error: 'Missing tournament id' });
+      }
+
+      let affected = 0;
+      await db.transaction(async (tx) => {
+        const resRows = await tx.execute(sql`
+          SELECT 
+            blade,
+            assist_blade AS "assistBlade",
+            ratchet,
+            bit,
+            lock_chip AS "lockChip",
+            piazzamento,
+            numero_partecipanti AS "numeroPartecipanti"
+          FROM cm_match_results
+          WHERE tournament_id = ${tournamentId}
+        `);
+        const rows = (resRows.rows as any[]) || [];
+
+        for (const r of rows) {
+          const placement = Number(r.piazzamento ?? 0);
+          const participants = Number(r.numeroPartecipanti ?? 0);
+          if (placement >= 1 && placement <= 3 && participants > 0) {
+            await revertExternalComboTx(tx, {
+              blade: r.blade,
+              assistBlade: r.assistBlade,
+              ratchet: r.ratchet,
+              bit: r.bit,
+              lockChip: r.lockChip,
+              placement,
+              totalParticipants: participants,
+            });
+            affected++;
+          }
+        }
+
+        await tx.execute(sql`DELETE FROM cm_match_results WHERE tournament_id = ${tournamentId}`);
+        await tx.execute(sql`DELETE FROM external_player_combos WHERE tournament_id = ${tournamentId}`);
+      });
+
+      try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY top_component_snapshot`);
+      } catch {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW top_component_snapshot`);
+      }
+
+      return res.json({ success: true, affected });
+    } catch (error: any) {
+      console.error('Failed to reset tournament combos:', error);
+      return res.status(500).json({ error: error?.message || 'Failed to reset tournament combos' });
+    }
+  });
+
   // Upsert combos for a specific player in a tournament (admin only)
   app.put('/api/tournaments/:id/players/:playerId/combos', requireAdmin, async (req, res) => {
     try {
@@ -1356,16 +1420,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         combos: Array.isArray(req.body?.combos) ? req.body.combos : [],
       });
 
-      // Validate component existence against stats tables
+      // Validate component existence against stats tables (defensive mapping)
       for (const combo of parsed.combos) {
-        const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
-          db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, combo.blade)),
-          combo.assistBlade === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, combo.assistBlade)),
-          db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, combo.ratchet)),
-          db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, combo.bit)),
-          combo.lockChip === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, combo.lockChip)),
-        ]);
-        if (!Number(bladeExists?.count) || !Number(assistExists?.count) || !Number(ratchetExists?.count) || !Number(bitExists?.count) || !Number(lockChipExists?.count)) {
+        const bladeRows = await db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, combo.blade));
+        const bladeCount = Number(bladeRows[0]?.count ?? 0);
+
+        const assistCount = combo.assistBlade === 'None'
+          ? 1
+          : Number((await db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, combo.assistBlade)))[0]?.count ?? 0);
+
+        const ratchetCount = Number((await db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, combo.ratchet)))[0]?.count ?? 0);
+        const bitCount = Number((await db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, combo.bit)))[0]?.count ?? 0);
+        const lockChipCount = combo.lockChip === 'None'
+          ? 1
+          : Number((await db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, combo.lockChip)))[0]?.count ?? 0);
+
+        if (!bladeCount || !assistCount || !ratchetCount || !bitCount || !lockChipCount) {
           return res.status(400).json({ error: 'Invalid combo components' });
         }
       }
@@ -1431,11 +1501,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       const inserted = await db.insert(externalPlayerCombos).values(values).returning();
       // Pre-fetch existing results for this player + tournament to avoid double-counting
-      const preExisting = await db
-        .select({ comboNumber: cmMatchResults.comboNumber })
+      const prevRows = await db
+        .select({
+          comboNumber: cmMatchResults.comboNumber,
+          blade: cmMatchResults.blade,
+          assistBlade: cmMatchResults.assistBlade,
+          ratchet: cmMatchResults.ratchet,
+          bit: cmMatchResults.bit,
+          lockChip: cmMatchResults.lockChip,
+          piazzamento: cmMatchResults.piazzamento,
+          numeroPartecipanti: cmMatchResults.numeroPartecipanti,
+        })
         .from(cmMatchResults)
         .where(and(eq(cmMatchResults.tournamentId, parsed.tournamentId), eq(cmMatchResults.playerId, parsed.playerId)));
-      const existingComboNums = new Set<number>(preExisting.map(r => Number(r.comboNumber)));
+      const prevMap = new Map<number, any>(prevRows.map(r => [Number(r.comboNumber), r]));
 
       // Upsert into cm_match_results so /api/trends has data (requires date)
       if (tournamentDate) {
@@ -1489,7 +1568,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (placement && totalParticipants && placement >= 1 && placement <= 3 && totalParticipants > 0) {
         for (const r of inserted) {
           const comboNum = Number(r.comboNumber ?? 0);
-          if (!existingComboNums.has(comboNum)) {
+          const prev = prevMap.get(comboNum);
+          const changed = !!prev && (
+            prev.blade !== r.blade ||
+            prev.assistBlade !== r.assistBlade ||
+            prev.ratchet !== r.ratchet ||
+            prev.bit !== r.bit ||
+            prev.lockChip !== r.lockChip ||
+            Number(prev.piazzamento) !== Number(placement) ||
+            Number(prev.numeroPartecipanti) !== Number(totalParticipants)
+          );
+
+          if (changed) {
+            await revertExternalCombo({
+              blade: prev.blade,
+              assistBlade: prev.assistBlade,
+              ratchet: prev.ratchet,
+              bit: prev.bit,
+              lockChip: prev.lockChip,
+              placement: Number(prev.piazzamento ?? 0),
+              totalParticipants: Number(prev.numeroPartecipanti ?? 0),
+            });
+            await processExternalCombo({
+              blade: r.blade,
+              assistBlade: r.assistBlade,
+              ratchet: r.ratchet,
+              bit: r.bit,
+              lockChip: r.lockChip,
+              placement,
+              totalParticipants,
+            });
+          } else if (!prev) {
             await processExternalCombo({
               blade: r.blade,
               assistBlade: r.assistBlade,

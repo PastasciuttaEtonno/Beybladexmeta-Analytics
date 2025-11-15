@@ -208,6 +208,7 @@ export default function TournamentDetail() {
 
   // Map of playerId -> combos, to render only for players who have combos
   const [playerCombosById, setPlayerCombosById] = useState<Record<string, ComboForm[]>>({});
+  const [resetting, setResetting] = useState(false);
 
   const { data: componentsData } = useQuery<{ blades: string[]; assistBlades: string[]; ratchets: string[]; bits: string[]; lockChips: string[] }>({
     queryKey: ["/api/components"],
@@ -408,6 +409,24 @@ export default function TournamentDetail() {
     );
   };
 
+  const handleResetTournamentCombos = async () => {
+    if (!user?.isAdmin) return;
+    if (!tournamentId) return;
+    const ok = window.confirm("Sei sicuro di voler azzerare le combo di questo torneo?");
+    if (!ok) return;
+    setResetting(true);
+    try {
+      const resp = await fetch(`/api/admin/tournaments/${tournamentId}/combos/reset`, { method: "POST" });
+      if (!resp.ok) throw new Error("Reset fallito");
+      setPlayerCombosById({});
+      toast({ title: "Reset eseguito", description: "Le combo del torneo sono state azzerate" });
+    } catch (e: any) {
+      toast({ title: "Errore", description: e?.message || "Reset fallito", variant: "destructive" });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <PageHeader title="Dettagli torneo" action={<HeaderLogo />} />
@@ -433,6 +452,13 @@ export default function TournamentDetail() {
               <p className="text-xs">
                 <a className="text-blue-600 hover:underline" href={detailResp.detail.contactUrl} target="_blank" rel="noreferrer">Contatti / Info</a>
               </p>
+            )}
+            {user?.isAdmin && detailResp?.detail?.hasCombos && (
+              <div className="pt-2">
+                <Button type="button" variant="destructive" onClick={handleResetTournamentCombos} disabled={resetting}>
+                  {resetting ? "Reset..." : "Azzera combo torneo"}
+                </Button>
+              </div>
             )}
           </CardHeader>
           <CardContent>
