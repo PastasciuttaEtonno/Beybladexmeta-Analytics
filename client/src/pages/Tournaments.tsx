@@ -22,6 +22,15 @@ import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil } from "lucide-react";
 import { useLocation } from "wouter";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 // Region filter UI removed
 
 type ComboForm = {
@@ -112,6 +121,7 @@ export default function Tournaments() {
   const [descrizione, setDescrizione] = useState<string>("");
   const [participants, setParticipants] = useState<number>(0);
   const [regione, setRegione] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [firstPlace, setFirstPlace] = useState<ComboForm[]>([
     { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
@@ -577,6 +587,10 @@ export default function Tournaments() {
     }
   }, [activeTab, refetchTournaments]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDateFilter, endDateFilter, tournamentsData]);
+
   const renderListView = () => {
     const tournaments = tournamentsData?.tournaments ?? [];
     const filtered = tournaments.filter((t) => {
@@ -590,6 +604,12 @@ export default function Tournaments() {
       const regionOk = true;
       return nameOk && (!!dVal ? (startOk && endOk) : true) && regionOk;
     });
+    const perPage = 10;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+    const page = Math.min(Math.max(1, currentPage), totalPages);
+    const startIdx = (page - 1) * perPage;
+    const endIdx = startIdx + perPage;
+    const pageItems = filtered.slice(startIdx, endIdx);
     return (
       <div className="space-y-4">
         {/* Compact filter bar */}
@@ -652,7 +672,7 @@ export default function Tournaments() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {(filtered.length > 0 ? filtered : []).map((t) => (
+            {(pageItems.length > 0 ? pageItems : []).map((t) => (
               <Card key={t.torneoId} className="overflow-hidden cursor-pointer" onClick={() => openTournamentDialog(t)}>
                 <CardHeader className="pb-2">
                   <h3 className="text-base font-semibold">{t.nomeTorneo}</h3>
@@ -681,6 +701,52 @@ export default function Tournaments() {
               </Card>
             )}
           </div>
+        )}
+
+        {filtered.length > 0 && (
+          <Pagination className="mt-2">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setCurrentPage(Math.max(1, page - 1)); }}
+                />
+              </PaginationItem>
+              {page > 2 && (
+                <PaginationItem>
+                  <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>1</PaginationLink>
+                </PaginationItem>
+              )}
+              {page > 3 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+              {Array.from({ length: 3 }, (_, i) => page - 1 + i)
+                .filter((p) => p >= 1 && p <= totalPages)
+                .map((p) => (
+                  <PaginationItem key={p}>
+                    <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setCurrentPage(p); }}>{p}</PaginationLink>
+                  </PaginationItem>
+                ))}
+              {page < totalPages - 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+              {page < totalPages - 1 && (
+                <PaginationItem>
+                  <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>{totalPages}</PaginationLink>
+                </PaginationItem>
+              )}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setCurrentPage(Math.min(totalPages, page + 1)); }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         )}
 
         {/* Tournament detail dialog removed; navigate to dedicated page */}
