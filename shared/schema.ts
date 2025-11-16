@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date, jsonb, pgView } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -420,3 +420,10 @@ export type UpsertTournamentPlayerCombos = z.infer<typeof upsertTournamentPlayer
 
 export type CmMatchResult = typeof cmMatchResults.$inferSelect;
 export type InsertCmMatchResult = typeof cmMatchResults.$inferInsert;
+
+export const playerLeaderboardView = pgView("player_leaderboard", {
+  playerId: varchar("player_id").primaryKey(),
+  nickname: text("nickname").notNull(),
+  avatar: text("avatar"),
+  totalPoints: doublePrecision("total_points").notNull(),
+}).existing();

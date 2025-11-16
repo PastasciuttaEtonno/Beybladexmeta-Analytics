@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema, registerSchema, users } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
@@ -1001,6 +1001,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_leaderboard`);
+      } catch (refreshError2) {
+        console.warn('player_leaderboard concurrent refresh failed, falling back:', refreshError2);
+        try {
+          await db.execute(sql`REFRESH MATERIALIZED VIEW player_leaderboard`);
+        } catch (fallbackError2) {
+          console.error('Failed to refresh player_leaderboard:', fallbackError2);
+        }
+      }
+
       res.json({ success: true, message: 'External tournament results submitted successfully', tournamentId: data.tournamentId });
     } catch (error) {
       console.error('External tournament submission error:', error);
@@ -1451,6 +1462,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_leaderboard`);
+      } catch {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW player_leaderboard`);
+      }
+
+      try {
         const adminRow = await db.select({ email: users.email }).from(users).where(eq(users.id, req.session.userId!));
         const email = adminRow[0]?.email || '';
         await db.insert(adminAuditLogs).values({
@@ -1680,6 +1697,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error('Failed to refresh materialized view:', fallbackError);
           }
         }
+
+        try {
+          await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_leaderboard`);
+        } catch (refreshError2) {
+          console.warn('player_leaderboard concurrent refresh failed, falling back:', refreshError2);
+          try {
+            await db.execute(sql`REFRESH MATERIALIZED VIEW player_leaderboard`);
+          } catch (fallbackError2) {
+            console.error('Failed to refresh player_leaderboard:', fallbackError2);
+          }
+        }
       }
 
       try {
@@ -1699,6 +1727,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Failed to upsert player combos:', error);
       res.status(400).json({ error: error?.message || 'Failed to upsert player combos' });
+    }
+  });
+
+  // Classifica giocatori basata su external_player_combos
+  app.get('/api/player-rankings', async (req, res) => {
+    try {
+      const rows = await db
+        .select()
+        .from(playerLeaderboardView)
+        .orderBy(desc(playerLeaderboardView.totalPoints))
+        .limit(100);
+      const players = rows.map((r: any) => ({
+        id: r.playerId,
+        nickname: r.nickname,
+        avatar: r.avatar,
+        totalPoints: Number(r.totalPoints || 0),
+      }));
+      res.json({ players });
+    } catch (error) {
+      console.error('Error fetching player rankings:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // Profilo singolo giocatore: avatar, nickname e statistiche
+  app.get('/api/players/:id', async (req, res) => {
+    try {
+      const playerId = String(req.params.id || '').trim();
+      if (!playerId) return res.status(400).json({ error: 'Missing player id' });
+
+      const playerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.id, playerId)).limit(1);
+      const player = playerRows[0] || null;
+      if (!player) return res.status(404).json({ error: 'Player not found' });
+
+      const totalPointsQuery = await db.execute(sql`
+        SELECT COALESCE(SUM(
+          CASE placement
+            WHEN 1 THEN 10
+            WHEN 2 THEN 7
+            WHEN 3 THEN 5
+            ELSE 0
+          END * total_participants
+        ), 0) AS total_points
+        FROM external_player_combos
+        WHERE player_id = ${playerId} AND placement IS NOT NULL AND total_participants IS NOT NULL;
+      `);
+      const totalPoints = Number(totalPointsQuery.rows[0]?.total_points || 0);
+
+      const mostUsedComboQuery = await db.execute(sql`
+        SELECT blade, assist_blade, ratchet, bit, lock_chip,
+               COUNT(*) AS use_count,
+               COALESCE(SUM(
+                 CASE placement
+                   WHEN 1 THEN 10
+                   WHEN 2 THEN 7
+                   WHEN 3 THEN 5
+                   ELSE 0
+                 END * total_participants
+               ), 0) AS points
+        FROM external_player_combos
+        WHERE player_id = ${playerId}
+        GROUP BY blade, assist_blade, ratchet, bit, lock_chip
+        ORDER BY use_count DESC, points DESC
+        LIMIT 1;
+      `);
+      const muc = mostUsedComboQuery.rows[0] || null;
+
+      const favoriteBladeQuery = await db.execute(sql`
+        SELECT blade,
+               COUNT(*) AS use_count,
+               COALESCE(SUM(
+                 CASE placement
+                   WHEN 1 THEN 10
+                   WHEN 2 THEN 7
+                   WHEN 3 THEN 5
+                   ELSE 0
+                 END * total_participants
+               ), 0) AS points
+        FROM external_player_combos
+        WHERE player_id = ${playerId}
+        GROUP BY blade
+        ORDER BY use_count DESC, points DESC
+        LIMIT 1;
+      `);
+      const favBlade = favoriteBladeQuery.rows[0] || null;
+
+      res.json({
+        player: { id: player.id, nickname: player.nickname, avatar: player.avatar },
+        stats: {
+          totalPoints,
+          mostUsedCombo: muc
+            ? {
+                blade: muc.blade,
+                assistBlade: muc.assist_blade,
+                ratchet: muc.ratchet,
+                bit: muc.bit,
+                lockChip: muc.lock_chip,
+                count: Number(muc.use_count || 0),
+                points: Number(muc.points || 0),
+              }
+            : null,
+          favoriteBlade: favBlade
+            ? {
+                blade: favBlade.blade,
+                count: Number(favBlade.use_count || 0),
+                points: Number(favBlade.points || 0),
+              }
+            : null,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching player profile:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // Tornei a cui il giocatore ha partecipato (riepilogo)
+  app.get('/api/players/:id/tournaments', async (req, res) => {
+    try {
+      const playerId = String(req.params.id || '').trim();
+      if (!playerId) return res.status(400).json({ error: 'Missing player id' });
+
+      const q = await db.execute(sql`
+        SELECT
+          tournament_id AS tournament_id,
+          MAX(data_torneo) AS date,
+          MIN(piazzamento) AS best_placement,
+          SUM(punti_guadagnati) AS total_points,
+          COUNT(*) AS combo_count
+        FROM cm_match_results
+        WHERE player_id = ${playerId}
+        GROUP BY tournament_id
+        ORDER BY date DESC
+        LIMIT 50;
+      `);
+      type PlayerTournamentSummary = {
+        tournamentId: string;
+        date: string | null;
+        bestPlacement: number | null;
+        totalPoints: number;
+        comboCount: number;
+      };
+
+      const base: PlayerTournamentSummary[] = (q.rows || []).map((r: any) => ({
+        tournamentId: String(r.tournament_id),
+        date: r.date ? String(r.date) : null,
+        bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
+        totalPoints: Number(r.total_points || 0),
+        comboCount: Number(r.combo_count || 0),
+      }));
+
+      const enriched = await Promise.all(base.map(async (t: PlayerTournamentSummary) => {
+        try {
+          const detail = await fetchTournamentDetail(t.tournamentId);
+          const name = detail?.name || null;
+          // If date missing, try schedule.startedAt
+          const startedAt = detail?.schedule?.startedAt as string | undefined;
+          const dateFromDetail = startedAt ? String(startedAt).slice(0, 10) : null;
+          return { ...t, name: name || null, date: t.date || dateFromDetail };
+        } catch {
+          return { ...t, name: null };
+        }
+      }));
+
+      res.json({ tournaments: enriched });
+    } catch (error) {
+      console.error('Error fetching player tournaments:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   });
 

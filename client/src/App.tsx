@@ -16,6 +16,8 @@ import TournamentDetail from "@/pages/TournamentDetail";
 import Profile from "@/pages/Profile";
 import ComboDetail from "@/pages/ComboDetail";
 import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
+import Players from "@/pages/Players";
+import PlayerDetail from "@/pages/PlayerDetail";
 
 function AppRoutes() {
   return (
@@ -58,6 +60,16 @@ function AppRoutes() {
 
       <Route path="/leaderboard/:type">
         <ComponentLeaderboard />
+        <BottomNav />
+      </Route>
+
+      <Route path="/players">
+        <Players />
+        <BottomNav />
+      </Route>
+
+      <Route path="/players/:id">
+        <PlayerDetail />
         <BottomNav />
       </Route>
 

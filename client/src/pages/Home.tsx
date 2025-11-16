@@ -7,6 +7,9 @@ import { PageHeader } from '@/components/PageHeader';
 import { HeaderLogo } from '@/components/HeaderLogo';
 import { LeaderboardDialog } from '@/components/LeaderboardDialog';
 import { useState } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { useLocation } from 'wouter';
 import type { BladeStats, RatchetStats, BitStats } from '@shared/schema';
 
 // Use the public MinIO URL like in Analytics.tsx
@@ -80,8 +83,10 @@ interface TopComponentsResponse {
 
 export default function Home() {
   const { theme } = useTheme();
+  const [, setLocation] = useLocation();
   const [leaderboardType, setLeaderboardType] = useState<"blade"|"ratchet"|"bit"|null>(null);
   const dialogOpen = leaderboardType !== null;
+  const [activeTab, setActiveTab] = useState<'components'|'players'>('components');
   
   const { data: topComponents, isLoading } = useQuery<TopComponentsResponse>({
     queryKey: ['/api/stats/top/components'],
@@ -100,8 +105,23 @@ export default function Home() {
       <PageHeader title="Home" action={<HeaderLogo />} />
       
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => {
+            if (val === 'players') {
+              setLocation('/players');
+            } else {
+              setActiveTab('components');
+            }
+          }}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="components">Componenti</TabsTrigger>
+            <TabsTrigger value="players">Giocatori</TabsTrigger>
+          </TabsList>
 
-        <div className="space-y-4">
+          <TabsContent value="components" className="space-y-4">
           {bladeLoading ? (
             <Card className="p-6">
               <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
@@ -248,7 +268,8 @@ export default function Home() {
               </div>
             </Card>
           )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </main>
       <LeaderboardDialog
         type={leaderboardType}
