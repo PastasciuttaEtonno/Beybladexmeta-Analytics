@@ -398,6 +398,22 @@ export const upsertTournamentPlayerCombosSchema = z.object({
 
 export type CmPlayer = typeof cmPlayers.$inferSelect;
 export type InsertCmPlayer = typeof cmPlayers.$inferInsert;
+
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminUserId: varchar("admin_user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  email: text("email").notNull(),
+  action: text("action").notNull(),
+  tournamentId: varchar("tournament_id"),
+  playerId: varchar("player_id"),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
+}, (table) => ({
+  actionIdx: index("admin_audit_action_idx").on(table.action),
+  tournamentIdx: index("admin_audit_tournament_idx").on(table.tournamentId),
+}));
+
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type ExternalPlayerCombo = typeof externalPlayerCombos.$inferSelect;
 export type InsertExternalPlayerCombo = typeof externalPlayerCombos.$inferInsert;
 export type UpsertTournamentPlayerCombos = z.infer<typeof upsertTournamentPlayerCombosSchema>;

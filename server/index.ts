@@ -127,7 +127,7 @@ app.use((req, res, next) => {
   let sessionStore;
 
   // Only try to use PostgreSQL if DATABASE_URL is available and looks valid
-  if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres://')) {
+  if (process.env.DATABASE_URL && (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'))) {
     try {
       const PgStore = connectPgSimple(session);
       const pgPool = new pg.Pool({

@@ -56,7 +56,7 @@ export function LeaderboardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-sm max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -70,24 +70,28 @@ export function LeaderboardDialog({
         ) : items.length > 0 ? (
           <div className="space-y-2">
             {items.map((row, index) => (
-              <Card key={`${activeType}-${index}`} className="p-3 flex items-center gap-3">
+              <Card key={`${activeType}-${index}`} className="p-3 flex items-center gap-2">
                 <div className="w-10 text-center">
                   <Badge variant="secondary" className="text-xs">
                     {index + 1}
                   </Badge>
                 </div>
-                <div className="w-14 h-14">
+                <div className="w-12 h-12">
                   <ComponentImage folder={folder} name={row[activeType]} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{row[activeType]}</p>
-                  <div className="flex gap-2 mt-1">
-                    <Badge variant="outline" className="text-xs">
-                      Score: {Number(row.punteggioTotale).toLocaleString()}
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">1st: {row.primiPosti}</Badge>
-                    <Badge variant="secondary" className="text-xs">2nd: {row.secondiPosti}</Badge>
-                    <Badge variant="secondary" className="text-xs">3rd: {row.terziPosti}</Badge>
+                  <div className="mt-1 space-y-1">
+                    <div className="flex">
+                      <Badge variant="outline" className="text-xs">
+                        Score: {Number(row.punteggioTotale).toLocaleString()}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-1">
+                      <Badge variant="secondary" className="text-xs">1st: {row.primiPosti}</Badge>
+                      <Badge variant="secondary" className="text-xs">2nd: {row.secondiPosti}</Badge>
+                      <Badge variant="secondary" className="text-xs">3rd: {row.terziPosti}</Badge>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -130,7 +134,7 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
         }
       }}
       alt={name}
-      className="w-14 h-14 object-contain"
+      className="w-12 h-12 object-contain"
     />
   );
 }

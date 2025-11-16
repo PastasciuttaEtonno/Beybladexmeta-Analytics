@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema, registerSchema, users } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
@@ -1450,6 +1450,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.execute(sql`REFRESH MATERIALIZED VIEW top_component_snapshot`);
       }
 
+      try {
+        const adminRow = await db.select({ email: users.email }).from(users).where(eq(users.id, req.session.userId!));
+        const email = adminRow[0]?.email || '';
+        await db.insert(adminAuditLogs).values({
+          adminUserId: req.session.userId!,
+          email,
+          action: 'reset_tournament_combos',
+          tournamentId,
+          payload: { affected },
+        } as any);
+      } catch {}
+
       return res.json({ success: true, affected });
     } catch (error: any) {
       console.error('Failed to reset tournament combos:', error);
@@ -1669,6 +1681,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+
+      try {
+        const adminRow = await db.select({ email: users.email }).from(users).where(eq(users.id, req.session.userId!));
+        const email = adminRow[0]?.email || '';
+        await db.insert(adminAuditLogs).values({
+          adminUserId: req.session.userId!,
+          email,
+          action: 'upsert_player_combos',
+          tournamentId: parsed.tournamentId,
+          playerId: parsed.playerId,
+          payload: { combos: parsed.combos },
+        } as any);
+      } catch {}
 
       res.json({ success: true, combos: inserted.map(r => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip })) });
     } catch (error: any) {
