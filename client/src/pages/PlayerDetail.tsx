@@ -105,9 +105,9 @@ export default function PlayerDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background pb-20">
       <PageHeader title={profile ? profile.nickname : "Profilo Giocatore"} />
-      <div className="max-w-2xl mx-auto p-4 space-y-4">
+      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-3">
         <Tabs
           value={"players"}
           onValueChange={(val) => {
@@ -248,7 +248,7 @@ export default function PlayerDetail() {
         </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   );
 }
