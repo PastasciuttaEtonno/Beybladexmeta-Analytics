@@ -124,7 +124,7 @@ export default function Profile() {
         break;
       case "About":
         description =
-          "Images are taken from the Beyblade wiki page and are not modified. The application is still in the early stages of development.";
+          "Images are taken from the Beyblade wiki page and are not modified. The stats are taken from Challengermode. The application is still in the early stages of development.";
         break;
       default:
         description = `${label} settings would open here`;
