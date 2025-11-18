@@ -108,10 +108,6 @@ export default function PlayerDetail() {
     <div className="min-h-screen bg-background">
       <PageHeader title={profile ? profile.nickname : "Profilo Giocatore"} />
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        <Button variant="ghost" onClick={() => setLocation('/players')} className="gap-2 w-fit">
-          <ArrowLeft className="w-4 h-4" />
-          Indietro
-        </Button>
         <Tabs
           value={"players"}
           onValueChange={(val) => {
@@ -124,6 +120,12 @@ export default function PlayerDetail() {
             <TabsTrigger value="components">Componenti</TabsTrigger>
             <TabsTrigger value="players">Giocatori</TabsTrigger>
           </TabsList>
+          <div className="mb-4">
+            <Button variant="ghost" onClick={() => setLocation('/players')} className="gap-2 w-fit">
+              <ArrowLeft className="w-4 h-4" />
+              Indietro
+            </Button>
+          </div>
 
           <TabsContent value="players" className="space-y-4">
         <Card className="p-4 flex items-center gap-4">
