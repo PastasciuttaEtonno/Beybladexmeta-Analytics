@@ -114,7 +114,7 @@ function SearchableSelect({
 export default function Tournaments() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'add'|'list'>('list');
   const [nomeTorneo, setNomeTorneo] = useState<string>("");
   const [dataTorneo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
@@ -502,7 +502,52 @@ export default function Tournaments() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, startDateFilter, endDateFilter, tournamentsData]);
+  }, [searchTerm, startDateFilter, endDateFilter]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search || "");
+    const pStr = params.get("page");
+    let p = pStr ? parseInt(pStr, 10) : NaN;
+    if (Number.isNaN(p) || p <= 0) {
+      const ss = sessionStorage.getItem("tournaments_page");
+      p = ss ? parseInt(ss, 10) : 1;
+    }
+    if (!Number.isNaN(p) && p > 0) setCurrentPage(p);
+
+    const q = params.get("q");
+    const start = params.get("start");
+    const end = params.get("end");
+    const ssQ = sessionStorage.getItem("tournaments_q");
+    const ssStart = sessionStorage.getItem("tournaments_start");
+    const ssEnd = sessionStorage.getItem("tournaments_end");
+    if (q !== null || ssQ !== null) setSearchTerm((q ?? ssQ ?? "") as string);
+    if (start !== null || ssStart !== null) setStartDateFilter((start ?? ssStart ?? "") as string);
+    if (end !== null || ssEnd !== null) setEndDateFilter((end ?? ssEnd ?? "") as string);
+  }, []);
+
+  useEffect(() => {
+    const base = "/tournaments";
+    const params = new URLSearchParams(window.location.search || "");
+    params.set("page", String(currentPage));
+    sessionStorage.setItem("tournaments_page", String(currentPage));
+    setLocation(`${base}?${params.toString()}`, { replace: true });
+  }, [currentPage]);
+
+  useEffect(() => {
+    const base = "/tournaments";
+    const params = new URLSearchParams(window.location.search || "");
+    if (searchTerm) {
+      params.set("q", searchTerm);
+    } else {
+      params.delete("q");
+    }
+    if (startDateFilter) params.set("start", startDateFilter); else params.delete("start");
+    if (endDateFilter) params.set("end", endDateFilter); else params.delete("end");
+    sessionStorage.setItem("tournaments_q", searchTerm);
+    sessionStorage.setItem("tournaments_start", startDateFilter);
+    sessionStorage.setItem("tournaments_end", endDateFilter);
+    setLocation(`${base}?${params.toString()}`, { replace: true });
+  }, [searchTerm, startDateFilter, endDateFilter]);
 
   const renderListView = () => {
     const tournaments = tournamentsData?.tournaments ?? [];

@@ -116,7 +116,7 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
 }
 
 export default function Analytics() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("score");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -133,6 +133,51 @@ export default function Analytics() {
 
   useEffect(() => {
     setCurrentPage(1);
+  }, [searchTerm, sortBy, sortOrder]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search || "");
+    const pStr = params.get("page");
+    let p = pStr ? parseInt(pStr, 10) : NaN;
+    if (Number.isNaN(p) || p <= 0) {
+      const ss = sessionStorage.getItem("analytics_page");
+      p = ss ? parseInt(ss, 10) : 1;
+    }
+    if (!Number.isNaN(p) && p > 0) setCurrentPage(p);
+
+    const q = params.get("q");
+    const sort = params.get("sort");
+    const order = params.get("order");
+    const ssQ = sessionStorage.getItem("analytics_q");
+    const ssSort = sessionStorage.getItem("analytics_sort");
+    const ssOrder = sessionStorage.getItem("analytics_order");
+    if (q !== null || ssQ !== null) setSearchTerm((q ?? ssQ ?? "") as string);
+    if (sort !== null || ssSort !== null) setSortBy((sort ?? ssSort ?? "score") as string);
+    if (order !== null || ssOrder !== null) setSortOrder(((order ?? ssOrder ?? "desc") as "asc" | "desc"));
+  }, []);
+
+  useEffect(() => {
+    const base = "/analytics";
+    const params = new URLSearchParams(window.location.search || "");
+    params.set("page", String(currentPage));
+    sessionStorage.setItem("analytics_page", String(currentPage));
+    setLocation(`${base}?${params.toString()}`, { replace: true });
+  }, [currentPage]);
+
+  useEffect(() => {
+    const base = "/analytics";
+    const params = new URLSearchParams(window.location.search || "");
+    if (searchTerm) {
+      params.set("q", searchTerm);
+    } else {
+      params.delete("q");
+    }
+    params.set("sort", sortBy);
+    params.set("order", sortOrder);
+    sessionStorage.setItem("analytics_q", searchTerm);
+    sessionStorage.setItem("analytics_sort", sortBy);
+    sessionStorage.setItem("analytics_order", sortOrder);
+    setLocation(`${base}?${params.toString()}`, { replace: true });
   }, [searchTerm, sortBy, sortOrder]);
 
   const { data, isLoading } = useQuery<ComboResponse>({
