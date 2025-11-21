@@ -543,33 +543,43 @@ export default function Favorites() {
 
                         <div className="grid grid-cols-2 gap-2">
                           {combo.assistBlade !== "None" && (
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                Assist Blade
-                              </p>
-                              <p className="text-sm font-medium truncate">
-                                {combo.assistBlade}
-                              </p>
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-10 shrink-0">
+                                <ComponentImage folder="assist-blades" name={combo.assistBlade} />
+                              </div>
+                              <div className="min-w-0 flex flex-col justify-center">
+                                <p className="text-xs text-muted-foreground">Assist Blade</p>
+                                <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
+                              </div>
                             </div>
                           )}
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Ratchet
-                            </p>
-                            <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 shrink-0">
+                              <ComponentImage folder="ratchets" name={combo.ratchet} />
+                            </div>
+                            <div className="min-w-0 flex flex-col justify-center">
+                              <p className="text-xs text-muted-foreground">Ratchet</p>
+                              <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Bit</p>
-                            <p className="text-sm font-medium truncate">{combo.bit}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 shrink-0">
+                              <ComponentImage folder="bits" name={combo.bit} />
+                            </div>
+                            <div className="min-w-0 flex flex-col justify-center">
+                              <p className="text-xs text-muted-foreground">Bit</p>
+                              <p className="text-sm font-medium truncate">{combo.bit}</p>
+                            </div>
                           </div>
                           {combo.lockChip !== "None" && (
-                            <div className="col-span-2">
-                              <p className="text-xs text-muted-foreground">
-                                Lock Chip
-                              </p>
-                              <p className="text-sm font-medium truncate">
-                                {combo.lockChip}
-                              </p>
+                            <div className="col-span-2 flex items-center gap-2">
+                              <div className="w-10 h-10 shrink-0">
+                                <ComponentImage folder="chips" name={combo.lockChip} />
+                              </div>
+                              <div className="min-w-0 flex flex-col justify-center">
+                                <p className="text-xs text-muted-foreground">Lock Chip</p>
+                                <p className="text-sm font-medium truncate">{combo.lockChip}</p>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -834,31 +844,43 @@ export default function Favorites() {
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             {combo.assistBlade !== "None" && (
-                              <div>
-                                <span className="text-muted-foreground">
-                                  Assist:
-                                </span>{" "}
-                                {combo.assistBlade}
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 shrink-0">
+                                  <ComponentImage folder="assist-blades" name={combo.assistBlade} />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="text-muted-foreground">Assist:</span>{" "}
+                                <span className="font-medium truncate  max-w-[140px]">{combo.assistBlade}</span>
+                                </div>
                               </div>
                             )}
-                            <div>
-                              <span className="text-muted-foreground">
-                                Ratchet:
-                              </span>{" "}
-                              {combo.ratchet}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 shrink-0">
+                                <ComponentImage folder="ratchets" name={combo.ratchet} />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="text-muted-foreground">Ratchet:</span>{" "}
+                                <span className="font-medium truncate  max-w-[140px]">{combo.ratchet}</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                Bit:
-                              </span>{" "}
-                              {combo.bit}
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 shrink-0">
+                                <ComponentImage folder="bits" name={combo.bit} />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="text-muted-foreground">Bit:</span>{" "}
+                                <span className="font-medium truncate  max-w-[140px]">{combo.bit}</span>
+                              </div>
                             </div>
                             {combo.lockChip !== "None" && (
-                              <div className="col-span-2">
-                                <span className="text-muted-foreground">
-                                  Chip:
-                                </span>{" "}
-                                {combo.lockChip}
+                              <div className="col-span-2 flex items-center gap-2">
+                                <div className="w-8 h-8 shrink-0">
+                                  <ComponentImage folder="chips" name={combo.lockChip} />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="text-muted-foreground">Chip:</span>{" "}
+                                  <span className="font-medium truncate  max-w-[180px]">{combo.lockChip}</span>
+                                </div>
                               </div>
                             )}
                           </div>
