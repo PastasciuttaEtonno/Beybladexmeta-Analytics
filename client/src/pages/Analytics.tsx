@@ -558,54 +558,46 @@ export default function Analytics() {
 
                         <div className="grid grid-cols-2 gap-2 mb-3">
                           {combo.assistBlade !== "None" && (
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                Assist Blade
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 shrink-0">
-                                  <ComponentImage folder={folderMap['assist-blade']} name={combo.assistBlade} />
-                                </div>
-                                <p className="text-sm font-medium truncate">
-                                  {combo.assistBlade}
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-10 shrink-0">
+                                <ComponentImage folder={folderMap['assist-blade']} name={combo.assistBlade} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs text-muted-foreground">
+                                  <span className="sm:hidden">As. Blade</span>
+                                  <span className="hidden sm:inline">Assist Blade</span>
                                 </p>
+                                <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
                               </div>
                             </div>
                           )}
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Ratchet
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
-                              </div>
-                              <p className="text-sm font-medium truncate">
-                                {combo.ratchet}
-                              </p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 shrink-0">
+                              <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-muted-foreground">Ratchet</p>
+                              <p className="text-sm font-medium truncate">{combo.ratchet}</p>
                             </div>
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Bit
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder={folderMap['bit']} name={combo.bit} />
-                              </div>
-                              <p className="text-sm font-medium truncate">
-                                {combo.bit}
-                              </p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 shrink-0">
+                              <ComponentImage folder={folderMap['bit']} name={combo.bit} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-muted-foreground">Bit</p>
+                              <p className="text-sm font-medium truncate">{combo.bit}</p>
                             </div>
                           </div>
                           {combo.lockChip !== "None" && (
-                            <div className="col-span-2">
-                              <p className="text-xs text-muted-foreground">
-                                Lock Chip
-                              </p>
-                              <p className="text-sm font-medium truncate">
-                                {combo.lockChip}
-                              </p>
+                            <div className="col-span-2 flex items-center gap-2">
+                              <div className="w-10 h-10 shrink-0">
+                                <ComponentImage folder={folderMap['lock-chip']} name={combo.lockChip} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs text-muted-foreground">Lock Chip</p>
+                                <p className="text-sm font-medium truncate">{combo.lockChip}</p>
+                              </div>
                             </div>
                           )}
                         </div>
