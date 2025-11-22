@@ -96,6 +96,27 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  const mask = (input: any): any => {
+    if (input === null || input === undefined) return input;
+    if (typeof input !== 'object') return input;
+    if (Array.isArray(input)) return input.map((v) => mask(v));
+    const redactedKeys = new Set(['password', 'password_hash', 'verification_token']);
+    const masked: Record<string, any> = {};
+    for (const [k, v] of Object.entries(input)) {
+      if (redactedKeys.has(k)) {
+        masked[k] = '[redacted]';
+      } else if (k === 'email' && typeof v === 'string') {
+        const [local, domain] = String(v).split('@');
+        const safeLocal = local ? (local.length <= 2 ? local[0] + '*' : local.slice(0, 2) + '*'.repeat(Math.max(1, local.length - 2))) : '';
+        masked[k] = `${safeLocal}@${domain || ''}`;
+      } else if (k === 'photoURL' && typeof v === 'string') {
+        masked[k] = '[redacted]';
+      } else {
+        masked[k] = mask(v);
+      }
+    }
+    return masked;
+  };
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -107,8 +128,12 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      const isAuth = path.startsWith('/api/auth');
+      if (!isAuth && capturedJsonResponse) {
+        try {
+          logLine += ` :: ${JSON.stringify(mask(capturedJsonResponse))}`;
+        } catch {
+        }
       }
 
       if (logLine.length > 80) {
