@@ -80,6 +80,10 @@ export default function Login() {
   const [regEmailError, setRegEmailError] = useState<string | null>(null);
   const [regPasswordError, setRegPasswordError] = useState<string | null>(null);
   const [regDisplayNameError, setRegDisplayNameError] = useState<string | null>(null);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [tosOpen, setTosOpen] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -272,6 +276,14 @@ export default function Login() {
                   toast({ title: "Invalid name", description: "Use between 1 and 100 characters", variant: "destructive" });
                   return;
                 }
+                if (!privacyAccepted) {
+                  toast({ title: "Privacy required", description: "Please read and accept the Privacy Policy", variant: "destructive" });
+                  return;
+                }
+                if (!tosAccepted) {
+                  toast({ title: "Terms required", description: "Please read and accept the Terms of Service", variant: "destructive" });
+                  return;
+                }
                 setRegistering(true);
                 try {
                   // Ensure reCAPTCHA is loaded and ready
@@ -383,10 +395,149 @@ export default function Login() {
                   <p className="text-xs text-destructive" aria-live="polite">{regPasswordError}</p>
                 )}
               </div>
-              <Button type="submit" className="w-full" disabled={registering || !!regEmailError || !!regPasswordError || !!regDisplayNameError || !regEmail || !regPassword || !regDisplayName}>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="privacy-accept" className="flex items-center gap-2 text-sm">
+                  <input id="privacy-accept" type="checkbox" checked={privacyAccepted} onChange={(e) => setPrivacyAccepted(e.target.checked)} />
+                  <span>I accept the Privacy Policy</span>
+                </label>
+                <button type="button" className="underline text-sm" onClick={() => setPrivacyOpen(true)}>Privacy Policy</button>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="tos-accept" className="flex items-center gap-2 text-sm">
+                  <input id="tos-accept" type="checkbox" checked={tosAccepted} onChange={(e) => setTosAccepted(e.target.checked)} />
+                  <span>I accept the Terms of Service</span>
+                </label>
+                <button type="button" className="underline text-sm" onClick={() => setTosOpen(true)}>Terms of Service</button>
+              </div>
+              <Button type="submit" className="w-full" disabled={registering || !!regEmailError || !!regPasswordError || !!regDisplayNameError || !regEmail || !regPassword || !regDisplayName || !privacyAccepted || !tosAccepted}>
                 {registering ? (recaptchaLoading ? "Verifica reCAPTCHA..." : "Registering...") : "Register"}
               </Button>
             </form>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={tosOpen} onOpenChange={setTosOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[70vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Terms of Service</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 text-sm">
+              <p>These Terms govern the use of the application by the user.</p>
+              <div>
+                <p className="font-medium">1. Acceptance</p>
+                <p>By creating an account or using the Service, you agree to these Terms.</p>
+              </div>
+              <div>
+                <p className="font-medium">2. Use of the Service</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Do not abuse, disrupt, or attempt to circumvent security or rate limits.</li>
+                  <li>Content is provided for informational purposes; accuracy is not guaranteed.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">3. Accounts</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>You are responsible for safeguarding your account credentials.</li>
+                  <li>We may suspend accounts that violate these Terms or the law.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">4. Data & Privacy</p>
+                <p>Personal data is processed as described in the Privacy Policy.</p>
+              </div>
+              <div>
+                <p className="font-medium">5. Intellectual Property</p>
+                <p>Trademarks and third-party content belong to their respective owners.</p>
+              </div>
+              <div>
+                <p className="font-medium">6. Liability</p>
+                <p>The Service is provided “as is”. We are not liable for indirect or consequential damages.</p>
+              </div>
+              <div>
+                <p className="font-medium">7. Changes</p>
+                <p>We may update these Terms. Continued use of the Service constitutes acceptance of changes.</p>
+              </div>
+              <div>
+                <p className="font-medium">8. Contact</p>
+                <p>For questions, contact: <span className="underline">beybladexmeta@outlook.it</span>.</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[70vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Privacy Policy</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 text-sm">
+              <p>
+                This Privacy Policy describes how the Data Controller collects, uses, and protects your personal data when you use this application (the "Service").
+              </p>
+              <div>
+                <p className="font-medium">1. Data Controller (Titolare del Trattamento)</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Contact Email: beybladexmeta@outlook.it</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">2. Data We Process (Dati Trattati)</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Account Data: Email address and unique User Identifier (ID) for authentication and account management.</li>
+                  <li>Technical Data: IP Address; Session Cookies (technical, `httpOnly`, `sameSite`); minimized technical logs used for security and debugging.</li>
+                  <li>Third-Party Public Data: Public tournament and profile data from Challengermode for statistical display.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">3. Purpose and Legal Basis (Finalità e Base Giuridica)</p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>Account Management & Authentication — Contractual Necessity (Art. 6.1.b)</li>
+                  <li>Security & Abuse Prevention (rate limiting, reCAPTCHA) — Legitimate Interest (Art. 6.1.f)</li>
+                  <li>Essential Communications (verification emails) — Contractual Necessity (Art. 6.1.b)</li>
+                  <li>Statistics & Analysis (aggregate metagame data) — Legitimate Interest (Art. 6.1.f)</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">4. Data Recipients and Third Parties</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Email Provider (Resend).</li>
+                  <li>Google reCAPTCHA (may set functional cookies).</li>
+                  <li>Hosting and Storage providers.</li>
+                  <li>External Data Sources (Challengermode).</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">5. International Data Transfers</p>
+                <p>Some suppliers may be outside the EU/EEA. Appropriate safeguards (e.g., SCCs) are applied.</p>
+              </div>
+              <div>
+                <p className="font-medium">6. Retention Period</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Account Data: retained until requested deletion.</li>
+                  <li>Login and Failed Attempts: retained for limited windows (e.g., 15–30 days).</li>
+                  <li>Aggregated Tournament Data: retained while the application is active.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">7. Data Security Measures</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Passwords stored using `bcrypt` hashing.</li>
+                  <li>Secure session cookies with session limits.</li>
+                  <li>Security headers and CSP.</li>
+                  <li>reCAPTCHA anti-bot verification.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium">8. Your Rights</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Access, Rectification, Erasure, Restriction, Objection, Portability.</li>
+                </ul>
+                <p>To exercise your rights, contact: <span className="underline">beybladexmeta@outlook.it</span>.</p>
+                <p className="mt-2">Right to Lodge a Complaint: Garante per la Protezione dei Dati Personali — garanteprivacy.it.</p>
+              </div>
+              <div>
+                <p className="font-medium">9. Cookies</p>
+                <p>We use only technical session cookies. No profiling cookies. reCAPTCHA may set functional cookies.</p>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

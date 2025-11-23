@@ -34,6 +34,7 @@ export default function Profile() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [tosOpen, setTosOpen] = useState(false);
 
 
   const handleSaveName = async () => {
@@ -256,6 +257,15 @@ export default function Profile() {
               <span className="flex-1 font-medium">Privacy</span>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
+            <button
+              onClick={() => setTosOpen(true)}
+              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
+              data-testid="button-tos"
+            >
+              <Info className="w-5 h-5 text-muted-foreground" />
+              <span className="flex-1 font-medium">Terms of Service</span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
           </Card>
         </div>
 
@@ -411,6 +421,54 @@ export default function Profile() {
               <p>
                 We only use technical session cookies essential for the Service. We do not use profiling or marketing cookies. Google reCAPTCHA may set functional cookies for its anti-bot protection service.
               </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={tosOpen} onOpenChange={setTosOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[70vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Terms of Service</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p>These Terms govern the use of the application by the user.</p>
+            <div>
+              <p className="font-medium">1. Acceptance</p>
+              <p>By creating an account or using the Service, you agree to these Terms.</p>
+            </div>
+            <div>
+              <p className="font-medium">2. Use of the Service</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Do not abuse, disrupt, or attempt to circumvent security or rate limits.</li>
+                <li>Content is provided for informational purposes; accuracy is not guaranteed.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium">3. Accounts</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>You are responsible for safeguarding your account credentials.</li>
+                <li>We may suspend accounts that violate these Terms or the law.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium">4. Data & Privacy</p>
+              <p>Personal data is processed as described in the Privacy Policy.</p>
+            </div>
+            <div>
+              <p className="font-medium">5. Intellectual Property</p>
+              <p>Trademarks and third-party content belong to their respective owners.</p>
+            </div>
+            <div>
+              <p className="font-medium">6. Liability</p>
+              <p>The Service is provided “as is”. We are not liable for indirect or consequential damages.</p>
+            </div>
+            <div>
+              <p className="font-medium">7. Changes</p>
+              <p>We may update these Terms. Continued use of the Service constitutes acceptance of changes.</p>
+            </div>
+            <div>
+              <p className="font-medium">8. Contact</p>
+              <p>For questions, contact: <span className="underline">beybladexmeta@outlook.it</span>.</p>
             </div>
           </div>
         </DialogContent>
