@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useMemo, useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -35,17 +36,23 @@ export default function Players() {
   });
 
   const players = (data?.players || []) as PlayerItem[];
+  const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 20;
-  const totalPages = Math.max(1, Math.ceil(players.length / perPage));
+  const filteredPlayers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return players;
+    return players.filter((p) => p.nickname.toLowerCase().includes(q));
+  }, [players, query]);
+  const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / perPage));
   const pageItems = useMemo(() => {
     const start = (page - 1) * perPage;
-    return players.slice(start, start + perPage);
-  }, [players, page]);
+    return filteredPlayers.slice(start, start + perPage);
+  }, [filteredPlayers, page]);
 
   useEffect(() => {
     setPage(1);
-  }, [players.length]);
+  }, [players.length, query]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -65,13 +72,25 @@ export default function Players() {
           </TabsList>
 
           <TabsContent value="players" className="space-y-3">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 min-w-[180px]">
+            <Input
+              id="player-search"
+              aria-label="Search players"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search players..."
+              className="h-9 text-sm"
+            />
+          </div>
+        </div>
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="h-20 bg-muted/30 animate-pulse" />
             ))}
           </div>
-        ) : players.length === 0 ? (
+        ) : filteredPlayers.length === 0 ? (
           <Card className="p-6 text-center">Nessun giocatore trovato</Card>
         ) : (
           <div className="space-y-2 overflow-y-auto">
@@ -103,7 +122,7 @@ export default function Players() {
                 </div>
               </Card>
             ))}
-            {players.length > perPage && (
+            {filteredPlayers.length > perPage && (
               <Pagination className="mt-2">
                 <PaginationContent>
                   <PaginationItem>
