@@ -422,11 +422,12 @@ export default function Tournaments() {
   // Filters for list view (used for external fetch)
   const [searchTerm, setSearchTerm] = useState("");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
-  const [endDateFilter, setEndDateFilter] = useState<string>("");
+  const DEFAULT_END_DATE = format(new Date(), "yyyy-MM-dd");
+  const [endDateFilter, setEndDateFilter] = useState<string>(DEFAULT_END_DATE);
   // Region filter removed
 
   const { data: tournamentsData, refetch: refetchTournaments, isLoading: tournamentsLoading } = useQuery<{ tournaments: TorneoCard[] }>({
-    queryKey: ["/api/challengermode/tournaments", startDateFilter || ""],
+    queryKey: ["/api/challengermode/tournaments", startDateFilter || "", endDateFilter || ""],
     queryFn: async () => {
       const afterIso = startDateFilter
         ? new Date(startDateFilter).toISOString()
@@ -437,7 +438,7 @@ export default function Tournaments() {
       if (!resp.ok) throw new Error("Failed to fetch tournaments");
       const json = await resp.json();
       const ext = (json?.tournaments ?? []) as any[];
-      const mapped: TorneoCard[] = ext.map((t) => ({
+      const base: TorneoCard[] = ext.map((t) => ({
         torneoId: t.id,
         nomeTorneo: t.name,
         dataTorneo: null,
@@ -448,7 +449,33 @@ export default function Tournaments() {
         gameTitle: t.gameTitle ?? undefined,
         hasCombos: !!t.hasCombos,
       }));
-      return { tournaments: mapped };
+      if (!endDateFilter) {
+        return { tournaments: base };
+      }
+      const out = new Array<TorneoCard>(base.length);
+      let i = 0;
+      const limit = 6;
+      async function worker() {
+        while (i < base.length) {
+          const idx = i++;
+          const m = base[idx];
+          try {
+            const dResp = await fetch(`/api/challengermode/tournaments/${encodeURIComponent(m.torneoId)}`, { credentials: "include" });
+            if (dResp.ok) {
+              const dj = await dResp.json();
+              const startedAt = dj?.detail?.schedule?.startedAt as string | undefined;
+              const dateOnly = startedAt ? String(startedAt).slice(0, 10) : null;
+              out[idx] = { ...m, dataTorneo: dateOnly };
+            } else {
+              out[idx] = m;
+            }
+          } catch {
+            out[idx] = m;
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: limit }, () => worker()));
+      return { tournaments: out };
     },
     enabled: activeTab === 'list',
   });
@@ -522,7 +549,8 @@ export default function Tournaments() {
     const ssEnd = sessionStorage.getItem("tournaments_end");
     if (q !== null || ssQ !== null) setSearchTerm((q ?? ssQ ?? "") as string);
     if (start !== null || ssStart !== null) setStartDateFilter((start ?? ssStart ?? "") as string);
-    if (end !== null || ssEnd !== null) setEndDateFilter((end ?? ssEnd ?? "") as string);
+    // Default end date to today if missing
+    setEndDateFilter((end ?? ssEnd ?? DEFAULT_END_DATE) as string);
   }, []);
 
   useEffect(() => {
@@ -552,15 +580,12 @@ export default function Tournaments() {
   const renderListView = () => {
     const tournaments = tournamentsData?.tournaments ?? [];
     const filtered = tournaments.filter((t) => {
-      const nameOk =
-        !searchTerm ||
-        t.nomeTorneo.toLowerCase().includes(searchTerm.trim().toLowerCase());
+      const nameOk = !searchTerm || t.nomeTorneo.toLowerCase().includes(searchTerm.trim().toLowerCase());
       const dVal = t.dataTorneo ? new Date(t.dataTorneo) : null;
-      const startOk = !startDateFilter || (dVal && dVal >= new Date(startDateFilter));
-      const endOk = !endDateFilter || (dVal && dVal <= new Date(endDateFilter));
-      // Region is not available from Challengermode API; ignore if absent
+      const startOk = !startDateFilter ? true : (dVal ? dVal >= new Date(startDateFilter) : true);
+      const endOk = !endDateFilter ? true : (dVal ? dVal <= new Date(endDateFilter) : false);
       const regionOk = true;
-      return nameOk && (!!dVal ? (startOk && endOk) : true) && regionOk;
+      return nameOk && startOk && endOk && regionOk;
     });
     const perPage = 10;
     const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
@@ -611,7 +636,7 @@ export default function Tournaments() {
             onClick={() => {
               setSearchTerm("");
               setStartDateFilter("");
-              setEndDateFilter("");
+              setEndDateFilter(DEFAULT_END_DATE);
               // Region filter removed
             }}
           >
