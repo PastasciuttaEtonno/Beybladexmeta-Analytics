@@ -79,7 +79,7 @@ export default function Players() {
               aria-label="Search players"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search players..."
+              placeholder="Cerca giocatori..."
               className="h-9 text-sm"
             />
           </div>
