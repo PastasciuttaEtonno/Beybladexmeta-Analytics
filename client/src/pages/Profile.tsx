@@ -235,7 +235,7 @@ export default function Profile() {
 
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">
-            Preferenze
+            Contratti
           </h2>
           <Card className="divide-y divide-border">
             {/* <button
