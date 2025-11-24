@@ -20,7 +20,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
-import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil, CheckCircle, AlertCircle } from "lucide-react";
+import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import {
   Pagination,
@@ -122,6 +123,7 @@ export default function Tournaments() {
   const [participants, setParticipants] = useState<number>(0);
   const [regione, setRegione] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const [firstPlace, setFirstPlace] = useState<ComboForm[]>([
     { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
@@ -643,6 +645,17 @@ export default function Tournaments() {
             <Eraser className="w-4 h-4" aria-label="Clear filters" />
             <span className="sr-only">Pulisci filtri</span>
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9"
+            aria-label="Informazioni tornei"
+            onClick={() => setInfoOpen(true)}
+            data-testid="button-tournaments-info"
+          >
+            <Info className="w-4 h-4" />
+          </Button>
         </div>
 
         {tournamentsLoading ? (
@@ -758,6 +771,14 @@ export default function Tournaments() {
 
           
         </Tabs>
+        <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Info</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm">I tornei contrassegnati dalla spunta verde hanno combo registrate</p>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

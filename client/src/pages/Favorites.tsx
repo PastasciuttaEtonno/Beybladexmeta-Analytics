@@ -341,7 +341,7 @@ export default function Favorites() {
         <PageHeader title="Preferiti" action={<HeaderLogo />} />
         <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
           <Card className="p-6 mb-6 text-center">
-            <p className="text-sm text-muted-foreground">Accedi per usare i Preferiti</p>
+            <p className="text-sm text-muted-foreground">Accedi per usare i Preferiti e salvare le tue combo preferite</p>
             <div className="mt-3">
               <Button onClick={() => setLocation('/profile')}>Vai al Profilo</Button>
             </div>
