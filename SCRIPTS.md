@@ -4,14 +4,15 @@ Quick reference for all available database and setup scripts.
 
 ## Available Scripts
 
-### 1. Database Schema Management
+### 1. Database Migration
 
 ```bash
-# Push schema changes to database (recommended)
-npm run db:push
+# Generate a new migration
+# Replace <migration_name> with a descriptive name
+npx drizzle-kit generate --name <migration_name>
 
-# Force push (use when there are warnings)
-npm run db:push --force
+# Apply migrations
+tsx scripts/migrate.ts
 ```
 
 ### 2. Database Status Check
@@ -39,7 +40,7 @@ tsx scripts/db-reset.ts
 
 After reset, run:
 ```bash
-npm run db:push
+tsx scripts/migrate.ts
 ```
 
 ### 4. Seed Sample Tournament Data
@@ -73,6 +74,23 @@ tsx server/create-user.ts
 
 Admin users can access the Tournament section to submit results.
 
+### 6. Other Scripts
+
+- `backup-db.ts`: Backs up the database.
+- `create-session-table.ts`: Creates the session table.
+- `create-top-component-view.ts`: Creates a materialized view for top components.
+- `db-add-tournaments.ts`: Adds tournaments to the database.
+- `db-clear.ts`: Clears data from most tables.
+- `db-create.ts`: Creates the database.
+- `db-migrate.ts`: Applies database migrations.
+- `db-test-conn.ts`: Tests the database connection.
+- `db-test-target.ts`: Tests the database target.
+- `import-component-names.ts`: Imports component names.
+- `import-csv.ts`: Imports data from a CSV file.
+- `player-leaderboard-view.ts`: Creates a view for the player leaderboard.
+- `refresh-view.ts`: Refreshes a materialized view.
+- `reset-stats-and-combos.ts`: Resets stats and combos.
+
 ---
 
 ## Typical Development Workflow
@@ -87,8 +105,8 @@ npm install
 cp .env.example .env
 # Edit .env with your database credentials
 
-# 3. Initialize database schema
-npm run db:push
+# 3. Apply database migrations
+tsx scripts/migrate.ts
 
 # 4. Create admin user
 tsx server/create-user.ts
@@ -105,13 +123,16 @@ npm run dev
 ```bash
 # 1. Edit shared/schema.ts
 
-# 2. Push changes to database
-npm run db:push
+# 2. Generate a new migration
+npx drizzle-kit generate --name <migration_name>
 
-# 3. Check status
+# 3. Apply the migration
+tsx scripts/migrate.ts
+
+# 4. Check status
 tsx scripts/db-status.ts
 
-# 4. Restart dev server (if running)
+# 5. Restart dev server (if running)
 # Server auto-restarts on Replit
 ```
 
@@ -121,8 +142,8 @@ tsx scripts/db-status.ts
 # 1. Reset database
 tsx scripts/db-reset.ts
 
-# 2. Recreate schema
-npm run db:push
+# 2. Re-apply migrations
+tsx scripts/migrate.ts
 
 # 3. Add sample data
 tsx scripts/seed-sample-data.ts

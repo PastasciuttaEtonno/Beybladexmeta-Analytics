@@ -56,7 +56,11 @@ The app will start on port 5000. Click "Open in a new tab" to view.
 ### 5. Initialize Database Schema
 
 ```bash
-npm run db:push
+# Generate a new migration (if you have schema changes)
+npx drizzle-kit generate --name "initial_schema"
+
+# Apply migrations
+tsx scripts/migrate.ts
 ```
 
 This creates all necessary tables in your PostgreSQL database.
@@ -64,7 +68,7 @@ This creates all necessary tables in your PostgreSQL database.
 ### 6. Create Admin User
 
 ```bash
-npm run create-admin
+tsx server/create-user.ts
 ```
 
 Follow the prompts to create your admin account.
@@ -137,13 +141,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ### 5. Initialize Database Schema
 
 ```bash
-npm run db:push
-```
+# Generate a new migration (if you have schema changes)
+npx drizzle-kit generate --name "initial_schema"
 
-If you encounter any issues, use:
-
-```bash
-npm run db:push --force
+# Apply migrations
+tsx scripts/migrate.ts
 ```
 
 ### 6. Verify Database Tables
@@ -161,6 +163,8 @@ psql -U your_username -d beyblade_tracker
 # - favorite_combos, favorite_decks, favorite_deck_combos
 # - login_rate_limits
 # - session (created by express-session)
+# - cm_tournaments
+# - cm_leaderboard
 ```
 
 ---
@@ -169,7 +173,7 @@ psql -U your_username -d beyblade_tracker
 
 ### Database Schema Overview
 
-The application uses 11 main tables:
+The application uses 13 main tables:
 
 **Authentication & Users:**
 - `users` - User accounts with credentials and profile data
@@ -185,19 +189,23 @@ The application uses 11 main tables:
 - `favorite_decks` - Named deck collections
 - `favorite_deck_combos` - Combos within decks (3 per deck)
 
+**Challengermode Integration:**
+- `cm_tournaments` - Caches tournament data from Challengermode
+- `cm_leaderboard` - Caches leaderboard data from Challengermode
+
 ### Running Migrations
 
-The project uses Drizzle ORM with a push-based schema sync:
+The project uses Drizzle ORM with a migration-based workflow:
 
 ```bash
-# Push schema changes to database
-npm run db:push
+# Generate a new migration
+npx drizzle-kit generate --name <migration_name>
 
-# Force push (if there are warnings)
-npm run db:push --force
+# Apply migrations
+tsx scripts/migrate.ts
 ```
 
-**⚠️ Important:** Never manually write SQL migrations. Always use `npm run db:push`.
+**⚠️ Important:** Always use this workflow to make schema changes. Do not manually edit the database.
 
 ### Database Reset (Development Only)
 
@@ -205,7 +213,7 @@ To completely reset your database:
 
 ```bash
 # Drop all tables and recreate
-npm run db:reset
+tsx scripts/db-reset.ts
 ```
 
 ---
@@ -250,10 +258,10 @@ Add these variables to enable Challengermode GraphQL and server-side caching:
 | `CHALLENGERMODE_REFRESH_KEY` | Refresh key for access token | None |
 | `CHALLENGERMODE_GRAPHQL_URL` | GraphQL endpoint | `https://publicapi.challengermode.com/graphql` |
 | `CHALLENGERMODE_AUTH_URL` | Access key endpoint | `https://publicapi.challengermode.com/mk1/v1/auth/access_keys` |
-| `CHALLENGERMODE_CACHE_TTL_MINUTES` | Cache TTL for `external_api_cache` | `2880` (2 days) |
+| `CHALLENGERMODE_CACHE_TTL_MINUTES` | Cache TTL for `cm_tournaments` | `1440` (1 day) |
 
 Notes:
-- Server caches Challengermode responses in `external_api_cache` with a shared TTL.
+- Server caches Challengermode responses in `cm_tournaments` and `cm_leaderboard`.
 - Clear cache during development with `npx tsx scripts/db-clear.ts`.
 
 ## Running the Application
@@ -275,14 +283,7 @@ npm start
 
 ### Available Scripts
 
-```bash
-npm run dev           # Start development server with hot reload
-npm run db:push       # Push database schema changes
-npm run db:push --force  # Force push schema (ignores warnings)
-npm run create-admin  # Create an admin user (interactive CLI)
-npm run db:status     # Show tables and row counts
-npm run db:migrate:tournaments  # Import tournament definitions (if applicable)
-```
+See `SCRIPTS.md` for a full list of available scripts.
 
 ---
 
@@ -293,7 +294,7 @@ Admin users have access to the Tournament section for entering tournament result
 ### Create Admin via CLI
 
 ```bash
-npm run create-admin
+tsx server/create-user.ts
 ```
 
 You'll be prompted for:
@@ -479,8 +480,11 @@ If users can't log in or sessions expire immediately:
 ### Database Schema Mismatches
 
 ```bash
-# Force sync schema
-npm run db:push --force
+# Generate a new migration
+npx drizzle-kit generate --name <migration_name>
+
+# Apply the migration
+tsx scripts/migrate.ts
 ```
 
 ---
@@ -507,7 +511,7 @@ SELECT * FROM favorite_combos WHERE user_id = 'your-user-id';
 
 ```bash
 # Create test user via CLI
-npm run create-admin
+tsx server/create-user.ts
 
 # Or insert directly
 INSERT INTO users (id, username, password, display_name, is_admin)
