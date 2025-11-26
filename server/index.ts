@@ -3,6 +3,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { registerRoutes } from "./routes";
+import { registerChallengerAuth } from "./auth-challenger";
 import fs from "fs";
 import path from "path";
 
@@ -201,6 +202,7 @@ app.use((req, res, next) => {
     },
   }));
 
+  registerChallengerAuth(app);
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
