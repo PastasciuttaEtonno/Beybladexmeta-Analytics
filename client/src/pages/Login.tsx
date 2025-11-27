@@ -220,6 +220,16 @@ export default function Login() {
           </Button>
         </form>
 
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-12"
+          onClick={() => { window.location.href = "/api/challenger/login"; }}
+          data-testid="button-login-challengermode"
+        >
+          Sign in with Challengermode
+        </Button>
+
         <div className="text-xs text-center text-muted-foreground">
           <button
             type="button"

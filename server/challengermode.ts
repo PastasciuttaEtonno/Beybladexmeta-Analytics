@@ -290,3 +290,61 @@ export async function fetchTournamentDetail(tournamentId: string): Promise<Exter
   await putExternalApiCache(cacheKey, node);
   return node as ExternalTournamentDetail;
 }
+
+// Fetch participations for the current user using their OAuth access token
+export type UserParticipation = {
+  gameAccountId: string | null;
+  tournamentId: string;
+  confirmed: boolean;
+};
+
+export async function fetchUserParticipations(userAccessToken: string): Promise<UserParticipation[]> {
+  const query = `query Me {\n  me {\n    user { username userId }\n    ownTournamentParticipations(filter: { onlyOngoing: false, gameSlugs: [\"Beyblade X\", \"beybladex\", \"BeybladeX\", \"beybladeX\"] }) {\n      gameAccountId\n      tournamentId\n      confirmed\n    }\n  }\n}`;
+  const res = await fetch(GRAPHQL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userAccessToken}` },
+    body: JSON.stringify({ query }),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`Challengermode Me query failed: ${res.status} ${text.slice(0, 400)}`);
+  }
+  let json: any;
+  try { json = JSON.parse(text); } catch (e) { throw e; }
+  const errs = json?.errors;
+  if (Array.isArray(errs) && errs.length) {
+    throw new Error(`GraphQL error: ${errs[0]?.message || 'unknown'}`);
+  }
+  const nodes: any[] = json?.data?.me?.ownTournamentParticipations || [];
+  return (nodes || []).map((n) => ({
+    gameAccountId: n?.gameAccountId ?? null,
+    tournamentId: String(n?.tournamentId || ''),
+    confirmed: Boolean(n?.confirmed),
+  })).filter((p) => p.tournamentId);
+}
+
+export type MeBasic = {
+  userId: string | null;
+  username: string | null;
+  profilePictureUrl: string | null;
+};
+
+export async function fetchMeBasic(userAccessToken: string): Promise<MeBasic> {
+  const query = `query Me {\n  me {\n    user { userId username profilePicture(size: SMALL) { url } }\n  }\n}`;
+  const res = await fetch(GRAPHQL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userAccessToken}` },
+    body: JSON.stringify({ query }),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`Challengermode Me basic failed: ${res.status} ${text.slice(0, 400)}`);
+  }
+  let json: any;
+  try { json = JSON.parse(text); } catch (e) { throw e; }
+  const node = json?.data?.me?.user;
+  const userId = node?.userId ? String(node.userId) : null;
+  const username = node?.username ? String(node.username) : null;
+  const profilePictureUrl = node?.profilePicture?.url ? String(node.profilePicture.url) : null;
+  return { userId, username, profilePictureUrl };
+}

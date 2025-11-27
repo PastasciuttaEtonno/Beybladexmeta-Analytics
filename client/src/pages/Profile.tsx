@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import {
   HelpCircle,
   Info,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 export default function Profile() {
@@ -139,64 +141,72 @@ export default function Profile() {
         {user && (
           <Card className="p-6">
             <div className="flex flex-col items-center space-y-4 mb-2">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt={user.displayName || "Avatar"} className="w-20 h-20 rounded-full object-cover" />
+              ) : null}
               <div className="text-center">
                 <h2 className="text-xl font-bold" data-testid="text-display-name">
                   {user.displayName}
                 </h2>
-                <p
-                  className="text-sm text-muted-foreground"
-                  data-testid="text-email"
-                >
-                  {user.email}
-                </p>
               </div>
             </div>
-            {isEditingName ? (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Nome</Label>
-                  <Input
-                    id="displayName"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Enter your name"
-                    className="h-12"
-                    data-testid="input-display-name"
-                    disabled={isSaving}
-                  />
+            {!user?.challengerId && (
+              isEditingName ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Nome</Label>
+                    <Input
+                      id="displayName"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="h-12"
+                      data-testid="input-display-name"
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSaveName}
+                      disabled={isSaving}
+                      className="flex-1"
+                      data-testid="button-save-name"
+                    >
+                      {isSaving ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditingName(false);
+                        setDisplayName(user.displayName || "");
+                      }}
+                      disabled={isSaving}
+                      data-testid="button-cancel-edit"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleSaveName}
-                    disabled={isSaving}
-                    className="flex-1"
-                    data-testid="button-save-name"
-                  >
-                    {isSaving ? "Saving..." : "Save"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditingName(false);
-                      setDisplayName(user.displayName || "");
-                    }}
-                    disabled={isSaving}
-                    data-testid="button-cancel-edit"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setIsEditingName(true)}
-                className="w-full"
-                data-testid="button-edit-name"
-              >
-                Modifica nome
-              </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditingName(true)}
+                  className="w-full"
+                  data-testid="button-edit-name"
+                >
+                  Modifica nome
+                </Button>
+              )
             )}
+          </Card>
+        )}
+
+        {user?.challengerId && (
+          <Card className="p-6">
+            <div className="mb-3">
+              <h3 className="text-base font-semibold">Tornei partecipati</h3>
+            </div>
+            <ParticipationsList />
           </Card>
         )}
 
@@ -473,6 +483,44 @@ export default function Profile() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function ParticipationsList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["cm-participations"],
+    queryFn: async () => {
+      const res = await fetch("/api/challenger/participations");
+      if (!res.ok) throw new Error("Failed to fetch participations");
+      return res.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  const items: any[] = data?.participations || [];
+  if (!items.length) {
+    return <p className="text-sm text-muted-foreground">Nessun torneo trovato.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {items.map((t) => (
+        <div key={t.tournamentId} className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">{t.name || t.tournamentId}</p>
+            {/* date hidden to avoid sensitive details */}
+          </div>
+          {t.hasCombos ? (
+            <span className="text-xs text-green-600">Combo presenti</span>
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }

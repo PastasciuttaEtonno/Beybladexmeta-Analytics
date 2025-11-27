@@ -6,6 +6,7 @@ interface User {
   displayName: string;
   photoURL: string | null;
   isAdmin: boolean;
+  challengerId?: string | null;
 }
 
 interface AuthContextType {
