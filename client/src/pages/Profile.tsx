@@ -508,8 +508,9 @@ function ParticipationsList() {
   if (!items.length) {
     return <p className="text-sm text-muted-foreground">Nessun torneo trovato.</p>;
   }
+  const scroll = items.length > 5;
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${scroll ? 'max-h-64 overflow-y-auto pr-1' : ''}`}>
       {items.map((t) => (
         <div key={t.tournamentId} className="flex items-center justify-between">
           <div>
