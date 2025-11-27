@@ -488,11 +488,17 @@ export default function TournamentDetail() {
           <CardContent>
             {!user?.challengerId && (
               <div className="mb-4 p-3 rounded-md border bg-muted/30">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <p className="text-sm text-muted-foreground">
                     Accedi con Challengermode per inserire o modificare le tue combo.
                   </p>
-                  <Button type="button" size="sm" variant="outline" onClick={() => { window.location.href = "/login"; }}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => { window.location.href = "/login"; }}
+                  >
                     Accedi con Challengermode
                   </Button>
                 </div>
