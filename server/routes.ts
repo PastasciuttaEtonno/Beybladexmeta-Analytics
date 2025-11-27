@@ -1,17 +1,19 @@
 import type { Express, Request, Response } from "express";
+import { z } from "zod";
 import { RecaptchaEnterpriseServiceClient } from "@google-cloud/recaptcha-enterprise";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema, registerSchema, users } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
 import crypto from "node:crypto";
 import { Resend } from "resend";
-import { fetchTournamentsForGame, fetchTournamentDetail } from "./challengermode";
+import { fetchTournamentsForGame, fetchTournamentDetail, fetchUserParticipations } from "./challengermode";
+import { checkTournamentPlacement } from "./lib/challengermode";
 import { processExternalCombo, calculatePoints as calcExternalPoints, revertExternalCombo, revertExternalComboTx } from "./scoreExternalCombo";
 
 // Extend express session type
@@ -439,6 +441,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(topComponents);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch top components' });
+    }
+  });
+
+  app.post('/api/tournaments/claim', requireAuth, async (req, res) => {
+    try {
+      const BodySchema = z.object({
+        tournamentId: z.string().min(1).max(64).transform((s) => s.trim()),
+        combos: z.array(tournamentComboSchema).length(3),
+      });
+      const parsed = BodySchema.parse(req.body);
+
+      const user = await storage.getUser(req.session.userId!);
+      const challengerId = (user as any)?.challengerId as string | undefined;
+      if (!challengerId) return res.status(400).json({ error: 'Devi effettuare il login con Challengermode' });
+
+      const verified = await checkTournamentPlacement(parsed.tournamentId, challengerId);
+      if (!verified) return res.status(403).json({ error: 'Non risulti nella Top 4 di questo torneo' });
+
+      await db.insert(cmPlayers).values({ id: challengerId, nickname: user?.displayName || challengerId, avatar: null as any }).onConflictDoNothing();
+
+      let placement: number | null = null;
+      let totalParticipants: number | null = null;
+      let tournamentDate: Date | null = null;
+      try {
+        const detail = await fetchTournamentDetail(parsed.tournamentId);
+        const startedAtStr = detail?.schedule?.startedAt as string | undefined;
+        if (startedAtStr) {
+          const dateOnly = String(startedAtStr).slice(0, 10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+            tournamentDate = new Date(dateOnly);
+          }
+        }
+        const userCount = detail?.attendance?.signups?.userCount as number | undefined;
+        if (typeof userCount === 'number' && userCount > 0) totalParticipants = userCount;
+        const lineups: any[] = detail?.attendance?.signups?.lineups || [];
+        const found = lineups.find(l => Array.isArray(l.members) && l.members.some((m: any) => m?.user?.userId === challengerId));
+        const disp = found?.placement?.displayPlacement as string | undefined;
+        if (disp) {
+          const p = parseInt(String(disp), 10);
+          if (!Number.isNaN(p)) placement = p;
+        }
+      } catch {}
+
+      await db.execute(sql`DELETE FROM external_player_combos WHERE tournament_id = ${parsed.tournamentId} AND player_id = ${challengerId}`);
+
+      const values = parsed.combos.map((c, idx) => ({
+        tournamentId: parsed.tournamentId,
+        playerId: challengerId,
+        comboNumber: idx + 1,
+        blade: c.blade,
+        assistBlade: c.assistBlade,
+        ratchet: c.ratchet,
+        bit: c.bit,
+        lockChip: c.lockChip,
+        placement: placement ?? null,
+        totalParticipants: totalParticipants ?? null,
+        tournamentDate: tournamentDate ?? null,
+      }));
+      const inserted = await db.insert(externalPlayerCombos).values(values).returning();
+
+      if (tournamentDate) {
+        const baseCombos = inserted.map((r) => ({
+          blade: r.blade,
+          assistBlade: r.assistBlade,
+          ratchet: r.ratchet,
+          bit: r.bit,
+          lockChip: r.lockChip,
+        }));
+        if (baseCombos.length > 0) {
+          await db.insert(comboStats).values(baseCombos as any).onConflictDoNothing();
+        }
+
+        const cmValues = inserted.map((r, idx) => ({
+          tournamentId: parsed.tournamentId,
+          playerId: challengerId,
+          comboNumber: r.comboNumber ?? idx + 1,
+          blade: r.blade,
+          assistBlade: r.assistBlade,
+          ratchet: r.ratchet,
+          bit: r.bit,
+          lockChip: r.lockChip,
+          piazzamento: placement ?? 0,
+          numeroPartecipanti: totalParticipants ?? 0,
+          dataTorneo: tournamentDate,
+          puntiGuadagnati: (placement && totalParticipants && placement >= 1 && placement <= 3 && totalParticipants > 0)
+            ? calcExternalPoints(placement, totalParticipants)
+            : 0,
+        }));
+        await db.insert(cmMatchResults).values(cmValues as any).onConflictDoUpdate({
+          target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber],
+          set: {
+            blade: sql`excluded.blade`,
+            assistBlade: sql`excluded.assist_blade`,
+            ratchet: sql`excluded.ratchet`,
+            bit: sql`excluded.bit`,
+            lockChip: sql`excluded.lock_chip`,
+            piazzamento: sql`excluded.piazzamento`,
+            numeroPartecipanti: sql`excluded.numero_partecipanti`,
+            dataTorneo: sql`excluded.data_torneo`,
+            puntiGuadagnati: sql`excluded.punti_guadagnati`,
+            updatedAt: sql`now()`,
+          }
+        });
+      }
+
+      if (placement && totalParticipants && placement >= 1 && placement <= 3 && totalParticipants > 0) {
+        for (const r of inserted) {
+          await processExternalCombo({
+            blade: r.blade,
+            assistBlade: r.assistBlade,
+            ratchet: r.ratchet,
+            bit: r.bit,
+            lockChip: r.lockChip,
+            placement,
+            totalParticipants,
+          });
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error?.message || 'Invalid request' });
     }
   });
 
@@ -1343,7 +1467,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // External: Challengermode tournament detail with attendance/placements (read-only)
+  // Current user's Challengermode participations (requires OAuth session token)
+  app.get('/api/challenger/participations', requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      const challengerId = (user as any)?.challengerId as string | undefined;
+      if (!challengerId) return res.status(400).json({ error: 'Devi effettuare il login con Challengermode' });
+      const accessToken = (req.session as any).cm_access_token as string | undefined;
+      if (!accessToken) return res.status(400).json({ error: 'Sessione Challengermode non disponibile. Effettua nuovamente il login con Challengermode.' });
+
+      const parts = await fetchUserParticipations(accessToken);
+      const ids = Array.from(new Set(parts.map(p => p.tournamentId).filter(Boolean)));
+
+      const rows = await db.execute(sql`SELECT DISTINCT tournament_id FROM cm_match_results`);
+      const existingSet = new Set<string>((rows.rows as any[]).map(r => String((r as any).tournament_id || (r as any).tournamentId)));
+
+      const enriched = await Promise.all(ids.map(async (tid) => {
+        try {
+          const detail = await fetchTournamentDetail(tid);
+          return {
+            tournamentId: tid,
+            name: detail?.name || null,
+            state: detail?.state || null,
+            date: (detail?.schedule?.startedAt ? String(detail.schedule.startedAt).slice(0, 10) : null),
+            hasCombos: existingSet.has(tid),
+          };
+        } catch {
+          return { tournamentId: tid, name: null, state: null, date: null, hasCombos: existingSet.has(tid) };
+        }
+      }));
+
+      res.json({ participations: enriched });
+    } catch (error: any) {
+      console.error('Error fetching user participations:', error);
+      res.status(500).json({ error: error?.message || 'Failed to fetch participations' });
+    }
+  });
+
+      // External: Challengermode tournament detail with attendance/placements (read-only)
   app.get('/api/challengermode/tournaments/:id', async (req, res) => {
     try {
       const id = String(req.params.id || '');
@@ -1376,6 +1537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
         }
+
+        // No local lineup injection for security; winners list reflects external data only.
       }
 
       try {
@@ -1483,6 +1646,227 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Failed to reset tournament combos:', error);
       return res.status(500).json({ error: error?.message || 'Failed to reset tournament combos' });
+    }
+  });
+
+  app.put('/api/tournaments/:id/combos/:num', requireAuth, async (req, res) => {
+    try {
+      const tournamentId = String(req.params.id || '').trim();
+      const comboNumber = parseInt(String(req.params.num || '0'), 10);
+      if (!tournamentId || !Number.isFinite(comboNumber) || comboNumber < 1 || comboNumber > 3) {
+        return res.status(400).json({ error: 'Parametri non validi' });
+      }
+      const newCombo = tournamentComboSchema.parse({
+        blade: String(req.body?.blade || '').trim(),
+        assistBlade: String(req.body?.assistBlade || '').trim(),
+        ratchet: String(req.body?.ratchet || '').trim(),
+        bit: String(req.body?.bit || '').trim(),
+        lockChip: String(req.body?.lockChip || '').trim(),
+      });
+
+      const hasMultipleCapitals = /[A-Z].*[A-Z]/.test(newCombo.blade || '');
+      if (hasMultipleCapitals) {
+        if (newCombo.assistBlade !== 'None' || newCombo.lockChip !== 'None') {
+          return res.status(400).json({ error: 'Assist Blade e Lock Chip devono essere None per questa Blade' });
+        }
+      }
+
+      const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
+        db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, newCombo.blade)),
+        newCombo.assistBlade === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, newCombo.assistBlade)),
+        db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, newCombo.ratchet)),
+        db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, newCombo.bit)),
+        newCombo.lockChip === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, newCombo.lockChip)),
+      ]);
+      if (!Number(bladeExists?.count) || !Number(assistExists?.count) || !Number(ratchetExists?.count) || !Number(bitExists?.count) || !Number(lockChipExists?.count)) {
+        return res.status(400).json({ error: 'Invalid combo components' });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      const challengerId = (user as any)?.challengerId as string | undefined;
+      if (!challengerId) return res.status(403).json({ error: 'Operazione consentita solo agli utenti Challengermode' });
+
+      const rows = await db.select().from(externalPlayerCombos)
+        .where(and(eq(externalPlayerCombos.tournamentId, tournamentId), eq(externalPlayerCombos.playerId, challengerId), eq(externalPlayerCombos.comboNumber, comboNumber)))
+        .limit(1);
+      const existing = rows[0];
+      if (!existing) return res.status(404).json({ error: 'Combo non trovata o non di tua proprietà' });
+
+      const placement = Number(existing.placement ?? 0);
+      const totalParticipants = Number(existing.totalParticipants ?? 0);
+
+      if (placement > 0 && totalParticipants > 0) {
+        await revertExternalCombo({
+          blade: existing.blade,
+          assistBlade: existing.assistBlade,
+          ratchet: existing.ratchet,
+          bit: existing.bit,
+          lockChip: existing.lockChip,
+          placement,
+          totalParticipants,
+        });
+      }
+
+      const updatedRows = await db.update(externalPlayerCombos)
+        .set({
+          blade: newCombo.blade,
+          assistBlade: newCombo.assistBlade,
+          ratchet: newCombo.ratchet,
+          bit: newCombo.bit,
+          lockChip: newCombo.lockChip,
+          updatedAt: sql`now()`,
+        })
+        .where(and(eq(externalPlayerCombos.tournamentId, tournamentId), eq(externalPlayerCombos.playerId, challengerId), eq(externalPlayerCombos.comboNumber, comboNumber)))
+        .returning();
+      const updated = updatedRows[0];
+
+      if (placement > 0 && totalParticipants > 0) {
+        await processExternalCombo({
+          blade: updated.blade,
+          assistBlade: updated.assistBlade,
+          ratchet: updated.ratchet,
+          bit: updated.bit,
+          lockChip: updated.lockChip,
+          placement,
+          totalParticipants,
+        });
+      }
+
+      if (updated?.tournamentDate) {
+        await db.insert(cmMatchResults).values({
+          tournamentId,
+          playerId: challengerId,
+          comboNumber,
+          blade: updated.blade,
+          assistBlade: updated.assistBlade,
+          ratchet: updated.ratchet,
+          bit: updated.bit,
+          lockChip: updated.lockChip,
+          piazzamento: placement || 0,
+          numeroPartecipanti: totalParticipants || 0,
+          dataTorneo: updated.tournamentDate,
+          puntiGuadagnati: placement && totalParticipants ? calcExternalPoints(placement, totalParticipants) : 0,
+          updatedAt: sql`now()`,
+        } as any).onConflictDoUpdate({
+          target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber],
+          set: {
+            blade: sql`excluded.blade`,
+            assistBlade: sql`excluded.assist_blade`,
+            ratchet: sql`excluded.ratchet`,
+            bit: sql`excluded.bit`,
+            lockChip: sql`excluded.lock_chip`,
+            piazzamento: sql`excluded.piazzamento`,
+            numeroPartecipanti: sql`excluded.numero_partecipanti`,
+            dataTorneo: sql`excluded.data_torneo`,
+            puntiGuadagnati: sql`excluded.punti_guadagnati`,
+            updatedAt: sql`now()`,
+          },
+        });
+      }
+
+      try {
+        await db.insert(adminAuditLogs).values({
+          adminUserId: req.session.userId!,
+          email: (user as any)?.email || '',
+          action: 'user_update_combo',
+          tournamentId,
+          playerId: challengerId,
+          payload: {
+            comboNumber,
+            before: {
+              blade: existing.blade,
+              assistBlade: existing.assistBlade,
+              ratchet: existing.ratchet,
+              bit: existing.bit,
+              lockChip: existing.lockChip,
+            },
+            after: {
+              blade: updated.blade,
+              assistBlade: updated.assistBlade,
+              ratchet: updated.ratchet,
+              bit: updated.bit,
+              lockChip: updated.lockChip,
+            },
+          },
+        } as any);
+      } catch {}
+
+      res.json({ success: true, combo: {
+        tournamentId,
+        comboNumber,
+        blade: updated.blade,
+        assistBlade: updated.assistBlade,
+        ratchet: updated.ratchet,
+        bit: updated.bit,
+        lockChip: updated.lockChip,
+      } });
+    } catch (error: any) {
+      res.status(400).json({ error: error?.message || 'Richiesta non valida' });
+    }
+  });
+
+  app.delete('/api/tournaments/:id/combos/:num', requireAuth, async (req, res) => {
+    try {
+      const tournamentId = String(req.params.id || '').trim();
+      const comboNumber = parseInt(String(req.params.num || '0'), 10);
+      if (!tournamentId || !Number.isFinite(comboNumber) || comboNumber < 1 || comboNumber > 3) {
+        return res.status(400).json({ error: 'Parametri non validi' });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      const challengerId = (user as any)?.challengerId as string | undefined;
+      if (!challengerId) return res.status(403).json({ error: 'Operazione consentita solo agli utenti Challengermode' });
+
+      const rows = await db.select().from(externalPlayerCombos)
+        .where(and(eq(externalPlayerCombos.tournamentId, tournamentId), eq(externalPlayerCombos.playerId, challengerId), eq(externalPlayerCombos.comboNumber, comboNumber)))
+        .limit(1);
+      const existing = rows[0];
+      if (!existing) return res.status(404).json({ error: 'Combo non trovata o non di tua proprietà' });
+
+      const placement = Number(existing.placement ?? 0);
+      const totalParticipants = Number(existing.totalParticipants ?? 0);
+
+      if (placement > 0 && totalParticipants > 0) {
+        await revertExternalCombo({
+          blade: existing.blade,
+          assistBlade: existing.assistBlade,
+          ratchet: existing.ratchet,
+          bit: existing.bit,
+          lockChip: existing.lockChip,
+          placement,
+          totalParticipants,
+        });
+      }
+
+      await db.delete(externalPlayerCombos)
+        .where(and(eq(externalPlayerCombos.tournamentId, tournamentId), eq(externalPlayerCombos.playerId, challengerId), eq(externalPlayerCombos.comboNumber, comboNumber)));
+
+      await db.delete(cmMatchResults)
+        .where(and(eq(cmMatchResults.tournamentId, tournamentId), eq(cmMatchResults.playerId, challengerId), eq(cmMatchResults.comboNumber, comboNumber)));
+
+      try {
+        await db.insert(adminAuditLogs).values({
+          adminUserId: req.session.userId!,
+          email: (user as any)?.email || '',
+          action: 'user_delete_combo',
+          tournamentId,
+          playerId: challengerId,
+          payload: {
+            comboNumber,
+            deleted: {
+              blade: existing.blade,
+              assistBlade: existing.assistBlade,
+              ratchet: existing.ratchet,
+              bit: existing.bit,
+              lockChip: existing.lockChip,
+            },
+          },
+        } as any);
+      } catch {}
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error?.message || 'Richiesta non valida' });
     }
   });
 

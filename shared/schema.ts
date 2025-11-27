@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   verification_token_expires_at: timestamp("verification_token_expires_at", {
     withTimezone: true,
   }),
+  challengerId: text("challenger_id").unique(),
 }, (table) => {
   // 3. AGGIUNTI: Indici per le performance
   return {

@@ -2,6 +2,9 @@ import { Switch, Route, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
@@ -81,6 +84,44 @@ function AppRoutes() {
 }
 
 export default function App() {
+  function GlobalCmAuthNotice() {
+    const { user } = useAuth();
+    const [open, setOpen] = useState(false);
+    useEffect(() => {
+      const paramForce = new URLSearchParams(window.location.search).get('showCmBanner');
+      if (paramForce === '1') { setOpen(true); return; }
+      const dismissedAtStr = localStorage.getItem("cm_auth_info_dismissed_at");
+      if (!dismissedAtStr) { setOpen(true); return; }
+      const dismissedAt = new Date(dismissedAtStr).getTime();
+      const now = Date.now();
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      if (!(dismissedAt > 0) || (now - dismissedAt) > sevenDays) {
+        setOpen(true);
+      }
+    }, []);
+    const close = () => {
+      localStorage.setItem("cm_auth_info_dismissed_at", new Date().toISOString());
+      setOpen(false);
+    };
+    if (!open) return null;
+    return (
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-md pointer-events-auto">
+        <div className="rounded-md border bg-background shadow-lg p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">Autenticazione con Challengermode disponibile.</p>
+            <div className="flex items-center gap-2">
+              {!user?.challengerId && (
+                <Button type="button" size="sm" onClick={() => { window.location.href = "/login"; }}>
+                  Accedi
+                </Button>
+              )}
+              <Button type="button" size="sm" variant="outline" onClick={close}>Chiudi</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -88,6 +129,7 @@ export default function App() {
           <AuthProvider>
             <AppRoutes />
             <Toaster />
+            <GlobalCmAuthNotice />
           </AuthProvider>
         </ThemeProvider>
       </TooltipProvider>

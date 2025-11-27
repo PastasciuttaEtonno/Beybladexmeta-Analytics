@@ -224,6 +224,8 @@ export default function TournamentDetail() {
     enabled: editDialogOpen && !!tournamentId && !!selectedPlayer?.id,
   });
 
+  const selfId = String(user?.challengerId || '').trim();
+
   useEffect(() => {
     if (playerCombosResp?.combos && playerCombosResp.combos.length > 0) {
       const current = playerCombosResp.combos;
@@ -289,8 +291,23 @@ export default function TournamentDetail() {
 
   const saveCombosMutation = useMutation({
     mutationFn: async () => {
-      const payload = { combos: editCombos };
-      return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
+      const selfId = String(user?.challengerId || '').trim();
+      if (selectedPlayer?.id && selfId && selectedPlayer.id === selfId) {
+        await Promise.all([0,1,2].map(async (idx) => {
+          const c = editCombos[idx] || { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+          await apiRequest("PUT", `/api/tournaments/${tournamentId}/combos/${idx+1}`, {
+            blade: c.blade,
+            assistBlade: c.assistBlade,
+            ratchet: c.ratchet,
+            bit: c.bit,
+            lockChip: c.lockChip,
+          });
+        }));
+        return { ok: true } as any;
+      } else {
+        const payload = { combos: editCombos };
+        return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
+      }
     },
     onSuccess: () => {
       toast({ title: "Saved", description: "Player combos updated" });
@@ -322,8 +339,9 @@ export default function TournamentDetail() {
         {sorted.map((lu, idx) => {
           const placement = lu?.placement?.displayPlacement ?? `${idx + 1}`;
           const members: any[] = lu?.members || [];
+          const isSelfInLineup = members.some((m: any) => String(m?.user?.userId || '') === selfId);
           return (
-            <Card key={idx} className="border">
+            <Card key={idx} className={`border ${isSelfInLineup ? 'border-primary bg-primary/10' : ''}`}>
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Posizione {placement}</CardTitle>
               </CardHeader>
@@ -333,18 +351,20 @@ export default function TournamentDetail() {
                     const cmUser = m?.user || {};
                     const pic = cmUser?.profilePicture || {};
                     const url = pic?.url || '';
-                    const canEdit = !!user?.isAdmin && parseInt(placement, 10) <= 4;
                     const memberId = String(cmUser?.userId || '').trim();
+                    const selfId = String(user?.challengerId || '').trim();
+                    const isSelf = memberId && memberId === selfId;
+                    const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
                     const memberName = cmUser?.username || cmUser?.userId || 'Giocatore';
                     const combosList = (playerCombosById && memberId) ? (playerCombosById[memberId] ?? []) : [];
                     return (
-                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''}`}
-                           onClick={() => {
-                             if (!canEdit) return;
-                             if (!memberId) return;
-                             setSelectedPlayer({ id: memberId, username: String(memberName) });
-                             setEditDialogOpen(true);
-                           }}>
+                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2' : ''}`}
+                            onClick={() => {
+                              if (!canEdit) return;
+                              if (!memberId) return;
+                              setSelectedPlayer({ id: memberId, username: String(memberName) });
+                              setEditDialogOpen(true);
+                          }}>
                         <div className="flex items-center gap-3">
                           {url ? (
                             <img src={url} alt={String(memberName)} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover" />
@@ -354,8 +374,11 @@ export default function TournamentDetail() {
                             </div>
                           )}
                           <span className="text-sm font-medium">{String(memberName)}</span>
-                          {canEdit && (
-                            <Pencil className="ml-1 w-4 h-4 text-muted-foreground" />
+                          {isSelf && (
+                            <>
+                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">Tu</span>
+                              <Pencil className="ml-1 w-4 h-4 text-primary" />
+                            </>
                           )}
                         </div>
                         <div className="mt-2 flex flex-col gap-2 max-w-full">
@@ -460,8 +483,21 @@ export default function TournamentDetail() {
                 </Button>
               </div>
             )}
+            {/* self-edit button removed: editing only shown when user appears in lineup */}
           </CardHeader>
           <CardContent>
+            {!user?.challengerId && (
+              <div className="mb-4 p-3 rounded-md border bg-muted/30">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Accedi con Challengermode per inserire o modificare le tue combo.
+                  </p>
+                  <Button type="button" size="sm" variant="outline" onClick={() => { window.location.href = "/login"; }}>
+                    Accedi con Challengermode
+                  </Button>
+                </div>
+              </div>
+            )}
             {detailLoading ? (
               <div className="flex items-center justify-center py-16" aria-label="Loading leaderboard">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -472,7 +508,9 @@ export default function TournamentDetail() {
           </CardContent>
         </Card>
 
-        {user?.isAdmin && (
+        {(
+          editDialogOpen
+        ) && (
           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
             <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
               <DialogHeader>
@@ -489,7 +527,22 @@ export default function TournamentDetail() {
                 <div className="space-y-6">
                   {[0, 1, 2].map((idx) => (
                     <div key={idx} className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0">
-                      <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
+                        {selectedPlayer?.id && selectedPlayer.id === String(user?.challengerId || '').trim() && (
+                          <Button type="button" variant="outline" size="sm" onClick={async () => {
+                            try {
+                              await apiRequest("DELETE", `/api/tournaments/${tournamentId}/combos/${idx+1}`);
+                              const next = editCombos.slice();
+                              next[idx] = { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+                              setEditCombos(next);
+                              toast({ title: "Eliminata", description: `Combo ${idx+1} rimossa` });
+                            } catch (e: any) {
+                              toast({ title: "Errore", description: e?.message || "Eliminazione fallita", variant: "destructive" });
+                            }
+                          }}>Elimina</Button>
+                        )}
+                      </div>
 
                       <div>
                         <Label htmlFor={`edit-${idx}-blade`}>Blade</Label>
