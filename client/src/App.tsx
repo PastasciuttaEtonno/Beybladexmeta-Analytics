@@ -94,8 +94,8 @@ export default function App() {
       if (!dismissedAtStr) { setOpen(true); return; }
       const dismissedAt = new Date(dismissedAtStr).getTime();
       const now = Date.now();
-      const sevenDays = 7 * 24 * 60 * 60 * 1000;
-      if (!(dismissedAt > 0) || (now - dismissedAt) > sevenDays) {
+      const twoDays = 2 * 24 * 60 * 60 * 1000;
+      if (!(dismissedAt > 0) || (now - dismissedAt) > twoDays) {
         setOpen(true);
       }
     }, []);
