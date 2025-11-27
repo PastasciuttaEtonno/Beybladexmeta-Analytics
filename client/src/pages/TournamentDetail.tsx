@@ -289,8 +289,23 @@ export default function TournamentDetail() {
 
   const saveCombosMutation = useMutation({
     mutationFn: async () => {
-      const payload = { combos: editCombos };
-      return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
+      const selfId = String(user?.challengerId || '').trim();
+      if (selectedPlayer?.id && selfId && selectedPlayer.id === selfId) {
+        await Promise.all([0,1,2].map(async (idx) => {
+          const c = editCombos[idx] || { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+          await apiRequest("PUT", `/api/tournaments/${tournamentId}/combos/${idx+1}`, {
+            blade: c.blade,
+            assistBlade: c.assistBlade,
+            ratchet: c.ratchet,
+            bit: c.bit,
+            lockChip: c.lockChip,
+          });
+        }));
+        return { ok: true } as any;
+      } else {
+        const payload = { combos: editCombos };
+        return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
+      }
     },
     onSuccess: () => {
       toast({ title: "Saved", description: "Player combos updated" });
@@ -333,8 +348,9 @@ export default function TournamentDetail() {
                     const cmUser = m?.user || {};
                     const pic = cmUser?.profilePicture || {};
                     const url = pic?.url || '';
-                    const canEdit = !!user?.isAdmin && parseInt(placement, 10) <= 4;
                     const memberId = String(cmUser?.userId || '').trim();
+                    const selfId = String(user?.challengerId || '').trim();
+                    const canEdit = (memberId && memberId === selfId) || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
                     const memberName = cmUser?.username || cmUser?.userId || 'Giocatore';
                     const combosList = (playerCombosById && memberId) ? (playerCombosById[memberId] ?? []) : [];
                     return (
@@ -472,7 +488,9 @@ export default function TournamentDetail() {
           </CardContent>
         </Card>
 
-        {user?.isAdmin && (
+        {(
+          editDialogOpen
+        ) && (
           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
             <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
               <DialogHeader>
@@ -489,7 +507,22 @@ export default function TournamentDetail() {
                 <div className="space-y-6">
                   {[0, 1, 2].map((idx) => (
                     <div key={idx} className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0">
-                      <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
+                        {selectedPlayer?.id && selectedPlayer.id === String(user?.challengerId || '').trim() && (
+                          <Button type="button" variant="outline" size="sm" onClick={async () => {
+                            try {
+                              await apiRequest("DELETE", `/api/tournaments/${tournamentId}/combos/${idx+1}`);
+                              const next = editCombos.slice();
+                              next[idx] = { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+                              setEditCombos(next);
+                              toast({ title: "Eliminata", description: `Combo ${idx+1} rimossa` });
+                            } catch (e: any) {
+                              toast({ title: "Errore", description: e?.message || "Eliminazione fallita", variant: "destructive" });
+                            }
+                          }}>Elimina</Button>
+                        )}
+                      </div>
 
                       <div>
                         <Label htmlFor={`edit-${idx}-blade`}>Blade</Label>
