@@ -99,30 +99,48 @@ export function registerChallengerAuth(app: express.Express) {
         } catch {}
       }
 
-      let userRow = (await db.select().from(users).where(eq(users.challengerId, challengerId)).limit(1))[0];
-      if (!userRow) {
-        const email = `${challengerId}@challengermode.local`;
-        const pwd = crypto.randomBytes(24).toString("hex");
-        const hash = await hashPassword(pwd);
-        const inserted = await db.insert(users).values({
-          email,
-          password_hash: hash,
-          displayName: username || "",
-          photoURL: avatar,
-          isAdmin: false,
-          is_verified: true,
-          verification_token: null,
-          verification_token_expires_at: null,
-          challengerId,
-        }).returning();
-        userRow = inserted[0];
+      const existingByChallenger = (await db.select().from(users).where(eq(users.challengerId, challengerId)).limit(1))[0];
+      const currentUserId = (req.session as any).userId as string | undefined;
+      let userRow;
+      if (currentUserId) {
+        const currentUserRows = await db.select().from(users).where(eq(users.id, currentUserId)).limit(1);
+        const currentUser = currentUserRows[0];
+        if (!currentUser) return res.status(500).send("Sessione invalida");
+        if (existingByChallenger && existingByChallenger.id !== currentUser.id) {
+          return res.status(409).send("Questo Challengermode ID è già collegato a un altro account");
+        }
+        const updates: any = { challengerId };
+        if (username && username !== currentUser.displayName) updates.displayName = username;
+        if (avatar && avatar !== (currentUser.photoURL || null)) updates.photoURL = avatar;
+        const updated = await db.update(users).set(updates).where(eq(users.id, currentUser.id)).returning();
+        userRow = updated[0] || currentUser;
       } else {
-        const updates: any = {};
-        if (username && username !== userRow.displayName) updates.displayName = username;
-        if (avatar && avatar !== (userRow.photoURL || null)) updates.photoURL = avatar;
-        if (Object.keys(updates).length) {
-          const updated = await db.update(users).set(updates).where(eq(users.id, userRow.id)).returning();
-          userRow = updated[0] || userRow;
+        if (!existingByChallenger) {
+          const email = `${challengerId}@challengermode.local`;
+          const pwd = crypto.randomBytes(24).toString("hex");
+          const hash = await hashPassword(pwd);
+          const inserted = await db.insert(users).values({
+            email,
+            password_hash: hash,
+            displayName: username || "",
+            photoURL: avatar,
+            isAdmin: false,
+            is_verified: true,
+            verification_token: null,
+            verification_token_expires_at: null,
+            challengerId,
+          }).returning();
+          userRow = inserted[0];
+        } else {
+          const updates: any = {};
+          if (username && username !== existingByChallenger.displayName) updates.displayName = username;
+          if (avatar && avatar !== (existingByChallenger.photoURL || null)) updates.photoURL = avatar;
+          if (Object.keys(updates).length) {
+            const updated = await db.update(users).set(updates).where(eq(users.id, existingByChallenger.id)).returning();
+            userRow = updated[0] || existingByChallenger;
+          } else {
+            userRow = existingByChallenger;
+          }
         }
       }
 

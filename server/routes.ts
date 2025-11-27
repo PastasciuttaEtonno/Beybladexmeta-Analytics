@@ -1504,7 +1504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // External: Challengermode tournament detail with attendance/placements (read-only)
+      // External: Challengermode tournament detail with attendance/placements (read-only)
   app.get('/api/challengermode/tournaments/:id', async (req, res) => {
     try {
       const id = String(req.params.id || '');
@@ -1537,6 +1537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
         }
+
+        // No local lineup injection for security; winners list reflects external data only.
       }
 
       try {
@@ -1661,6 +1663,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bit: String(req.body?.bit || '').trim(),
         lockChip: String(req.body?.lockChip || '').trim(),
       });
+
+      const hasMultipleCapitals = /[A-Z].*[A-Z]/.test(newCombo.blade || '');
+      if (hasMultipleCapitals) {
+        if (newCombo.assistBlade !== 'None' || newCombo.lockChip !== 'None') {
+          return res.status(400).json({ error: 'Assist Blade e Lock Chip devono essere None per questa Blade' });
+        }
+      }
+
+      const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
+        db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, newCombo.blade)),
+        newCombo.assistBlade === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, newCombo.assistBlade)),
+        db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, newCombo.ratchet)),
+        db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, newCombo.bit)),
+        newCombo.lockChip === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, newCombo.lockChip)),
+      ]);
+      if (!Number(bladeExists?.count) || !Number(assistExists?.count) || !Number(ratchetExists?.count) || !Number(bitExists?.count) || !Number(lockChipExists?.count)) {
+        return res.status(400).json({ error: 'Invalid combo components' });
+      }
 
       const user = await storage.getUser(req.session.userId!);
       const challengerId = (user as any)?.challengerId as string | undefined;

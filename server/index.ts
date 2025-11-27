@@ -74,7 +74,14 @@ app.use((req, res, next) => {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://www.google.com https://www.gstatic.com",
+      (() => {
+        let origins = ["'self'", "https://www.google.com", "https://www.gstatic.com"];
+        const candidate = process.env.PUBLIC_MINIO_URL || process.env.VITE_PUBLIC_MINIO_URL || '';
+        try {
+          if (candidate) origins.push(new URL(candidate).origin);
+        } catch {}
+        return `connect-src ${origins.join(' ')}`;
+      })(),
       // invisible v3 may create iframes
       "frame-src 'self' https://www.google.com https://www.gstatic.com",
       // tighten embedding and object usage

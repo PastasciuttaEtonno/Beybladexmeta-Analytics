@@ -224,6 +224,8 @@ export default function TournamentDetail() {
     enabled: editDialogOpen && !!tournamentId && !!selectedPlayer?.id,
   });
 
+  const selfId = String(user?.challengerId || '').trim();
+
   useEffect(() => {
     if (playerCombosResp?.combos && playerCombosResp.combos.length > 0) {
       const current = playerCombosResp.combos;
@@ -337,8 +339,9 @@ export default function TournamentDetail() {
         {sorted.map((lu, idx) => {
           const placement = lu?.placement?.displayPlacement ?? `${idx + 1}`;
           const members: any[] = lu?.members || [];
+          const isSelfInLineup = members.some((m: any) => String(m?.user?.userId || '') === selfId);
           return (
-            <Card key={idx} className="border">
+            <Card key={idx} className={`border ${isSelfInLineup ? 'border-primary bg-primary/10' : ''}`}>
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Posizione {placement}</CardTitle>
               </CardHeader>
@@ -350,17 +353,18 @@ export default function TournamentDetail() {
                     const url = pic?.url || '';
                     const memberId = String(cmUser?.userId || '').trim();
                     const selfId = String(user?.challengerId || '').trim();
-                    const canEdit = (memberId && memberId === selfId) || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
+                    const isSelf = memberId && memberId === selfId;
+                    const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
                     const memberName = cmUser?.username || cmUser?.userId || 'Giocatore';
                     const combosList = (playerCombosById && memberId) ? (playerCombosById[memberId] ?? []) : [];
                     return (
-                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''}`}
-                           onClick={() => {
-                             if (!canEdit) return;
-                             if (!memberId) return;
-                             setSelectedPlayer({ id: memberId, username: String(memberName) });
-                             setEditDialogOpen(true);
-                           }}>
+                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2' : ''}`}
+                            onClick={() => {
+                              if (!canEdit) return;
+                              if (!memberId) return;
+                              setSelectedPlayer({ id: memberId, username: String(memberName) });
+                              setEditDialogOpen(true);
+                          }}>
                         <div className="flex items-center gap-3">
                           {url ? (
                             <img src={url} alt={String(memberName)} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover" />
@@ -370,8 +374,11 @@ export default function TournamentDetail() {
                             </div>
                           )}
                           <span className="text-sm font-medium">{String(memberName)}</span>
-                          {canEdit && (
-                            <Pencil className="ml-1 w-4 h-4 text-muted-foreground" />
+                          {isSelf && (
+                            <>
+                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">Tu</span>
+                              <Pencil className="ml-1 w-4 h-4 text-primary" />
+                            </>
                           )}
                         </div>
                         <div className="mt-2 flex flex-col gap-2 max-w-full">
@@ -476,8 +483,21 @@ export default function TournamentDetail() {
                 </Button>
               </div>
             )}
+            {/* self-edit button removed: editing only shown when user appears in lineup */}
           </CardHeader>
           <CardContent>
+            {!user?.challengerId && (
+              <div className="mb-4 p-3 rounded-md border bg-muted/30">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Accedi con Challengermode per inserire o modificare le tue combo.
+                  </p>
+                  <Button type="button" size="sm" variant="outline" onClick={() => { window.location.href = "/login"; }}>
+                    Accedi con Challengermode
+                  </Button>
+                </div>
+              </div>
+            )}
             {detailLoading ? (
               <div className="flex items-center justify-center py-16" aria-label="Loading leaderboard">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

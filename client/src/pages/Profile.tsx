@@ -151,6 +151,18 @@ export default function Profile() {
               </div>
             </div>
             {!user?.challengerId && (
+              <div className="mt-3 mb-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => { window.location.href = "/api/challenger/login"; }}
+                >
+                  Collega account Challengermode
+                </Button>
+              </div>
+            )}
+            {!user?.challengerId && (
               isEditingName ? (
                 <div className="space-y-3">
                   <div className="space-y-2">
