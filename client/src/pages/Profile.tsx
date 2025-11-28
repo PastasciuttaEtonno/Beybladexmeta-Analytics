@@ -361,6 +361,7 @@ export default function Profile() {
                 <li>Account Data: Email address and unique User Identifier (ID) for authentication and account management.</li>
                 <li>Technical Data: IP Address (for security, abuse prevention, and rate limiting); Session Cookies ; minimized technical logs of requests (date, time, action) used for security and debugging.</li>
                 <li>Third-Party Public Data: Public tournament and profile data retrieved from sources like Challengermode, processed solely for statistical display and metagame analysis.</li>
+                <li>Challengermode OAuth: used to link your Challengermode account to your Beybladexmeta account, enabling access to Challengermode-specific features.</li>
               </ul>
             </div>
 
