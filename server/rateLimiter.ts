@@ -187,6 +187,6 @@ export class LoginRateLimiter {
 
 export const loginRateLimiter = new LoginRateLimiter({
   maxAttempts: 5,
-  windowMinutes: 15,
-  blockDurationMinutes: 15,
+  windowMinutes: 5,
+  blockDurationMinutes: 5,
 });
