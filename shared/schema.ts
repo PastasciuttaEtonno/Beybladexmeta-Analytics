@@ -133,6 +133,7 @@ export const ratchetStats = pgTable("ratchet_stats", {
 
 export const bitStats = pgTable("bit_stats", {
   bit: text("bit").primaryKey(),
+  isRatchetLess: boolean("is_ratchet_less").notNull().default(false),
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),

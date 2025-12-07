@@ -38,7 +38,7 @@ type Components = {
   blades: string[];
   assistBlades: string[];
   ratchets: string[];
-  bits: string[];
+  bits: { name: string; isRatchetLess: boolean }[];
   lockChips: string[];
 };
 
@@ -122,6 +122,7 @@ export default function Favorites() {
   const [ratchet, setRatchet] = useState("");
   const [bit, setBit] = useState("");
   const [lockChip, setLockChip] = useState("");
+  const [isRatchetDisabled, setIsRatchetDisabled] = useState(false);
 
   // Deck form state
   const [deckName, setDeckName] = useState("");
@@ -163,6 +164,18 @@ export default function Favorites() {
       setLockChip("None");
     }
   }, [blade]);
+
+  useEffect(() => {
+    const selected = (components?.bits || []).find((b) => b.name === bit);
+    const disabled = !!selected?.isRatchetLess;
+    setIsRatchetDisabled(disabled);
+    if (disabled) setRatchet("None");
+  }, [bit, components?.bits]);
+
+  const isBitRatchetLess = (name: string) => {
+    const found = (components?.bits || []).find((b) => b.name === name);
+    return !!found?.isRatchetLess;
+  };
 
   const addComboMutation = useMutation({
     mutationFn: async (combo: Omit<FavoriteCombo, "id" | "userId">) => {
@@ -326,7 +339,11 @@ export default function Favorites() {
       newCombos[index].assistBlade = "None";
       newCombos[index].lockChip = "None";
     }
-    
+    if (field === "bit") {
+      if (isBitRatchetLess(value)) {
+        newCombos[index].ratchet = "None";
+      }
+    }
     setDeckCombos(newCombos);
   };
 
@@ -433,7 +450,7 @@ export default function Favorites() {
 
                     <div className="space-y-2">
                       <Label htmlFor="ratchet">Ratchet</Label>
-                      <Select value={ratchet} onValueChange={setRatchet}>
+                      <Select value={ratchet} onValueChange={setRatchet} disabled={isRatchetDisabled}>
                         <SelectTrigger
                           id="ratchet"
                           data-testid="select-ratchet"
@@ -448,6 +465,9 @@ export default function Favorites() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {isRatchetDisabled && (
+                        <p className="text-xs text-muted-foreground">Bloccato su "None" per Bit selezionato</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -457,9 +477,9 @@ export default function Favorites() {
                           <SelectValue placeholder="Select bit..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {components?.bits.map((b) => (
-                            <SelectItem key={b} value={b}>
-                              {b}
+                          {(components?.bits || []).map((b) => (
+                            <SelectItem key={b.name} value={b.name}>
+                              {b.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -553,15 +573,17 @@ export default function Favorites() {
                               </div>
                             </div>
                           )}
-                          <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 shrink-0">
-                              <ComponentImage folder="ratchets" name={combo.ratchet} />
+                          {combo.ratchet !== "None" && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-10 shrink-0">
+                                <ComponentImage folder="ratchets" name={combo.ratchet} />
+                              </div>
+                              <div className="min-w-0 flex flex-col justify-center">
+                                <p className="text-xs text-muted-foreground">Ratchet</p>
+                                <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                              </div>
                             </div>
-                            <div className="min-w-0 flex flex-col justify-center">
-                              <p className="text-xs text-muted-foreground">Ratchet</p>
-                              <p className="text-sm font-medium truncate">{combo.ratchet}</p>
-                            </div>
-                          </div>
+                          )}
                           <div className="flex items-center gap-2">
                             <div className="w-10 h-10 shrink-0">
                               <ComponentImage folder="bits" name={combo.bit} />
@@ -714,6 +736,7 @@ export default function Favorites() {
                           onValueChange={(val) =>
                             updateDeckCombo(index, "ratchet", val)
                           }
+                          disabled={isBitRatchetLess(combo.bit)}
                         >
                           <SelectTrigger
                             data-testid={`select-deck-ratchet-${index}`}
@@ -728,6 +751,9 @@ export default function Favorites() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {isBitRatchetLess(combo.bit) && (
+                          <p className="text-xs text-muted-foreground">Bloccato su "None" per Bit selezionato</p>
+                        )}
 
                         <Select
                           value={combo.bit}
@@ -741,9 +767,9 @@ export default function Favorites() {
                             <SelectValue placeholder="Select bit..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {components?.bits.map((b) => (
-                              <SelectItem key={b} value={b}>
-                                {b}
+                            {(components?.bits || []).map((b) => (
+                              <SelectItem key={b.name} value={b.name}>
+                                {b.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -854,15 +880,17 @@ export default function Favorites() {
                                 </div>
                               </div>
                             )}
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 shrink-0">
-                                <ComponentImage folder="ratchets" name={combo.ratchet} />
+                            {combo.ratchet !== "None" && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 shrink-0">
+                                  <ComponentImage folder="ratchets" name={combo.ratchet} />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="text-muted-foreground">Ratchet:</span>{" "}
+                                  <span className="font-medium truncate  max-w-[140px]">{combo.ratchet}</span>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <span className="text-muted-foreground">Ratchet:</span>{" "}
-                                <span className="font-medium truncate  max-w-[140px]">{combo.ratchet}</span>
-                              </div>
-                            </div>
+                            )}
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 shrink-0">
                                 <ComponentImage folder="bits" name={combo.bit} />

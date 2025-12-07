@@ -571,15 +571,17 @@ export default function Analytics() {
                               </div>
                             </div>
                           )}
-                          <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 shrink-0">
-                              <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
+                          {combo.ratchet !== 'None' && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-10 shrink-0">
+                                <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs text-muted-foreground">Ratchet</p>
+                                <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-xs text-muted-foreground">Ratchet</p>
-                              <p className="text-sm font-medium truncate">{combo.ratchet}</p>
-                            </div>
-                          </div>
+                          )}
                           <div className="flex items-center gap-2">
                             <div className="w-10 h-10 shrink-0">
                               <ComponentImage folder={folderMap['bit']} name={combo.bit} />

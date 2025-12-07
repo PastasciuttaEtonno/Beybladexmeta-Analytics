@@ -92,10 +92,11 @@ function formatComboTitle(combo: ComboForm): string {
   const assistPart = assist && assist.toLowerCase() !== 'none' ? assist : '';
   const lockPart = lockChip && lockChip.toLowerCase() !== 'none' ? lockChip : '';
 
+  const ratchetPart = ratchet && ratchet.toLowerCase() !== 'none' ? ratchet : '';
   const parts = [
     lockPart,
     blade + (assistPart ? `${assistPart}` : ''),
-    ratchet,
+    ratchetPart,
     bit,
   ].filter(Boolean);
 
@@ -210,7 +211,7 @@ export default function TournamentDetail() {
   const [playerCombosById, setPlayerCombosById] = useState<Record<string, ComboForm[]>>({});
   const [resetting, setResetting] = useState(false);
 
-  const { data: componentsData } = useQuery<{ blades: string[]; assistBlades: string[]; ratchets: string[]; bits: string[]; lockChips: string[] }>({
+  const { data: componentsData } = useQuery<{ blades: string[]; assistBlades: string[]; ratchets: string[]; bits: { name: string; isRatchetLess: boolean }[]; lockChips: string[] }>({
     queryKey: ["/api/components"],
   });
 
@@ -283,6 +284,12 @@ export default function TournamentDetail() {
         if (!singleWord) {
           updated.assistBlade = 'None';
           updated.lockChip = 'None';
+        }
+      }
+      if (field === 'bit') {
+        const selected = (componentsData?.bits || []).find((b) => b.name === value);
+        if (selected?.isRatchetLess) {
+          updated.ratchet = 'None';
         }
       }
       return updated;
@@ -396,7 +403,9 @@ export default function TournamentDetail() {
                                   {combo.assistBlade && combo.assistBlade !== 'None' && (
                                     <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="assist-blades" name={combo.assistBlade} /></div>
                                   )}
-                                  <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="ratchets" name={combo.ratchet} /></div>
+                                  {combo.ratchet && combo.ratchet !== 'None' && (
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="ratchets" name={combo.ratchet} /></div>
+                                  )}
                                   <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="bits" name={combo.bit} /></div>
                                   {/* {combo.lockChip && combo.lockChip !== 'None' && (
                                     <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="chips" name={combo.lockChip} /></div>
@@ -585,6 +594,7 @@ export default function TournamentDetail() {
                           placeholder="Select ratchet"
                           options={componentsData?.ratchets || []}
                           onSelect={(val) => updateEditCombo(idx, 'ratchet', val)}
+                          disabled={!!(componentsData?.bits || []).find((b) => b.name === (editCombos[idx]?.bit || '') && b.isRatchetLess)}
                         />
                       </div>
 
@@ -594,7 +604,7 @@ export default function TournamentDetail() {
                           id={`edit-${idx}-bit`}
                           value={editCombos[idx]?.bit || ''}
                           placeholder="Select bit"
-                          options={componentsData?.bits || []}
+                          options={(componentsData?.bits || []).map((b) => b.name)}
                           onSelect={(val) => updateEditCombo(idx, 'bit', val)}
                         />
                       </div>

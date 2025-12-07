@@ -832,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(ratchetStats)
         .orderBy(asc(ratchetStats.ratchet));
       
-      const bits = await db.select({ name: bitStats.bit })
+      const bits = await db.select({ name: bitStats.bit, isRatchetLess: bitStats.isRatchetLess })
         .from(bitStats)
         .orderBy(asc(bitStats.bit));
       
@@ -842,11 +842,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter out None/empty values and sort alphabetically
       res.json({
-        blades: blades.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
-        assistBlades: assistBlades.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
-        ratchets: ratchets.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
-        bits: bits.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
-        lockChips: lockChips.map(b => b.name).filter(n => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        blades: blades.map((b: { name: string }) => b.name).filter((n: string) => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        assistBlades: assistBlades.map((b: { name: string }) => b.name).filter((n: string) => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        ratchets: ratchets.map((b: { name: string }) => b.name).filter((n: string) => n && n.toUpperCase() !== 'NONE' && n !== '-'),
+        bits: bits
+          .filter((b: { name: string; isRatchetLess: boolean }) => b.name && b.name.toUpperCase() !== 'NONE' && b.name !== '-')
+          .map((b: { name: string; isRatchetLess: boolean }) => ({ name: b.name, isRatchetLess: !!b.isRatchetLess })),
+        lockChips: lockChips.map((b: { name: string }) => b.name).filter((n: string) => n && n.toUpperCase() !== 'NONE' && n !== '-'),
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch components' });
@@ -1671,14 +1673,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
+      // Validate components; allow ratchet 'None' only for ratchet-less bits
+      const [[bladeExists], [assistExists], bitRows, [lockChipExists]] = await Promise.all([
         db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, newCombo.blade)),
         newCombo.assistBlade === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, newCombo.assistBlade)),
-        db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, newCombo.ratchet)),
-        db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, newCombo.bit)),
+        db.select().from(bitStats).where(eq(bitStats.bit, newCombo.bit)).limit(1),
         newCombo.lockChip === 'None' ? Promise.resolve([{ count: 1 }]) : db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, newCombo.lockChip)),
       ]);
-      if (!Number(bladeExists?.count) || !Number(assistExists?.count) || !Number(ratchetExists?.count) || !Number(bitExists?.count) || !Number(lockChipExists?.count)) {
+      const bitExistsCount = bitRows.length ? 1 : 0;
+      const bitIsRatchetLess = !!(bitRows[0] as any)?.isRatchetLess;
+      const ratchetCount = newCombo.ratchet === 'None'
+        ? (bitIsRatchetLess ? 1 : 0)
+        : Number((await db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, newCombo.ratchet)))[0]?.count ?? 0);
+
+      if (!Number(bladeExists?.count) || !Number(assistExists?.count) || !ratchetCount || !bitExistsCount || !Number(lockChipExists?.count)) {
         return res.status(400).json({ error: 'Invalid combo components' });
       }
 
@@ -1888,8 +1896,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? 1
           : Number((await db.select({ count: sql`count(*)` }).from(assistBladeStats).where(eq(assistBladeStats.assistBlade, combo.assistBlade)))[0]?.count ?? 0);
 
-        const ratchetCount = Number((await db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, combo.ratchet)))[0]?.count ?? 0);
-        const bitCount = Number((await db.select({ count: sql`count(*)` }).from(bitStats).where(eq(bitStats.bit, combo.bit)))[0]?.count ?? 0);
+        const bitRows = await db.select().from(bitStats).where(eq(bitStats.bit, combo.bit)).limit(1);
+        const bitCount = bitRows.length ? 1 : 0;
+        const bitIsRatchetLess = !!(bitRows[0] as any)?.isRatchetLess;
+
+        const ratchetCount = combo.ratchet === 'None'
+          ? (bitIsRatchetLess ? 1 : 0)
+          : Number((await db.select({ count: sql`count(*)` }).from(ratchetStats).where(eq(ratchetStats.ratchet, combo.ratchet)))[0]?.count ?? 0);
+
         const lockChipCount = combo.lockChip === 'None'
           ? 1
           : Number((await db.select({ count: sql`count(*)` }).from(lockChipStats).where(eq(lockChipStats.lockChip, combo.lockChip)))[0]?.count ?? 0);

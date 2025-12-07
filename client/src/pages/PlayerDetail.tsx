@@ -100,7 +100,8 @@ export default function PlayerDetail() {
     const lockChip = c.lockChip?.trim() || "";
     const assistPart = assist && assist.toLowerCase() !== "none" ? assist : "";
     const lockPart = lockChip && lockChip.toLowerCase() !== "none" ? lockChip : "";
-    const parts = [lockPart, blade + (assistPart ? `${assistPart}` : ""), ratchet, bit].filter(Boolean);
+    const ratchetPart = ratchet && ratchet.toLowerCase() !== "none" ? ratchet : "";
+    const parts = [lockPart, blade + (assistPart ? `${assistPart}` : ""), ratchetPart, bit].filter(Boolean);
     return parts.join(" • ");
   }
 
@@ -175,7 +176,9 @@ export default function PlayerDetail() {
                         {stats.mostUsedCombo.assistBlade && stats.mostUsedCombo.assistBlade.toLowerCase() !== 'none' && (
                           <ComponentImage folder="assist-blades" name={stats.mostUsedCombo.assistBlade} />
                         )}
-                        <ComponentImage folder="ratchets" name={stats.mostUsedCombo.ratchet} />
+                        {stats.mostUsedCombo.ratchet && stats.mostUsedCombo.ratchet.toLowerCase() !== 'none' && (
+                          <ComponentImage folder="ratchets" name={stats.mostUsedCombo.ratchet} />
+                        )}
                         <ComponentImage folder="bits" name={stats.mostUsedCombo.bit} />
                       </div>
                     </div>

@@ -206,7 +206,7 @@ export default function Tournaments() {
     blades: string[];
     assistBlades: string[];
     ratchets: string[];
-    bits: string[];
+    bits: { name: string; isRatchetLess: boolean }[];
     lockChips: string[];
   }>({
     queryKey: ["/api/components"],
