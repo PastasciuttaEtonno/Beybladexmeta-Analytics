@@ -143,9 +143,10 @@ export default function Login() {
         description: "Successfully logged in",
       });
     } catch (error) {
+      const msg = error instanceof Error && error.message ? error.message : "Failed to login";
       toast({
         title: "Error",
-        description: "Failed to login",
+        description: msg,
         variant: "destructive",
       });
     } finally {
