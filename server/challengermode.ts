@@ -233,6 +233,13 @@ export type ExternalTournamentDetail = {
   contactUrl: string | null;
   // Add schedule with startedAt so routes can derive YYYY-MM-DD
   schedule?: { startedAt?: string | null } | null;
+  // Hosts (Club) info from GraphQL
+  hosts?: {
+    spaces?: Array<{
+      name?: string | null;
+      id?: string | null;
+    } | null> | null;
+  } | null;
   stages?: Array<{ format?: string | null; lineupCount?: number | null }> | null;
   attendance?: {
     availableSlotCount?: number | null;
@@ -261,7 +268,7 @@ export async function fetchTournamentDetail(tournamentId: string): Promise<Exter
     return cached;
   }
   const token = await getAccessToken();
-  const query = `query Tournament($tournamentId: UUID!) {\n  tournament(tournamentId: $tournamentId) {\n    id\n    name\n    state\n    contactUrl\n    schedule { startedAt }\n    stages { format lineupCount }\n    attendance {\n      availableSlotCount\n      confirmedLineupCount\n      signups {\n        userCount\n        lineupCount\n        lineups {\n          placement { displayPlacement }\n          members { user { username userId profilePicture(size: SMALL) { url width height } } }\n        }\n      }\n    }\n  }\n}`;
+  const query = `query Tournament($tournamentId: UUID!) {\n  tournament(tournamentId: $tournamentId) {\n    id\n    name\n    state\n    contactUrl\n    schedule { startedAt }\n    hosts { spaces { name id } }\n    stages { format lineupCount }\n    attendance {\n      availableSlotCount\n      confirmedLineupCount\n      signups {\n        userCount\n        lineupCount\n        lineups {\n          placement { displayPlacement }\n          members { user { username userId profilePicture(size: SMALL) { url width height } } }\n        }\n      }\n    }\n  }\n}`;
 
   const body = { query, variables: { tournamentId } };
   console.info(`[Challengermode] GraphQL POST ${GRAPHQL_URL} tournamentId=${tournamentId} bearer_tail=${token.slice(-6)}`);
