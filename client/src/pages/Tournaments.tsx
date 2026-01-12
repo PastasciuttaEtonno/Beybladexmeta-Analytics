@@ -630,7 +630,7 @@ export default function Tournaments() {
           <div className="w-[200px] space-y-1">
             <Select value={selectedRegion} onValueChange={(val) => setSelectedRegion(val === 'ALL' ? '' : val)}>
               <SelectTrigger className="h-9 text-sm" aria-label="Regione">
-                <SelectValue placeholder="mancante" />
+                <SelectValue placeholder="Tutte le regioni" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Tutte le Regioni</SelectItem>
@@ -697,9 +697,7 @@ export default function Tournaments() {
                     {isOffSeasonDate(t.dataTorneo) && (
                       <Badge variant="secondary" className="text-[10px] ml-1">Off Season</Badge>
                     )}
-                    {t.region && (
-                      <Badge variant="outline" className="text-[10px] ml-1">{t.region}</Badge>
-                    )}
+                    <Badge variant="outline" className="text-[10px] ml-1">{t.region || "mancante"}</Badge>
                     {t.hasCombos ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (

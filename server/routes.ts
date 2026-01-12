@@ -1636,7 +1636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               hosts: detail?.hosts || undefined,
               schedule: detail?.schedule || undefined,
               hasCombos: idSet.has(id),
-              region: meta.region || "Tutte le Regioni",
+              region: meta.region || null,
               city: meta.city || null,
               organizerName: meta.organizer_name || (detail?.hosts?.spaces?.[0]?.name ?? undefined),
             };
@@ -1646,7 +1646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             out[idx] = {
               ...base,
               hasCombos: idSet.has(id),
-              region: meta.region || "Tutte le Regioni",
+              region: meta.region || null,
               city: meta.city || null,
               organizerName: meta.organizer_name || undefined,
             };
