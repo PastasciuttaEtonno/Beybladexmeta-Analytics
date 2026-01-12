@@ -10,6 +10,7 @@ export interface ExternalComboResult {
   ratchet: string;
   bit: string;
   lockChip: string;
+  season: string;
   placement: number; // 1, 2, 3, etc.
   totalParticipants: number;
 }
@@ -35,9 +36,9 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
 
   await db.transaction(async (tx) => {
     await tx.execute(sql`
-      INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione)
-      VALUES (${result.blade}, ${result.assistBlade}, ${result.ratchet}, ${result.bit}, ${result.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points}, NOW())
-      ON CONFLICT (blade, assist_blade, ratchet, bit, lock_chip)
+      INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, season, primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione)
+      VALUES (${result.blade}, ${result.assistBlade}, ${result.ratchet}, ${result.bit}, ${result.lockChip}, ${result.season}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points}, NOW())
+      ON CONFLICT (blade, assist_blade, ratchet, bit, lock_chip, season)
       DO UPDATE SET
         primi_posti = combo_stats.primi_posti + ${primiPosti},
         secondi_posti = combo_stats.secondi_posti + ${secondiPosti},
@@ -46,9 +47,9 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
     `);
 
     await tx.execute(sql`
-      INSERT INTO blade_stats (blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-      VALUES (${result.blade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-      ON CONFLICT (blade)
+      INSERT INTO blade_stats (blade, season, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+      VALUES (${result.blade}, ${result.season}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+      ON CONFLICT (blade, season)
       DO UPDATE SET
         primi_posti = blade_stats.primi_posti + ${primiPosti},
         secondi_posti = blade_stats.secondi_posti + ${secondiPosti},
@@ -68,9 +69,9 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
     `);
 
     await tx.execute(sql`
-      INSERT INTO ratchet_stats (ratchet, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-      VALUES (${result.ratchet}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-      ON CONFLICT (ratchet)
+      INSERT INTO ratchet_stats (ratchet, season, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+      VALUES (${result.ratchet}, ${result.season}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+      ON CONFLICT (ratchet, season)
       DO UPDATE SET
         primi_posti = ratchet_stats.primi_posti + ${primiPosti},
         secondi_posti = ratchet_stats.secondi_posti + ${secondiPosti},
@@ -79,9 +80,9 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
     `);
 
     await tx.execute(sql`
-      INSERT INTO bit_stats (bit, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-      VALUES (${result.bit}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-      ON CONFLICT (bit)
+      INSERT INTO bit_stats (bit, season, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+      VALUES (${result.bit}, ${result.season}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+      ON CONFLICT (bit, season)
       DO UPDATE SET
         primi_posti = bit_stats.primi_posti + ${primiPosti},
         secondi_posti = bit_stats.secondi_posti + ${secondiPosti},
@@ -122,6 +123,7 @@ export const revertExternalCombo = async (result: ExternalComboResult) => {
         AND ratchet = ${result.ratchet}
         AND bit = ${result.bit}
         AND lock_chip = ${result.lockChip}
+        AND season = ${result.season}
     `);
 
     await tx.execute(sql`
@@ -131,6 +133,7 @@ export const revertExternalCombo = async (result: ExternalComboResult) => {
           terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
           punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
       WHERE blade = ${result.blade}
+        AND season = ${result.season}
     `);
 
     await tx.execute(sql`
@@ -149,6 +152,7 @@ export const revertExternalCombo = async (result: ExternalComboResult) => {
           terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
           punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
       WHERE ratchet = ${result.ratchet}
+        AND season = ${result.season}
     `);
 
     await tx.execute(sql`
@@ -158,6 +162,7 @@ export const revertExternalCombo = async (result: ExternalComboResult) => {
           terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
           punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
       WHERE bit = ${result.bit}
+        AND season = ${result.season}
     `);
 
     await tx.execute(sql`
@@ -190,6 +195,7 @@ export const revertExternalComboTx = async (tx: any, result: ExternalComboResult
       AND ratchet = ${result.ratchet}
       AND bit = ${result.bit}
       AND lock_chip = ${result.lockChip}
+      AND season = ${result.season}
   `);
 
   await tx.execute(sql`
@@ -199,6 +205,7 @@ export const revertExternalComboTx = async (tx: any, result: ExternalComboResult
         terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
         punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
     WHERE blade = ${result.blade}
+      AND season = ${result.season}
   `);
 
   await tx.execute(sql`
@@ -217,6 +224,7 @@ export const revertExternalComboTx = async (tx: any, result: ExternalComboResult
         terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
         punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
     WHERE ratchet = ${result.ratchet}
+      AND season = ${result.season}
   `);
 
   await tx.execute(sql`
@@ -226,6 +234,7 @@ export const revertExternalComboTx = async (tx: any, result: ExternalComboResult
         terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
         punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
     WHERE bit = ${result.bit}
+      AND season = ${result.season}
   `);
 
   await tx.execute(sql`

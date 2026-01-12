@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ type ComboForm = {
   ratchet: string;
   bit: string;
   lockChip: string;
+  season?: string;
 };
 
 const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
@@ -150,6 +152,7 @@ type ExternalTournamentDetail = {
   name: string;
   state: string;
   contactUrl: string | null;
+  schedule?: { startedAt?: string | null } | null;
   stages?: Array<{ format?: string | null; lineupCount?: number | null }> | null;
   attendance?: {
     availableSlotCount?: number | null;
@@ -198,6 +201,15 @@ export default function TournamentDetail() {
     return sum || 0;
   })();
 
+  const isOffSeasonTournament = (() => {
+    const startedAtStr = detailResp?.detail?.schedule?.startedAt || null;
+    if (!startedAtStr) return false;
+    const d = new Date(startedAtStr);
+    const start = new Date('2025-10-01T00:00:00Z');
+    const end = new Date('2026-01-31T23:59:59Z');
+    return d >= start && d <= end;
+  })();
+
   // Admin combo editor state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: string; username: string } | null>(null);
@@ -225,7 +237,9 @@ export default function TournamentDetail() {
     enabled: editDialogOpen && !!tournamentId && !!selectedPlayer?.id,
   });
 
-  const selfId = String(user?.challengerId || '').trim();
+  const rawSelfId = String(user?.challengerId || '').trim();
+  // const selfId = String(new URLSearchParams(window.location.search || '').get('fakeSelf') || rawSelfId).trim();
+  const selfId = rawSelfId;
 
   useEffect(() => {
     if (playerCombosResp?.combos && playerCombosResp.combos.length > 0) {
@@ -298,7 +312,9 @@ export default function TournamentDetail() {
 
   const saveCombosMutation = useMutation({
     mutationFn: async () => {
-      const selfId = String(user?.challengerId || '').trim();
+      const rawSelfId = String(user?.challengerId || '').trim();
+      // const selfId = String(new URLSearchParams(window.location.search || '').get('fakeSelf') || rawSelfId).trim();
+      const selfId = rawSelfId;
       if (selectedPlayer?.id && selfId && selectedPlayer.id === selfId) {
         await Promise.all([0,1,2].map(async (idx) => {
           const c = editCombos[idx] || { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
@@ -346,7 +362,12 @@ export default function TournamentDetail() {
         {sorted.map((lu, idx) => {
           const placement = lu?.placement?.displayPlacement ?? `${idx + 1}`;
           const members: any[] = lu?.members || [];
-          const isSelfInLineup = members.some((m: any) => String(m?.user?.userId || '') === selfId);
+          // const fakeSelfName = new URLSearchParams(window.location.search || '').get('fakeSelfName');
+          const isSelfInLineup = members.some((m: any) => {
+            const mid = String(m?.user?.userId || '').trim();
+            // const mname = String(m?.user?.username || m?.user?.userId || '').trim();
+            return mid === selfId;
+          });
           return (
             <Card key={idx} className={`border ${isSelfInLineup ? 'border-primary bg-primary/10' : ''}`}>
               <CardHeader className="py-3">
@@ -359,10 +380,13 @@ export default function TournamentDetail() {
                     const pic = cmUser?.profilePicture || {};
                     const url = pic?.url || '';
                     const memberId = String(cmUser?.userId || '').trim();
-                    const selfId = String(user?.challengerId || '').trim();
-                    const isSelf = memberId && memberId === selfId;
-                    const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
+                    const rawSelfId = String(user?.challengerId || '').trim();
+                    // const selfId = String(new URLSearchParams(window.location.search || '').get('fakeSelf') || rawSelfId).trim();
+                    const selfId = rawSelfId;
                     const memberName = cmUser?.username || cmUser?.userId || 'Giocatore';
+                    // const fakeSelfName = new URLSearchParams(window.location.search || '').get('fakeSelfName');
+                    const isSelf = (memberId && memberId === selfId);
+                    const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
                     const combosList = (playerCombosById && memberId) ? (playerCombosById[memberId] ?? []) : [];
                     return (
                       <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2' : ''}`}
@@ -392,8 +416,11 @@ export default function TournamentDetail() {
                           {combosList && combosList.length > 0 ? (
                             combosList.map((combo, comboIdx) => (
                               <div key={comboIdx} className="flex flex-col gap-1 max-w-full">
-                                <div className="text-sm font-medium text-muted-foreground truncate" title={formatComboTitle(combo)}>
-                                  {formatComboTitle(combo)}
+                                <div className="flex items-center gap-2">
+                                  <div className="text-sm font-medium text-muted-foreground truncate" title={formatComboTitle(combo)}>
+                                    {formatComboTitle(combo)}
+                                  </div>
+                                  
                                 </div>
                                 <div className="flex items-center gap-3 flex-wrap">
                                   {combo.lockChip && combo.lockChip !== 'None' && (
@@ -477,9 +504,12 @@ export default function TournamentDetail() {
             <p className="text-xs text-muted-foreground">
               {detailResp?.detail?.state || ''}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Giocatori totali: {totalPlayers}
-            </p>
+            <div className="text-xs text-muted-foreground flex items-center gap-2">
+              <span>Giocatori totali: {totalPlayers}</span>
+              {isOffSeasonTournament && (
+                <Badge variant="secondary" className="text-[10px]">Off Season</Badge>
+              )}
+            </div>
             {detailResp?.detail?.contactUrl && (
               <p className="text-xs">
                 <a className="text-blue-600 hover:underline" href={detailResp.detail.contactUrl} target="_blank" rel="noreferrer">Contatti / Info</a>

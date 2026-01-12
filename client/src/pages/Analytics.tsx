@@ -126,6 +126,8 @@ export default function Analytics() {
   const [tempSearchTerm, setTempSearchTerm] = useState("");
   const [tempSortBy, setTempSortBy] = useState("score");
   const [tempSortOrder, setTempSortOrder] = useState<"asc" | "desc">("desc");
+  const [selectedSeason, setSelectedSeason] = useState<string>('All Time');
+  const [tempSelectedSeason, setTempSelectedSeason] = useState<string>('All Time');
 
   const [activeView, setActiveView] = useState<"leaderboard" | "trends">(
     "leaderboard",
@@ -174,19 +176,22 @@ export default function Analytics() {
     }
     params.set("sort", sortBy);
     params.set("order", sortOrder);
+    params.set("season", selectedSeason);
     sessionStorage.setItem("analytics_q", searchTerm);
     sessionStorage.setItem("analytics_sort", sortBy);
     sessionStorage.setItem("analytics_order", sortOrder);
+    sessionStorage.setItem("analytics_season", selectedSeason);
     setLocation(`${base}?${params.toString()}`, { replace: true });
-  }, [searchTerm, sortBy, sortOrder]);
+  }, [searchTerm, sortBy, sortOrder, selectedSeason]);
 
   const { data, isLoading } = useQuery<ComboResponse>({
-    queryKey: ["/api/stats/combos", searchTerm, sortBy, sortOrder, currentPage],
+    queryKey: ["/api/stats/combos", searchTerm, sortBy, sortOrder, selectedSeason, currentPage],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
       params.append("sortBy", sortBy);
       params.append("sortOrder", sortOrder);
+      params.append("season", selectedSeason);
       params.append("page", currentPage.toString());
       params.append("limit", "20");
 
@@ -282,6 +287,7 @@ export default function Analytics() {
     setTempSearchTerm(searchTerm);
     setTempSortBy(sortBy);
     setTempSortOrder(sortOrder);
+    setTempSelectedSeason(selectedSeason);
     setFilterModalOpen(true);
   };
 
@@ -303,6 +309,7 @@ export default function Analytics() {
     setSearchTerm(tempSearchTerm);
     setSortBy(tempSortBy);
     setSortOrder(tempSortOrder);
+    setSelectedSeason(tempSelectedSeason);
     setFilterModalOpen(false);
   };
 
@@ -310,14 +317,16 @@ export default function Analytics() {
     setTempSearchTerm("");
     setTempSortBy("score");
     setTempSortOrder("desc");
+    setTempSelectedSeason("All Time");
     setSearchTerm("");
     setSortBy("score");
     setSortOrder("desc");
+    setSelectedSeason("All Time");
     setFilterModalOpen(false);
   };
 
   const hasActiveFilters =
-    searchTerm !== "" || sortBy !== "score" || sortOrder !== "desc";
+    searchTerm !== "" || sortBy !== "score" || sortOrder !== "desc" || selectedSeason !== "All Time";
 
   const getRankIcon = (index: number) => {
     if (currentPage !== 1) return null;
@@ -453,6 +462,22 @@ export default function Analytics() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="season">Stagione</Label>
+                      <Select value={tempSelectedSeason} onValueChange={setTempSelectedSeason}>
+                        <SelectTrigger id="season" data-testid="select-modal-season">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="All Time">All Time</SelectItem>
+                          <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
+                          <SelectItem value="Season 2026">Season 2026</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Seleziona la stagione per filtrare la classifica
+                      </p>
+                    </div>
                   </div>
 
                   <DialogFooter className="flex-row gap-2 sm:gap-2">
@@ -506,6 +531,11 @@ export default function Analytics() {
                     {sortOrder === "asc"
                       ? "Lowest to Highest"
                       : "Highest to Lowest"}
+                  </Badge>
+                )}
+                {selectedSeason !== "All Time" && (
+                  <Badge variant="secondary" className="text-xs">
+                    Stagione: {selectedSeason}
                   </Badge>
                 )}
               </div>

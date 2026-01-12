@@ -10,6 +10,13 @@ import { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { BladeStats, RatchetStats, BitStats } from '@shared/schema';
 
 // Use the public MinIO URL like in Analytics.tsx
@@ -87,9 +94,15 @@ export default function Home() {
   const [leaderboardType, setLeaderboardType] = useState<"blade"|"ratchet"|"bit"|null>(null);
   const dialogOpen = leaderboardType !== null;
   const [activeTab, setActiveTab] = useState<'components'|'players'>('components');
+  const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
   
   const { data: topComponents, isLoading } = useQuery<TopComponentsResponse>({
-    queryKey: ['/api/stats/top/components'],
+    queryKey: ['/api/stats/top/components', selectedSeason],
+    queryFn: async () => {
+      const res = await fetch(`/api/stats/top/components?season=${encodeURIComponent(selectedSeason)}`);
+      if (!res.ok) throw new Error("Failed to fetch top components");
+      return res.json();
+    },
   });
 
   const topBlade = topComponents?.blade;
@@ -122,6 +135,21 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="components" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Stagione</span>
+              <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                <SelectTrigger className="w-44 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Season 2026">Season 2026</SelectItem>
+                  <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
+                  <SelectItem value="All Time">All Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           {bladeLoading ? (
             <Card className="p-6">
               <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />

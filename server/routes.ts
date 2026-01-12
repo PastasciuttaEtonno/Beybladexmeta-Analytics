@@ -15,6 +15,7 @@ import { Resend } from "resend";
 import { fetchTournamentsForGame, fetchTournamentDetail, fetchUserParticipations } from "./challengermode";
 import { checkTournamentPlacement } from "./lib/challengermode";
 import { processExternalCombo, calculatePoints as calcExternalPoints, revertExternalCombo, revertExternalComboTx } from "./scoreExternalCombo";
+import { determineSeason } from "./lib/seasons";
 
 // Extend express session type
 declare module 'express-session' {
@@ -316,25 +317,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string | undefined;
       const sortByParam = (req.query.sortBy as string) || 'score';
       const sortOrder = (req.query.sortOrder as string) || 'desc';
+      const seasonRaw = String(req.query.season || '').trim();
+      const seasonLower = seasonRaw.toLowerCase();
+      const isAllTime = seasonLower === 'all' || seasonLower === 'all time' || seasonLower === 'all-time';
 
       const validSortFields = ['score', 'first', 'second', 'third'];
       const sortBy = validSortFields.includes(sortByParam) ? sortByParam : 'score';
 
+      // Build WHERE for both modes when search is present
+      const buildSearchWhere = () => {
+        if (search && search.trim()) {
+          const searchTerm = `%${search.trim()}%`;
+          return or(
+            ilike(comboStats.blade, searchTerm),
+            ilike(comboStats.assistBlade, searchTerm),
+            ilike(comboStats.ratchet, searchTerm),
+            ilike(comboStats.bit, searchTerm),
+            ilike(comboStats.lockChip, searchTerm)
+          );
+        }
+        return null;
+      };
+
+      if (isAllTime || !seasonRaw) {
+        const sumScore = sql<number>`sum(${comboStats.punteggioTotale})`.mapWith(Number);
+        const sumFirst = sql<number>`sum(${comboStats.primiPosti})`.mapWith(Number);
+        const sumSecond = sql<number>`sum(${comboStats.secondiPosti})`.mapWith(Number);
+        const sumThird = sql<number>`sum(${comboStats.terziPosti})`.mapWith(Number);
+
+        let aggQuery = db
+          .select({
+            blade: comboStats.blade,
+            assistBlade: comboStats.assistBlade,
+            ratchet: comboStats.ratchet,
+            bit: comboStats.bit,
+            lockChip: comboStats.lockChip,
+            punteggioTotale: sumScore,
+            primiPosti: sumFirst,
+            secondiPosti: sumSecond,
+            terziPosti: sumThird,
+          })
+          .from(comboStats);
+
+        const whereClause = buildSearchWhere();
+        if (whereClause) {
+          aggQuery = (aggQuery as any).where(whereClause);
+        }
+
+        aggQuery = aggQuery.groupBy(
+          comboStats.blade,
+          comboStats.assistBlade,
+          comboStats.ratchet,
+          comboStats.bit,
+          comboStats.lockChip,
+        );
+
+        const orderFn = sortOrder === 'asc' ? asc : desc;
+        const sortExpr = {
+          score: sql`sum(${comboStats.punteggioTotale})`,
+          first: sql`sum(${comboStats.primiPosti})`,
+          second: sql`sum(${comboStats.secondiPosti})`,
+          third: sql`sum(${comboStats.terziPosti})`,
+        }[sortBy]!;
+
+        const [topCombos, countResult] = await Promise.all([
+          (aggQuery as any).orderBy(orderFn(sortExpr)).limit(limit).offset(offset),
+          // Count of groups honoring the same search filter
+          db.execute(sql`
+            SELECT COUNT(*) AS c
+            FROM (
+              SELECT 1
+              FROM combo_stats
+              ${search && search.trim()
+                ? sql`WHERE blade ILIKE ${'%' + search.trim() + '%'}
+                       OR assist_blade ILIKE ${'%' + search.trim() + '%'}
+                       OR ratchet ILIKE ${'%' + search.trim() + '%'}
+                       OR bit ILIKE ${'%' + search.trim() + '%'}
+                       OR lock_chip ILIKE ${'%' + search.trim() + '%'}`
+                : sql``}
+              GROUP BY blade, assist_blade, ratchet, bit, lock_chip
+            ) t
+          `),
+        ]);
+
+        const total = Number(((countResult.rows as any[])[0]?.c) || 0);
+        const totalPages = Math.ceil(total / limit);
+
+        return res.json({
+          combos: topCombos,
+          pagination: { page, limit, total, totalPages },
+        });
+      }
+
       let query = db.select().from(comboStats);
       let countQuery = db.select({ count: sql<number>`count(*)` }).from(comboStats);
 
-      if (search && search.trim()) {
-        const searchTerm = `%${search.trim()}%`;
-        const whereClause = or(
-          ilike(comboStats.blade, searchTerm),
-          ilike(comboStats.assistBlade, searchTerm),
-          ilike(comboStats.ratchet, searchTerm),
-          ilike(comboStats.bit, searchTerm),
-          ilike(comboStats.lockChip, searchTerm)
-        );
-        query = query.where(whereClause) as any;
-        countQuery = countQuery.where(whereClause) as any;
+      const whereClause = buildSearchWhere();
+      if (whereClause) {
+        query = (query as any).where(whereClause);
+        countQuery = (countQuery as any).where(whereClause);
       }
+
+      query = (query as any).where(eq(comboStats.season, seasonRaw));
+      countQuery = (countQuery as any).where(eq(comboStats.season, seasonRaw));
 
       const sortColumn = {
         score: comboStats.punteggioTotale,
@@ -417,16 +502,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all top components in a single query (OPTIMIZED)
   app.get('/api/stats/top/components', async (req, res) => {
     try {
-      // Pick top per component_type by #1 placements, then points
-      const result = await db.execute(sql`
-        SELECT component_type, name, primi_posti, secondi_posti, terzi_posti, punteggio_totale
-        FROM (
-          SELECT component_type, name, primi_posti, secondi_posti, terzi_posti, punteggio_totale,
-                 ROW_NUMBER() OVER (PARTITION BY component_type ORDER BY primi_posti DESC, punteggio_totale DESC, name ASC) AS rn
-          FROM top_component_snapshot
-        ) t
-        WHERE rn = 1
-      `);
+      const seasonRaw = String(req.query.season || '').trim();
+      const seasonLower = seasonRaw.toLowerCase();
+      const isAllTime = seasonLower === 'all' || seasonLower === 'all time' || seasonLower === 'all-time';
+      const targetSeason = seasonRaw || 'Off Season 2025';
+      const result = await db.execute(
+        isAllTime
+          ? sql`
+            SELECT component_type, name, primi_posti, secondi_posti, terzi_posti, punteggio_totale
+            FROM (
+              SELECT
+                component_type,
+                name,
+                SUM(primi_posti) AS primi_posti,
+                SUM(secondi_posti) AS secondi_posti,
+                SUM(terzi_posti) AS terzi_posti,
+                SUM(punteggio_totale) AS punteggio_totale,
+                ROW_NUMBER() OVER (
+                  PARTITION BY component_type
+                  ORDER BY SUM(primi_posti) DESC, SUM(punteggio_totale) DESC, name ASC
+                ) AS rn
+              FROM top_component_snapshot
+              GROUP BY component_type, name
+            ) t
+            WHERE rn = 1
+          `
+          : sql`
+            SELECT component_type, name, primi_posti, secondi_posti, terzi_posti, punteggio_totale
+            FROM (
+              SELECT
+                component_type,
+                name,
+                primi_posti,
+                secondi_posti,
+                terzi_posti,
+                punteggio_totale,
+                ROW_NUMBER() OVER (
+                  PARTITION BY component_type
+                  ORDER BY primi_posti DESC, punteggio_totale DESC, name ASC
+                ) AS rn
+              FROM top_component_snapshot
+              WHERE season = ${targetSeason}
+            ) t
+            WHERE rn = 1
+          `
+      );
 
       const topComponents: any = {};
       for (const row of result.rows as any[]) {
@@ -486,6 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await db.execute(sql`DELETE FROM external_player_combos WHERE tournament_id = ${parsed.tournamentId} AND player_id = ${challengerId}`);
 
+      const seasonVal = tournamentDate ? determineSeason(tournamentDate) : determineSeason(new Date());
       const values = parsed.combos.map((c, idx) => ({
         tournamentId: parsed.tournamentId,
         playerId: challengerId,
@@ -498,6 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         placement: placement ?? null,
         totalParticipants: totalParticipants ?? null,
         tournamentDate: tournamentDate ?? null,
+        season: seasonVal,
       }));
       const inserted = await db.insert(externalPlayerCombos).values(values).returning();
 
@@ -508,6 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ratchet: r.ratchet,
           bit: r.bit,
           lockChip: r.lockChip,
+          season: seasonVal,
         }));
         if (baseCombos.length > 0) {
           await db.insert(comboStats).values(baseCombos as any).onConflictDoNothing();
@@ -554,6 +677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ratchet: r.ratchet,
             bit: r.bit,
             lockChip: r.lockChip,
+            season: seasonVal,
             placement,
             totalParticipants,
           });
@@ -1073,6 +1197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Aggiorna le statistiche aggregate usando la funzione di servizio (9 chiamate) in modo idempotente
+      const seasonValAdmin = determineSeason(new Date(data.dataTorneo));
       for (const [idx, combo] of firstCombos.entries()) {
         const key = `${data.firstPlacePlayerId}|${idx + 1}`;
         if (!existingKeySet.has(key)) {
@@ -1082,6 +1207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ratchet: combo.ratchet,
             bit: combo.bit,
             lockChip: combo.lockChip,
+            season: seasonValAdmin,
             placement: 1,
             totalParticipants: data.participants,
           });
@@ -1096,6 +1222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ratchet: combo.ratchet,
             bit: combo.bit,
             lockChip: combo.lockChip,
+            season: seasonValAdmin,
             placement: 2,
             totalParticipants: data.participants,
           });
@@ -1110,6 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ratchet: combo.ratchet,
             bit: combo.bit,
             lockChip: combo.lockChip,
+            season: seasonValAdmin,
             placement: 3,
             totalParticipants: data.participants,
           });
@@ -1568,7 +1696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rows = await db.select().from(externalPlayerCombos)
         .where(and(eq(externalPlayerCombos.tournamentId, tournamentId), eq(externalPlayerCombos.playerId, playerId)))
         .orderBy(asc(externalPlayerCombos.comboNumber));
-      const combos = rows.map(r => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip }));
+      const combos = rows.map(r => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip, season: r.season || undefined }));
       res.json({ combos });
     } catch (error) {
       console.error('Failed to fetch player combos:', error);
@@ -1586,14 +1714,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let affected = 0;
       await db.transaction(async (tx) => {
         const resRows = await tx.execute(sql`
-          SELECT 
-            blade,
-            assist_blade AS "assistBlade",
-            ratchet,
-            bit,
-            lock_chip AS "lockChip",
-            piazzamento,
-            numero_partecipanti AS "numeroPartecipanti"
+          SELECT blade,
+                 assist_blade AS "assistBlade",
+                 ratchet,
+                 bit,
+                 lock_chip AS "lockChip",
+                 data_torneo AS "dataTorneo",
+                 piazzamento,
+                 numero_partecipanti AS "numeroPartecipanti"
           FROM cm_match_results
           WHERE tournament_id = ${tournamentId}
         `);
@@ -1603,12 +1731,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const placement = Number(r.piazzamento ?? 0);
           const participants = Number(r.numeroPartecipanti ?? 0);
           if (placement >= 1 && placement <= 3 && participants > 0) {
+            const seasonForRevert = r.dataTorneo ? determineSeason(new Date(r.dataTorneo)) : determineSeason(new Date());
             await revertExternalComboTx(tx, {
               blade: r.blade,
               assistBlade: r.assistBlade,
               ratchet: r.ratchet,
               bit: r.bit,
               lockChip: r.lockChip,
+              season: seasonForRevert,
               placement,
               totalParticipants: participants,
             });
@@ -1704,12 +1834,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalParticipants = Number(existing.totalParticipants ?? 0);
 
       if (placement > 0 && totalParticipants > 0) {
+        const seasonForDelete = existing?.season || (existing?.tournamentDate ? determineSeason(new Date(existing.tournamentDate as any)) : determineSeason(new Date()));
         await revertExternalCombo({
           blade: existing.blade,
           assistBlade: existing.assistBlade,
           ratchet: existing.ratchet,
           bit: existing.bit,
           lockChip: existing.lockChip,
+          season: seasonForDelete,
           placement,
           totalParticipants,
         });
@@ -1729,12 +1861,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = updatedRows[0];
 
       if (placement > 0 && totalParticipants > 0) {
+        const seasonForUpdate = updated?.season || (updated?.tournamentDate ? determineSeason(new Date(updated.tournamentDate as any)) : determineSeason(new Date()));
         await processExternalCombo({
           blade: updated.blade,
           assistBlade: updated.assistBlade,
           ratchet: updated.ratchet,
           bit: updated.bit,
           lockChip: updated.lockChip,
+          season: seasonForUpdate,
           placement,
           totalParticipants,
         });
@@ -1835,12 +1969,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalParticipants = Number(existing.totalParticipants ?? 0);
 
       if (placement > 0 && totalParticipants > 0) {
+        const seasonForDelete = existing?.season || (existing?.tournamentDate ? determineSeason(new Date(existing.tournamentDate as any)) : determineSeason(new Date()));
         await revertExternalCombo({
           blade: existing.blade,
           assistBlade: existing.assistBlade,
           ratchet: existing.ratchet,
           bit: existing.bit,
           lockChip: existing.lockChip,
+          season: seasonForDelete,
           placement,
           totalParticipants,
         });
@@ -1959,6 +2095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Insert new combos with combo_number 1..N
+      const seasonVal = tournamentDate ? determineSeason(tournamentDate) : determineSeason(new Date());
       const values = parsed.combos.map((c, idx) => ({
         tournamentId: parsed.tournamentId,
         playerId: parsed.playerId,
@@ -1971,6 +2108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         placement: placement ?? null,
         totalParticipants: totalParticipants ?? null,
         tournamentDate: tournamentDate ?? null,
+        season: seasonVal,
       }));
       const inserted = await db.insert(externalPlayerCombos).values(values).returning();
       // Pre-fetch existing results for this player + tournament to avoid double-counting
@@ -2059,6 +2197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ratchet: prev.ratchet,
               bit: prev.bit,
               lockChip: prev.lockChip,
+              season: seasonVal,
               placement: Number(prev.piazzamento ?? 0),
               totalParticipants: Number(prev.numeroPartecipanti ?? 0),
             });
@@ -2068,6 +2207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ratchet: r.ratchet,
               bit: r.bit,
               lockChip: r.lockChip,
+              season: seasonVal,
               placement,
               totalParticipants,
             });
@@ -2078,6 +2218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ratchet: r.ratchet,
               bit: r.bit,
               lockChip: r.lockChip,
+              season: seasonVal,
               placement,
               totalParticipants,
             });

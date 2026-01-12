@@ -98,22 +98,26 @@ export const comboStats = pgTable("combo_stats", {
   ratchet: text("ratchet").notNull(),
   bit: text("bit").notNull(),
   lockChip: text("lock_chip").notNull(),
+  season: text("season").notNull(),
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
   dataCreazione: timestamp("data_creazione", { withTimezone: true }).notNull().default(sql`now()`),
 }, (table) => ({
-  pk: primaryKey({ columns: [table.blade, table.assistBlade, table.ratchet, table.bit, table.lockChip] })
+  pk: primaryKey({ name: "combo_stats_pkey", columns: [table.blade, table.assistBlade, table.ratchet, table.bit, table.lockChip, table.season] })
 }));
 
 export const bladeStats = pgTable("blade_stats", {
   blade: text("blade").primaryKey(),
+  season: text("season").notNull(),
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
-});
+}, (table) => ({
+  pk: primaryKey({ columns: [table.blade, table.season] })
+}));
 
 export const assistBladeStats = pgTable("assist_blade_stats", {
   assistBlade: text("assist_blade").primaryKey(),
@@ -124,21 +128,27 @@ export const assistBladeStats = pgTable("assist_blade_stats", {
 });
 
 export const ratchetStats = pgTable("ratchet_stats", {
-  ratchet: text("ratchet").primaryKey(),
+  ratchet: text("ratchet").notNull(),
+  season: text("season").notNull(),
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
-});
+}, (table) => ({
+  pk: primaryKey({ columns: [table.ratchet, table.season] })
+}));
 
 export const bitStats = pgTable("bit_stats", {
-  bit: text("bit").primaryKey(),
+  bit: text("bit").notNull(),
+  season: text("season").notNull(),
   isRatchetLess: boolean("is_ratchet_less").notNull().default(false),
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
-});
+}, (table) => ({
+  pk: primaryKey({ columns: [table.bit, table.season] })
+}));
 
 export const lockChipStats = pgTable("lock_chip_stats", {
   lockChip: text("lock_chip").primaryKey(),
@@ -383,6 +393,7 @@ export const externalPlayerCombos = pgTable("external_player_combos", {
   placement: integer("placement"),
   totalParticipants: integer("total_participants"),
   tournamentDate: date("tournament_date"),
+  season: text("season"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
 }, (table) => ({
   pk: primaryKey({ columns: [table.tournamentId, table.playerId, table.comboNumber] }),
@@ -428,4 +439,14 @@ export const playerLeaderboardView = pgView("player_leaderboard", {
   nickname: text("nickname").notNull(),
   avatar: text("avatar"),
   totalPoints: doublePrecision("total_points").notNull(),
+}).existing();
+
+export const topComponentSnapshot = pgView("top_component_snapshot", {
+  componentType: text("component_type").notNull(),
+  name: text("name").notNull(),
+  primiPosti: integer("primi_posti").notNull(),
+  secondiPosti: integer("secondi_posti").notNull(),
+  terziPosti: integer("terzi_posti").notNull(),
+  punteggioTotale: doublePrecision("punteggio_totale").notNull(),
+  season: text("season").notNull(),
 }).existing();

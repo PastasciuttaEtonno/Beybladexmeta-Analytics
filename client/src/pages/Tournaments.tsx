@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -581,6 +582,13 @@ export default function Tournaments() {
 
   const renderListView = () => {
     const tournaments = tournamentsData?.tournaments ?? [];
+    const isOffSeasonDate = (date?: string | Date | null): boolean => {
+      if (!date) return false;
+      const d = new Date(date);
+      const start = new Date('2025-10-01T00:00:00Z');
+      const end = new Date('2026-01-31T23:59:59Z');
+      return d >= start && d <= end;
+    };
     const filtered = tournaments.filter((t) => {
       const nameOk = !searchTerm || t.nomeTorneo.toLowerCase().includes(searchTerm.trim().toLowerCase());
       const dVal = t.dataTorneo ? new Date(t.dataTorneo) : null;
@@ -676,6 +684,9 @@ export default function Tournaments() {
                     <p className="text-xs text-muted-foreground">
                       {t.dataTorneo ? format(new Date(t.dataTorneo), 'dd MMM yyyy') : (t.state || 'Completed tournament')}
                     </p>
+                    {isOffSeasonDate(t.dataTorneo) && (
+                      <Badge variant="secondary" className="text-[10px] ml-1">Off Season</Badge>
+                    )}
                     {t.hasCombos ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
