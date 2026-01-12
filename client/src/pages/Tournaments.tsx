@@ -387,16 +387,7 @@ export default function Tournaments() {
       return;
     }
 
-    submitMutation.mutate({
-      nomeTorneo,
-      dataTorneo,
-      descrizione: descrizione || undefined,
-      participants,
-      regione,
-      firstPlaceCombos: firstPlace,
-      secondPlaceCombos: secondPlace,
-      thirdPlaceCombos: thirdPlace,
-    });
+    return;
   };
 
   // Non-admins can access list view; add tab is gated below
@@ -420,22 +411,37 @@ export default function Tournaments() {
     idSuffix?: string | null;
     gameTitle?: { id: string; slug: string; title: string };
     hasCombos?: boolean;
+    region?: string;
+    city?: string | null;
+    organizerName?: string;
+    hosts?: {
+      spaces?: Array<{
+        name?: string | null;
+        description?: string | null;
+        slug?: string | null;
+        id?: string | null;
+        logo?: { url?: string | null; width?: number | null; height?: number | null } | null;
+      } | null> | null;
+    } | null;
   };
 
-  // Filters for list view (used for external fetch)
+  // Filters for list view
   const [searchTerm, setSearchTerm] = useState("");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
   const DEFAULT_END_DATE = format(new Date(), "yyyy-MM-dd");
   const [endDateFilter, setEndDateFilter] = useState<string>(DEFAULT_END_DATE);
-  // Region filter removed
+  const [selectedRegion, setSelectedRegion] = useState<string>("");
 
   const { data: tournamentsData, refetch: refetchTournaments, isLoading: tournamentsLoading } = useQuery<{ tournaments: TorneoCard[] }>({
-    queryKey: ["/api/challengermode/tournaments", startDateFilter || "", endDateFilter || ""],
+    queryKey: ["/api/tournaments", startDateFilter || "", endDateFilter || "", selectedRegion || ""],
     queryFn: async () => {
       const afterIso = startDateFilter
         ? new Date(startDateFilter).toISOString()
         : "2024-01-01T00:00:00Z";
-      const resp = await fetch(`/api/challengermode/tournaments?after=${encodeURIComponent(afterIso)}`, {
+      const qs = new URLSearchParams();
+      if (afterIso) qs.set("after", afterIso);
+      if (selectedRegion) qs.set("region", selectedRegion);
+      const resp = await fetch(`/api/tournaments?${qs.toString()}`, {
         credentials: "include",
       });
       if (!resp.ok) throw new Error("Failed to fetch tournaments");
@@ -444,41 +450,19 @@ export default function Tournaments() {
       const base: TorneoCard[] = ext.map((t) => ({
         torneoId: t.id,
         nomeTorneo: t.name,
-        dataTorneo: null,
+        dataTorneo: t?.schedule?.startedAt ? String(t.schedule.startedAt).slice(0, 10) : null,
         description: t.description ?? undefined,
         state: t.state ?? undefined,
         contactUrl: t.contactUrl ?? undefined,
         idSuffix: t.idSuffix ?? null,
         gameTitle: t.gameTitle ?? undefined,
-        hasCombos: !!t.hasCombos,
+        hasCombos: t.hasCombos === true,
+        region: t.region ?? undefined,
+        city: t.city ?? null,
+        organizerName: t.organizerName ?? undefined,
+        hosts: t.hosts ?? undefined,
       }));
-      if (!endDateFilter) {
-        return { tournaments: base };
-      }
-      const out = new Array<TorneoCard>(base.length);
-      let i = 0;
-      const limit = 6;
-      async function worker() {
-        while (i < base.length) {
-          const idx = i++;
-          const m = base[idx];
-          try {
-            const dResp = await fetch(`/api/challengermode/tournaments/${encodeURIComponent(m.torneoId)}`, { credentials: "include" });
-            if (dResp.ok) {
-              const dj = await dResp.json();
-              const startedAt = dj?.detail?.schedule?.startedAt as string | undefined;
-              const dateOnly = startedAt ? String(startedAt).slice(0, 10) : null;
-              out[idx] = { ...m, dataTorneo: dateOnly };
-            } else {
-              out[idx] = m;
-            }
-          } catch {
-            out[idx] = m;
-          }
-        }
-      }
-      await Promise.all(Array.from({ length: limit }, () => worker()));
-      return { tournaments: out };
+      return { tournaments: base };
     },
     enabled: activeTab === 'list',
   });
@@ -547,13 +531,16 @@ export default function Tournaments() {
     const q = params.get("q");
     const start = params.get("start");
     const end = params.get("end");
+    const region = params.get("region");
     const ssQ = sessionStorage.getItem("tournaments_q");
     const ssStart = sessionStorage.getItem("tournaments_start");
     const ssEnd = sessionStorage.getItem("tournaments_end");
+    const ssRegion = sessionStorage.getItem("tournaments_region");
     if (q !== null || ssQ !== null) setSearchTerm((q ?? ssQ ?? "") as string);
     if (start !== null || ssStart !== null) setStartDateFilter((start ?? ssStart ?? "") as string);
     // Default end date to today if missing
     setEndDateFilter((end ?? ssEnd ?? DEFAULT_END_DATE) as string);
+    if (region !== null || ssRegion !== null) setSelectedRegion((region ?? ssRegion ?? "") as string);
   }, []);
 
   useEffect(() => {
@@ -574,11 +561,13 @@ export default function Tournaments() {
     }
     if (startDateFilter) params.set("start", startDateFilter); else params.delete("start");
     if (endDateFilter) params.set("end", endDateFilter); else params.delete("end");
+    if (selectedRegion) params.set("region", selectedRegion); else params.delete("region");
     sessionStorage.setItem("tournaments_q", searchTerm);
     sessionStorage.setItem("tournaments_start", startDateFilter);
     sessionStorage.setItem("tournaments_end", endDateFilter);
+    sessionStorage.setItem("tournaments_region", selectedRegion);
     setLocation(`${base}?${params.toString()}`, { replace: true });
-  }, [searchTerm, startDateFilter, endDateFilter]);
+  }, [searchTerm, startDateFilter, endDateFilter, selectedRegion]);
 
   const renderListView = () => {
     const tournaments = tournamentsData?.tournaments ?? [];
@@ -594,7 +583,7 @@ export default function Tournaments() {
       const dVal = t.dataTorneo ? new Date(t.dataTorneo) : null;
       const startOk = !startDateFilter ? true : (dVal ? dVal >= new Date(startDateFilter) : true);
       const endOk = !endDateFilter ? true : (dVal ? dVal <= new Date(endDateFilter) : false);
-      const regionOk = true;
+      const regionOk = !selectedRegion || (t.region || "") === selectedRegion;
       return nameOk && startOk && endOk && regionOk;
     });
     const perPage = 10;
@@ -638,7 +627,19 @@ export default function Tournaments() {
               className="h-9 text-sm"
             />
           </div>
-          {/* Region filter removed */}
+          <div className="w-[200px] space-y-1">
+            <Select value={selectedRegion} onValueChange={(val) => setSelectedRegion(val === 'ALL' ? '' : val)}>
+              <SelectTrigger className="h-9 text-sm" aria-label="Regione">
+                <SelectValue placeholder="mancante" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tutte le Regioni</SelectItem>
+                {ITALIAN_REGIONS.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -647,7 +648,7 @@ export default function Tournaments() {
               setSearchTerm("");
               setStartDateFilter("");
               setEndDateFilter(DEFAULT_END_DATE);
-              // Region filter removed
+              setSelectedRegion("");
             }}
           >
             <Eraser className="w-4 h-4" aria-label="Clear filters" />
@@ -679,13 +680,25 @@ export default function Tournaments() {
             {(pageItems.length > 0 ? pageItems : []).map((t) => (
               <Card key={t.torneoId} className="overflow-hidden cursor-pointer" onClick={() => openTournamentDialog(t)}>
                 <CardHeader className="pb-2">
-                  <h3 className="text-base font-semibold">{t.nomeTorneo}</h3>
+                  <div className="flex items-center gap-2">
+                    {t.hosts?.spaces?.[0]?.logo?.url ? (
+                      <img
+                        src={t.hosts.spaces[0].logo.url!}
+                        alt={t.hosts.spaces?.[0]?.name || "Organizer logo"}
+                        className="w-6 h-6 rounded"
+                      />
+                    ) : null}
+                    <h3 className="text-base font-semibold">{t.nomeTorneo}</h3>
+                  </div>
                   <div className="flex items-center gap-1">
                     <p className="text-xs text-muted-foreground">
                       {t.dataTorneo ? format(new Date(t.dataTorneo), 'dd MMM yyyy') : (t.state || 'Completed tournament')}
                     </p>
                     {isOffSeasonDate(t.dataTorneo) && (
                       <Badge variant="secondary" className="text-[10px] ml-1">Off Season</Badge>
+                    )}
+                    {t.region && (
+                      <Badge variant="outline" className="text-[10px] ml-1">{t.region}</Badge>
                     )}
                     {t.hasCombos ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />

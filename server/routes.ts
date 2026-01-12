@@ -1597,6 +1597,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unified tournaments list with region filter and organizer logo (read-only)
+  app.get('/api/tournaments', async (req, res) => {
+    try {
+      const region = String((req.query.region ?? '') as string).trim();
+      const after = String(req.query.after || '2024-01-01T00:00:00Z');
+      const nodes = await fetchTournamentsForGame(after);
+      const ids = (nodes as any[]).map((n) => String(n.id));
+      const metaRows = await db.execute(
+        region
+          ? sql`SELECT id, region, city, organizer_name FROM tournaments_view WHERE region = ${region}`
+          : sql`SELECT id, region, city, organizer_name FROM tournaments_view`
+      );
+      const metaMap = new Map<string, { region: string | null; city: string | null; organizer_name: string | null }>();
+      for (const r of (metaRows.rows as any[]) || []) {
+        metaMap.set(String(r.id), {
+          region: (r.region ?? null) as any,
+          city: (r.city ?? null) as any,
+          organizer_name: (r.organizer_name ?? null) as any,
+        });
+      }
+      const rowsCombos = await db.execute(sql`SELECT DISTINCT tournament_id FROM cm_match_results`);
+      const idSet = new Set<string>((rowsCombos.rows as any[]).map((r) => String((r as any).tournament_id || (r as any).tournamentId)));
+      // Fetch details to include hosts + logo with limited concurrency
+      const limit = 6;
+      const out: any[] = new Array(nodes.length);
+      let i = 0;
+      async function worker() {
+        while (i < nodes.length) {
+          const idx = i++;
+          const base = nodes[idx] as any;
+          const id = String(base.id);
+          try {
+            const detail = await fetchTournamentDetail(id);
+            const meta = metaMap.get(id) || { region: null, city: null, organizer_name: null };
+            const enriched = {
+              ...base,
+              hosts: detail?.hosts || undefined,
+              schedule: detail?.schedule || undefined,
+              hasCombos: idSet.has(id),
+              region: meta.region || "Tutte le Regioni",
+              city: meta.city || null,
+              organizerName: meta.organizer_name || (detail?.hosts?.spaces?.[0]?.name ?? undefined),
+            };
+            out[idx] = enriched;
+          } catch {
+            const meta = metaMap.get(id) || { region: null, city: null, organizer_name: null };
+            out[idx] = {
+              ...base,
+              hasCombos: idSet.has(id),
+              region: meta.region || "Tutte le Regioni",
+              city: meta.city || null,
+              organizerName: meta.organizer_name || undefined,
+            };
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: limit }, () => worker()));
+      res.json({ tournaments: out.filter((t) => (region ? (t.region === region) : true)) });
+    } catch (error: any) {
+      console.error('Error fetching unified tournaments:', error);
+      res.status(500).json({ error: error?.message || 'Failed to fetch tournaments' });
+    }
+  });
   // Current user's Challengermode participations (requires OAuth session token)
   app.get('/api/challenger/participations', requireAuth, async (req, res) => {
     try {
