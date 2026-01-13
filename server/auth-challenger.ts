@@ -9,6 +9,15 @@ import { fetchMeBasic } from "./challengermode";
 export function registerChallengerAuth(app: express.Express) {
   const router = express.Router();
 
+  const computeRedirectUri = (req: express.Request): string => {
+    const forwardedProto = req.header('x-forwarded-proto');
+    const proto = (forwardedProto && forwardedProto.split(',')[0]) || req.protocol || 'https';
+    const forwardedHost = req.header('x-forwarded-host');
+    const host = (forwardedHost && forwardedHost.split(',')[0]) || req.header('host') || '';
+    const base = `${proto}://${host}`;
+    return `${base}/api/challenger/callback`;
+  };
+
   const base64url = (input: Buffer | string) => {
     const b = Buffer.isBuffer(input) ? input : Buffer.from(input);
     return b.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
@@ -21,7 +30,8 @@ export function registerChallengerAuth(app: express.Express) {
 
   router.get("/login", async (req, res) => {
     const clientId = process.env.CM_CLIENT_ID;
-    const redirectUri = process.env.CM_REDIRECT_URI;
+    const redirectEnv = process.env.CM_REDIRECT_URI;
+    const redirectUri = redirectEnv && redirectEnv.startsWith('http') ? redirectEnv : computeRedirectUri(req);
     if (!clientId || !redirectUri) return res.status(500).send("OAuth misconfigured");
     const state = crypto.randomBytes(16).toString("hex");
     const codeVerifier = generateCodeVerifier();
@@ -50,7 +60,8 @@ export function registerChallengerAuth(app: express.Express) {
 
       const clientId = process.env.CM_CLIENT_ID;
       const clientSecret = process.env.CM_CLIENT_SECRET;
-      const redirectUri = process.env.CM_REDIRECT_URI;
+      const redirectEnv = process.env.CM_REDIRECT_URI;
+      const redirectUri = redirectEnv && redirectEnv.startsWith('http') ? redirectEnv : computeRedirectUri(req);
       if (!clientId || !clientSecret || !redirectUri) return res.status(500).send("OAuth misconfigured");
       const codeVerifier: string = (req.session as any).cm_code_verifier || "";
       (req.session as any).cm_code_verifier = null;
