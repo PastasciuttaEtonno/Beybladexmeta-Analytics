@@ -30,8 +30,7 @@ export function registerChallengerAuth(app: express.Express) {
 
   router.get("/login", async (req, res) => {
     const clientId = process.env.CM_CLIENT_ID;
-    const redirectEnv = process.env.CM_REDIRECT_URI;
-    const redirectUri = redirectEnv && redirectEnv.startsWith('http') ? redirectEnv : computeRedirectUri(req);
+    const redirectUri = computeRedirectUri(req);
     if (!clientId || !redirectUri) return res.status(500).send("OAuth misconfigured");
     const state = crypto.randomBytes(16).toString("hex");
     const codeVerifier = generateCodeVerifier();
@@ -60,8 +59,7 @@ export function registerChallengerAuth(app: express.Express) {
 
       const clientId = process.env.CM_CLIENT_ID;
       const clientSecret = process.env.CM_CLIENT_SECRET;
-      const redirectEnv = process.env.CM_REDIRECT_URI;
-      const redirectUri = redirectEnv && redirectEnv.startsWith('http') ? redirectEnv : computeRedirectUri(req);
+      const redirectUri = computeRedirectUri(req);
       if (!clientId || !clientSecret || !redirectUri) return res.status(500).send("OAuth misconfigured");
       const codeVerifier: string = (req.session as any).cm_code_verifier || "";
       (req.session as any).cm_code_verifier = null;
