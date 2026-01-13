@@ -187,6 +187,15 @@ export type ExternalTournament = {
   contactUrl: string | null;
   idSuffix: string | null;
   gameTitle: { id: string; slug: string; title: string };
+  hosts?: {
+    spaces?: Array<{
+      name?: string | null;
+      description?: string | null;
+      slug?: string | null;
+      id?: string | null;
+      logo?: { url?: string | null; width?: number | null; height?: number | null } | null;
+    } | null> | null;
+  } | null;
 };
 
 export async function fetchTournamentsForGame(afterIso: string): Promise<ExternalTournament[]> {
@@ -196,7 +205,7 @@ export async function fetchTournamentsForGame(afterIso: string): Promise<Externa
     return cached;
   }
   const token = await getAccessToken();
-  const query = `query TournamentsForGame {\n  tournamentsForGame(\n    input: {\n      gameSlug: \"beybladex\"\n      tournamentFilter: {\n        completedTournamentSelector: { tournamentsAfter: \"${afterIso}\" }\n      }\n    }\n  ) {\n    description\n    id\n    name\n    state\n    contactUrl\n    idSuffix\n    gameTitle {\n      id\n      slug\n      title\n    }\n  }\n}`;
+  const query = `query TournamentsForGame {\n  tournamentsForGame(\n    input: {\n      gameSlug: \"beybladex\"\n      tournamentFilter: {\n        completedTournamentSelector: { tournamentsAfter: \"${afterIso}\" }\n      }\n    }\n  ) {\n    description\n    id\n    name\n    state\n    contactUrl\n    idSuffix\n    gameTitle { id slug title }\n    hosts { spaces { name description slug id logo(size: MEDIUM) { url width height } } }\n  }\n}`;
 
   console.log(`[Challengermode] GraphQL POST ${GRAPHQL_URL}`);
 
@@ -271,7 +280,7 @@ export async function fetchTournamentDetail(tournamentId: string): Promise<Exter
     return cached;
   }
   const token = await getAccessToken();
-  const query = `query Tournament($tournamentId: UUID!) {\n  tournament(tournamentId: $tournamentId) {\n    id\n    name\n    state\n    contactUrl\n    schedule { startedAt }\n    hosts {\n      spaces {\n        name\n        description\n        slug\n        id\n        logo(size: SMALL) { url width height }\n      }\n    }\n    stages { format lineupCount }\n    attendance {\n      availableSlotCount\n      confirmedLineupCount\n      signups {\n        userCount\n        lineupCount\n        lineups {\n          placement { displayPlacement }\n          members { user { username userId profilePicture(size: SMALL) { url width height } } }\n        }\n      }\n    }\n  }\n}`;
+  const query = `query Tournament($tournamentId: UUID!) {\n  tournament(tournamentId: $tournamentId) {\n    id\n    name\n    state\n    contactUrl\n    schedule { startedAt }\n    hosts {\n      spaces {\n        name\n        description\n        slug\n        id\n        logo(size: MEDIUM) { url width height }\n      }\n    }\n    stages { format lineupCount }\n    attendance {\n      availableSlotCount\n      confirmedLineupCount\n      signups {\n        userCount\n        lineupCount\n        lineups {\n          placement { displayPlacement }\n          members { user { username userId profilePicture(size: SMALL) { url width height } } }\n        }\n      }\n    }\n  }\n}`;
 
   const body = { query, variables: { tournamentId } };
   console.info(`[Challengermode] GraphQL POST ${GRAPHQL_URL} tournamentId=${tournamentId} bearer_tail=${token.slice(-6)}`);
