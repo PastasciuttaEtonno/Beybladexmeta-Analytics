@@ -52,7 +52,12 @@ export function registerChallengerAuth(app: express.Express) {
     try {
       const code = String(req.query.code || "");
       const state = String(req.query.state || "");
-      if (!code) return res.status(400).send("Missing code");
+      const oauthError = String(req.query.error || "");
+      if (!code || oauthError) {
+        (req.session as any).cm_oauth_state = null;
+        (req.session as any).cm_code_verifier = null;
+        return res.redirect("/profile");
+      }
       const expected = (req.session as any).cm_oauth_state || "";
       (req.session as any).cm_oauth_state = null;
       if (!state || state !== expected) return res.status(400).send("Invalid state");

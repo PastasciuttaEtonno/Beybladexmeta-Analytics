@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Star, Plus, Trash2, Layers, Eye } from "lucide-react";
+import { Star, Plus, Trash2, Layers, Eye, Trophy, Medal, Award } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -157,6 +157,32 @@ export default function Favorites() {
     queryKey: ["/api/favorites/decks"],
     enabled: !!user,
   });
+  const selectedKey = useMemo(() => {
+    if (!selectedCombo) return "";
+    return [
+      selectedCombo.blade,
+      selectedCombo.assistBlade,
+      selectedCombo.ratchet,
+      selectedCombo.bit,
+      selectedCombo.lockChip,
+    ].join("|");
+  }, [selectedCombo]);
+  const { data: comboStatsData, isLoading: comboStatsLoading } = useQuery<any>({
+    queryKey: ["/api/stats/combos/by-key", selectedKey],
+    enabled: detailModalOpen && !!selectedKey,
+    queryFn: async () => {
+      const resp = await fetch(`/api/stats/combos/by-key?key=${encodeURIComponent(selectedKey)}`, { credentials: "include" });
+      if (resp.status === 404) return null;
+      if (!resp.ok) throw new Error("Failed to fetch combo stats");
+      return await resp.json();
+    },
+  });
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return <Trophy className="w-8 h-8 text-yellow-500" />;
+    if (rank === 2) return <Medal className="w-8 h-8 text-slate-400" />;
+    if (rank === 3) return <Award className="w-8 h-8 text-amber-700" />;
+    return null;
+  };
 
   useEffect(() => {
     if (blade && !isSingleWordBlade(blade)) {
@@ -942,7 +968,7 @@ export default function Favorites() {
 
           {selectedCombo && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   { label: "Blade", value: selectedCombo.blade, folder: "blades" },
                   {
@@ -977,7 +1003,7 @@ export default function Favorites() {
                           name={component.value}
                         />
                         <p
-                          className="text-center text-sm font-medium truncate"
+                          className="text-center text-xs sm:text-sm font-medium truncate break-words"
                           data-testid={`text-detail-${component.label.toLowerCase().replace(/\s+/g, "-")}`}
                         >
                           {component.value}
@@ -985,6 +1011,69 @@ export default function Favorites() {
                       </CardContent>
                     </Card>
                   ))}
+              </div>
+              <div className="space-y-2">
+                {comboStatsLoading ? (
+                  <div className="h-6 bg-muted/30 animate-pulse" />
+                ) : comboStatsData?.combo ? (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <CardTitle className="text-base">Statistiche tornei</CardTitle>
+                          <CardDescription>Rank #{Number(comboStatsData.rank)} nella classifica</CardDescription>
+                        </div>
+                        {Number(comboStatsData.rank) <= 3 && (
+                          <div>{getRankIcon(Number(comboStatsData.rank))}</div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">1st Place</p>
+                          <p className="text-2xl font-bold">
+                            {Number(comboStatsData.combo.primiPosti)}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">2nd Place</p>
+                          <p className="text-2xl font-bold">
+                            {Number(comboStatsData.combo.secondiPosti)}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">3rd Place</p>
+                          <p className="text-2xl font-bold">
+                            {Number(comboStatsData.combo.terziPosti)}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Total Score</p>
+                          <p className="text-2xl font-bold text-primary">
+                            {Number(comboStatsData.combo.punteggioTotale).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <CardTitle className="text-base">Statistiche tornei</CardTitle>
+                          <CardDescription>Nessun dato registrato per questa combo</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Aggiungi risultati torneo o cerca la combo nella classifica.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           )}
