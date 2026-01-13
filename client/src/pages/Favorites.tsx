@@ -1069,7 +1069,7 @@ export default function Favorites() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        Vinci un torneo con questa combo e registrala!.
+                        Vinci un torneo con questa combo e registrala!
                       </p>
                     </CardContent>
                   </Card>
