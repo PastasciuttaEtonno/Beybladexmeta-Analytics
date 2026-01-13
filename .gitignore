@@ -38,3 +38,4 @@ coverage/
 *.tgz
 keygen.js
 test-minio.cjs
+REGIONAL_SCORING.md

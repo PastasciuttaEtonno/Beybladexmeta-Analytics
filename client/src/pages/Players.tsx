@@ -129,8 +129,8 @@ export default function Players() {
           </TabsList>
 
           <TabsContent value="players" className="space-y-3">
-        <div className="flex items-end gap-2">
-          <div className="flex-1 min-w-[180px]">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-0 w-full sm:w-auto">
             <Input
               id="player-search"
               aria-label="Search players"
@@ -140,7 +140,7 @@ export default function Players() {
               className="h-9 text-sm"
             />
           </div>
-          <div className="w-[200px]">
+          <div className="w-full sm:w-[200px]">
             <Select value={selectedRegion} onValueChange={setSelectedRegion}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Globale" />
@@ -153,7 +153,7 @@ export default function Players() {
               </SelectContent>
             </Select>
           </div>
-          <div className="w-[180px]">
+          <div className="w-full sm:w-[180px]">
             <Select value={selectedSeason} onValueChange={setSelectedSeason}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Stagione" />
@@ -206,7 +206,7 @@ export default function Players() {
             ))}
             {filteredPlayers.length > perPage && (
               <Pagination className="mt-2">
-                <PaginationContent>
+                <PaginationContent className="flex-wrap">
                   <PaginationItem>
                     <PaginationPrevious
                       href="#"
