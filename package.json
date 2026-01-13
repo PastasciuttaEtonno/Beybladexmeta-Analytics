@@ -8,6 +8,7 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc",
+    "regional:recalc": "tsx scripts/recalc-regional.ts",
     "db:create": "tsx scripts/db-create.ts",
     "db:test-conn": "tsx scripts/db-test-conn.ts",
     "db:import": "tsx scripts/import-csv.ts",

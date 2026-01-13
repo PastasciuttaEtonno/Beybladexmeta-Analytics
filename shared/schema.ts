@@ -450,3 +450,17 @@ export const topComponentSnapshot = pgView("top_component_snapshot", {
   punteggioTotale: doublePrecision("punteggio_totale").notNull(),
   season: text("season").notNull(),
 }).existing();
+
+export const playerRegionalStats = pgTable("player_regional_stats", {
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  region: text("region").notNull(),
+  season: text("season").default("Season 2026").notNull(),
+  points: integer("points").default(0).notNull(),
+  tournamentsPlayed: integer("tournaments_played").default(0).notNull(),
+  wins: integer("wins").default(0).notNull(),
+  top4: integer("top4").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.region, table.season] }),
+}));

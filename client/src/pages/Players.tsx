@@ -15,6 +15,13 @@ import {
   PaginationNext,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type PlayerItem = {
   id: string;
@@ -26,16 +33,66 @@ type PlayerItem = {
 export default function Players() {
   const [, setLocation] = useLocation();
 
-  const { data, isLoading } = useQuery<{ players: PlayerItem[] }>({
-    queryKey: ["/api/player-rankings"],
+  const REGIONS = [
+    "Piemonte",
+    "Valle d'Aosta",
+    "Lombardia",
+    "Trentino-Alto Adige",
+    "Veneto",
+    "Friuli-Venezia Giulia",
+    "Liguria",
+    "Emilia-Romagna",
+    "Toscana",
+    "Umbria",
+    "Marche",
+    "Lazio",
+    "Abruzzo",
+    "Molise",
+    "Campania",
+    "Puglia",
+    "Basilicata",
+    "Calabria",
+    "Sicilia",
+    "Sardegna",
+  ];
+
+  const [selectedRegion, setSelectedRegion] = useState<string>("global");
+  const [selectedSeason, setSelectedSeason] = useState<string>("Off Season");
+
+  const { data: seasonsData } = useQuery<{ seasons: string[] }>({
+    queryKey: ["/api/seasons"],
     queryFn: async () => {
-      const resp = await fetch("/api/player-rankings", { credentials: "include" });
-      if (!resp.ok) throw new Error("Failed to fetch player rankings");
+      const resp = await fetch("/api/seasons");
+      if (!resp.ok) throw new Error("Failed to fetch seasons");
+      return await resp.json();
+    },
+  });
+  const seasons = (seasonsData?.seasons || ["Off Season", "Season 2026"]) as string[];
+  useEffect(() => {
+    if (seasons.length && !seasons.includes(selectedSeason)) {
+      setSelectedSeason(seasons[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seasonsData?.seasons?.length]);
+
+  const { data, isLoading } = useQuery<{ leaderboard: any[] }>({
+    queryKey: ["/api/leaderboard/regional", selectedRegion, selectedSeason],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("season", selectedSeason);
+      if (selectedRegion && selectedRegion !== "global") params.set("region", selectedRegion);
+      const resp = await fetch(`/api/leaderboard/regional?${params.toString()}`);
+      if (!resp.ok) throw new Error("Failed to fetch regional leaderboard");
       return await resp.json();
     },
   });
 
-  const players = (data?.players || []) as PlayerItem[];
+  const players = ((data?.leaderboard || []) as any[]).map((row) => ({
+    id: String(row.player_id || ""),
+    nickname: String(row.player_name || row.player_id || ""),
+    avatar: row.avatar ? String(row.avatar) : null,
+    totalPoints: Number(row.points || 0),
+  })) as PlayerItem[];
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 20;
@@ -52,7 +109,7 @@ export default function Players() {
 
   useEffect(() => {
     setPage(1);
-  }, [players.length, query]);
+  }, [players.length, query, selectedRegion, selectedSeason]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -82,6 +139,31 @@ export default function Players() {
               placeholder="Cerca giocatori..."
               className="h-9 text-sm"
             />
+          </div>
+          <div className="w-[200px]">
+            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Globale" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="global">Globale</SelectItem>
+                {REGIONS.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-[180px]">
+            <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Stagione" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         {isLoading ? (

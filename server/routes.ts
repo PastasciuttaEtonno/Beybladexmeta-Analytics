@@ -684,6 +684,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      try {
+        const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
+        await recalculateRegionalStatsForTournament(parsed.tournamentId);
+      } catch {}
+
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error?.message || 'Invalid request' });
@@ -1266,6 +1271,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      try {
+        const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
+        await recalculateRegionalStatsForTournament(data.tournamentId);
+      } catch {}
+
       res.json({ success: true, message: 'External tournament results submitted successfully', tournamentId: data.tournamentId });
     } catch (error) {
       console.error('External tournament submission error:', error);
@@ -1761,9 +1771,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(asc(externalPlayerCombos.comboNumber));
       const combos = rows.map(r => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip, season: r.season || undefined }));
       res.json({ combos });
-    } catch (error) {
-      console.error('Failed to fetch player combos:', error);
-      res.status(500).json({ error: 'Failed to fetch player combos' });
+    } catch (error: any) {
+      console.error('Failed to fetch player combos:', error?.message || error);
+      res.status(500).json({ error: error?.message || 'Failed to fetch player combos' });
+    }
+  });
+
+
+  app.get('/api/leaderboard/regional', async (req, res) => {
+    try {
+      const region = String((req.query.region ?? '') as string).trim();
+      const season = String((req.query.season ?? 'Off Season') as string).trim();
+      if (region) {
+        const rows = await db.execute(sql`
+          SELECT prs.player_id,
+                 prs.player_name,
+                 prs.region,
+                 prs.season,
+                 prs.points,
+                 prs.tournaments_played,
+                 prs.wins,
+                 prs.top4,
+                 p.avatar
+          FROM player_regional_stats prs
+          LEFT JOIN cm_players p ON p.id = prs.player_id
+          WHERE prs.season = ${season} AND prs.region = ${region}
+          ORDER BY prs.points DESC, prs.wins DESC, prs.top4 DESC
+        `);
+        res.json({ leaderboard: rows.rows });
+      } else {
+        const rows = await db.execute(sql`
+          SELECT prs.player_id,
+                 MAX(prs.player_name) AS player_name,
+                 'Global' AS region,
+                 prs.season,
+                 SUM(prs.points) AS points,
+                 SUM(prs.tournaments_played) AS tournaments_played,
+                 SUM(prs.wins) AS wins,
+                 SUM(prs.top4) AS top4,
+                 MAX(p.avatar) AS avatar
+          FROM player_regional_stats prs
+          LEFT JOIN cm_players p ON p.id = prs.player_id
+          WHERE prs.season = ${season}
+          GROUP BY prs.player_id, prs.season
+          ORDER BY points DESC, wins DESC, top4 DESC
+        `);
+        res.json({ leaderboard: rows.rows });
+      }
+    } catch (error: any) {
+      console.error('Error fetching regional leaderboard:', error?.message || error);
+      res.status(500).json({ error: error?.message || 'Failed to fetch regional leaderboard' });
+    }
+  });
+
+  app.get('/api/seasons', async (_req, res) => {
+    try {
+      const seasonsSet = new Set<string>();
+      try {
+        const r1 = await db.execute(sql`SELECT DISTINCT season FROM player_regional_stats`);
+        for (const r of r1.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
+      } catch {}
+      try {
+        const r2 = await db.execute(sql`SELECT DISTINCT season FROM combo_stats`);
+        for (const r of r2.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
+      } catch {}
+      try {
+        const r3 = await db.execute(sql`SELECT DISTINCT season FROM blade_stats`);
+        for (const r of r3.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
+      } catch {}
+      try {
+        const r4 = await db.execute(sql`SELECT DISTINCT season FROM ratchet_stats`);
+        for (const r of r4.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
+      } catch {}
+      try {
+        const r5 = await db.execute(sql`SELECT DISTINCT season FROM bit_stats`);
+        for (const r of r5.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
+      } catch {}
+      try {
+        const hasSeason = await db.execute(sql`
+          SELECT EXISTS(
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'top_component_snapshot' AND column_name = 'season'
+          ) AS has_season
+        `);
+        const ok = Boolean((hasSeason.rows[0] as any)?.has_season);
+        if (ok) {
+          const r6 = await db.execute(sql`SELECT DISTINCT season FROM top_component_snapshot`);
+          for (const r of r6.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
+        }
+      } catch {}
+      const seasonsArr = Array.from(seasonsSet);
+      seasonsArr.sort((a, b) => {
+        const aKey = a === 'Off Season' ? '0' : a.toLowerCase();
+        const bKey = b === 'Off Season' ? '0' : b.toLowerCase();
+        return aKey.localeCompare(bKey);
+      });
+      if (seasonsArr.length === 0) return res.json({ seasons: ['Off Season', 'Season 2026'] });
+      res.json({ seasons: seasonsArr });
+    } catch (error: any) {
+      console.error('Error fetching seasons:', error?.message || error);
+      res.status(500).json({ error: error?.message || 'Failed to fetch seasons' });
     }
   });
 
@@ -2313,6 +2421,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
+        const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
+        await recalculateRegionalStatsForTournament(parsed.tournamentId);
+      } catch {}
+
+      try {
         const adminRow = await db.select({ email: users.email }).from(users).where(eq(users.id, req.session.userId!));
         const email = adminRow[0]?.email || '';
         await db.insert(adminAuditLogs).values({
@@ -2358,22 +2471,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const playerId = String(req.params.id || '').trim();
       if (!playerId) return res.status(400).json({ error: 'Missing player id' });
+      const season = String((req.query.season ?? 'Off Season') as string).trim();
 
       const playerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.id, playerId)).limit(1);
       const player = playerRows[0] || null;
       if (!player) return res.status(404).json({ error: 'Player not found' });
 
       const totalPointsQuery = await db.execute(sql`
-        SELECT COALESCE(SUM(
-          CASE placement
-            WHEN 1 THEN 10
-            WHEN 2 THEN 7
-            WHEN 3 THEN 5
-            ELSE 0
-          END * total_participants
-        ), 0) AS total_points
-        FROM external_player_combos
-        WHERE player_id = ${playerId} AND placement IS NOT NULL AND total_participants IS NOT NULL;
+        SELECT COALESCE(SUM(points), 0) AS total_points
+        FROM player_regional_stats
+        WHERE player_id = ${playerId} AND season = ${season}
       `);
       const totalPoints = Number(totalPointsQuery.rows[0]?.total_points || 0);
 

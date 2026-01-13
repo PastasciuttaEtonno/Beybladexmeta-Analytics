@@ -9,6 +9,13 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CardDescription } from "@/components/ui/card";
 import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type PlayerProfileResp = {
   player: { id: string; nickname: string; avatar: string | null };
@@ -43,10 +50,29 @@ export default function PlayerDetail() {
   const [, setLocation] = useLocation();
   const playerId = params?.id || "";
 
-  const { data, isLoading } = useQuery<PlayerProfileResp>({
-    queryKey: ["/api/players", playerId],
+  const [selectedSeason, setSelectedSeason] = useState<string>("Off Season");
+  const { data: seasonsData } = useQuery<{ seasons: string[] }>({
+    queryKey: ["/api/seasons"],
     queryFn: async () => {
-      const resp = await fetch(`/api/players/${encodeURIComponent(playerId)}`, { credentials: "include" });
+      const resp = await fetch("/api/seasons");
+      if (!resp.ok) throw new Error("Failed to fetch seasons");
+      return await resp.json();
+    },
+  });
+  const seasons = (seasonsData?.seasons || ["Off Season", "Season 2026"]) as string[];
+  useEffect(() => {
+    if (seasons.length && !seasons.includes(selectedSeason)) {
+      setSelectedSeason(seasons[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seasonsData?.seasons?.length]);
+
+  const { data, isLoading } = useQuery<PlayerProfileResp>({
+    queryKey: ["/api/players", playerId, selectedSeason],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("season", selectedSeason);
+      const resp = await fetch(`/api/players/${encodeURIComponent(playerId)}?${params.toString()}`, { credentials: "include" });
       if (!resp.ok) throw new Error("Failed to fetch player profile");
       return await resp.json();
     },
@@ -129,6 +155,20 @@ export default function PlayerDetail() {
           </div>
 
           <TabsContent value="players" className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="w-[180px]">
+            <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Stagione" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <Card className="p-4 flex items-center gap-4">
           <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
             {profile?.avatar ? (
