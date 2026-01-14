@@ -6,15 +6,15 @@ type AggregateKey = string;
 
 function seasonForDate(dateStr: string | null | undefined): string {
   try {
-    if (!dateStr) return "Off Season";
+    if (!dateStr) return "Off Season 2025";
     const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return "Off Season";
+    if (Number.isNaN(d.getTime())) return "Off Season 2025";
     const start = new Date("2025-10-01T00:00:00Z");
     const end = new Date("2026-02-01T00:00:00Z");
-    if (d >= start && d < end) return "Off Season";
+    if (d >= start && d < end) return "Off Season 2025";
     return "Season 2026";
   } catch {
-    return "Off Season";
+    return "Off Season 2025";
   }
 }
 

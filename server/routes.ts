@@ -1821,41 +1821,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json({ leaderboard: rows.rows });
         }
       } else {
+        const legacyOff = 'Off Season';
+        const isOffSeason2025 = season.toLowerCase().startsWith('off season');
         if (region) {
-          const rows = await db.execute(sql`
-            SELECT prs.player_id,
-                   prs.player_name,
-                   prs.region,
-                   prs.season,
-                   prs.points,
-                   prs.tournaments_played,
-                   prs.wins,
-                   prs.top4,
-                   p.avatar
-            FROM player_regional_stats prs
-            LEFT JOIN cm_players p ON p.id = prs.player_id
-            WHERE prs.season = ${season} AND prs.region = ${region}
-            ORDER BY prs.points DESC, prs.wins DESC, prs.top4 DESC
-          `);
-          res.json({ leaderboard: rows.rows });
+          if (isOffSeason2025) {
+            const rows = await db.execute(sql`
+              SELECT prs.player_id,
+                     MAX(prs.player_name) AS player_name,
+                     prs.region,
+                     'Off Season 2025' AS season,
+                     SUM(prs.points) AS points,
+                     SUM(prs.tournaments_played) AS tournaments_played,
+                     SUM(prs.wins) AS wins,
+                     SUM(prs.top4) AS top4,
+                     MAX(p.avatar) AS avatar
+              FROM player_regional_stats prs
+              LEFT JOIN cm_players p ON p.id = prs.player_id
+              WHERE prs.region = ${region} AND (prs.season = ${season} OR prs.season = ${legacyOff})
+              GROUP BY prs.player_id, prs.region
+              ORDER BY points DESC, wins DESC, top4 DESC
+            `);
+            res.json({ leaderboard: rows.rows });
+          } else {
+            const rows = await db.execute(sql`
+              SELECT prs.player_id,
+                     prs.player_name,
+                     prs.region,
+                     prs.season,
+                     prs.points,
+                     prs.tournaments_played,
+                     prs.wins,
+                     prs.top4,
+                     p.avatar
+              FROM player_regional_stats prs
+              LEFT JOIN cm_players p ON p.id = prs.player_id
+              WHERE prs.season = ${season} AND prs.region = ${region}
+              ORDER BY prs.points DESC, prs.wins DESC, prs.top4 DESC
+            `);
+            res.json({ leaderboard: rows.rows });
+          }
         } else {
-          const rows = await db.execute(sql`
-            SELECT prs.player_id,
-                   MAX(prs.player_name) AS player_name,
-                   'Global' AS region,
-                   prs.season,
-                   SUM(prs.points) AS points,
-                   SUM(prs.tournaments_played) AS tournaments_played,
-                   SUM(prs.wins) AS wins,
-                   SUM(prs.top4) AS top4,
-                   MAX(p.avatar) AS avatar
-            FROM player_regional_stats prs
-            LEFT JOIN cm_players p ON p.id = prs.player_id
-            WHERE prs.season = ${season}
-            GROUP BY prs.player_id, prs.season
-            ORDER BY points DESC, wins DESC, top4 DESC
-          `);
-          res.json({ leaderboard: rows.rows });
+          if (isOffSeason2025) {
+            const rows = await db.execute(sql`
+              SELECT prs.player_id,
+                     MAX(prs.player_name) AS player_name,
+                     'Global' AS region,
+                     'Off Season 2025' AS season,
+                     SUM(prs.points) AS points,
+                     SUM(prs.tournaments_played) AS tournaments_played,
+                     SUM(prs.wins) AS wins,
+                     SUM(prs.top4) AS top4,
+                     MAX(p.avatar) AS avatar
+              FROM player_regional_stats prs
+              LEFT JOIN cm_players p ON p.id = prs.player_id
+              WHERE (prs.season = ${season} OR prs.season = ${legacyOff})
+              GROUP BY prs.player_id
+              ORDER BY points DESC, wins DESC, top4 DESC
+            `);
+            res.json({ leaderboard: rows.rows });
+          } else {
+            const rows = await db.execute(sql`
+              SELECT prs.player_id,
+                     MAX(prs.player_name) AS player_name,
+                     'Global' AS region,
+                     prs.season,
+                     SUM(prs.points) AS points,
+                     SUM(prs.tournaments_played) AS tournaments_played,
+                     SUM(prs.wins) AS wins,
+                     SUM(prs.top4) AS top4,
+                     MAX(p.avatar) AS avatar
+              FROM player_regional_stats prs
+              LEFT JOIN cm_players p ON p.id = prs.player_id
+              WHERE prs.season = ${season}
+              GROUP BY prs.player_id, prs.season
+              ORDER BY points DESC, wins DESC, top4 DESC
+            `);
+            res.json({ leaderboard: rows.rows });
+          }
         }
       }
     } catch (error: any) {
@@ -2505,17 +2547,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const playerId = String(req.params.id || '').trim();
       if (!playerId) return res.status(400).json({ error: 'Missing player id' });
-      const season = String((req.query.season ?? 'Off Season') as string).trim();
+      const seasonRaw = String((req.query.season ?? 'Off Season 2025') as string).trim();
+      const season = seasonRaw || 'Off Season 2025';
 
       const playerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.id, playerId)).limit(1);
       const player = playerRows[0] || null;
       if (!player) return res.status(404).json({ error: 'Player not found' });
 
-      const totalPointsQuery = await db.execute(sql`
-        SELECT COALESCE(SUM(points), 0) AS total_points
-        FROM player_regional_stats
-        WHERE player_id = ${playerId} AND season = ${season}
-      `);
+      const legacyOff = 'Off Season';
+      const totalPointsQuery = season.toLowerCase().startsWith('off season')
+        ? await db.execute(sql`
+            SELECT COALESCE(SUM(points), 0) AS total_points
+            FROM player_regional_stats
+            WHERE player_id = ${playerId} AND (season = ${season} OR season = ${legacyOff})
+          `)
+        : await db.execute(sql`
+            SELECT COALESCE(SUM(points), 0) AS total_points
+            FROM player_regional_stats
+            WHERE player_id = ${playerId} AND season = ${season}
+          `);
       const totalPoints = Number(totalPointsQuery.rows[0]?.total_points || 0);
 
       const mostUsedComboQuery = await db.execute(sql`
