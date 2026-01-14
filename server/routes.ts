@@ -1781,42 +1781,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/leaderboard/regional', async (req, res) => {
     try {
       const region = String((req.query.region ?? '') as string).trim();
-      const season = String((req.query.season ?? 'Off Season') as string).trim();
-      if (region) {
-        const rows = await db.execute(sql`
-          SELECT prs.player_id,
-                 prs.player_name,
-                 prs.region,
-                 prs.season,
-                 prs.points,
-                 prs.tournaments_played,
-                 prs.wins,
-                 prs.top4,
-                 p.avatar
-          FROM player_regional_stats prs
-          LEFT JOIN cm_players p ON p.id = prs.player_id
-          WHERE prs.season = ${season} AND prs.region = ${region}
-          ORDER BY prs.points DESC, prs.wins DESC, prs.top4 DESC
-        `);
-        res.json({ leaderboard: rows.rows });
+      const seasonRaw = String((req.query.season ?? '') as string).trim();
+      const season = seasonRaw || 'All Time';
+      if (season === 'All Time') {
+        if (region) {
+          const rows = await db.execute(sql`
+            SELECT prs.player_id,
+                   MAX(prs.player_name) AS player_name,
+                   prs.region,
+                   'All Time' AS season,
+                   SUM(prs.points) AS points,
+                   SUM(prs.tournaments_played) AS tournaments_played,
+                   SUM(prs.wins) AS wins,
+                   SUM(prs.top4) AS top4,
+                   MAX(p.avatar) AS avatar
+            FROM player_regional_stats prs
+            LEFT JOIN cm_players p ON p.id = prs.player_id
+            WHERE prs.region = ${region}
+            GROUP BY prs.player_id, prs.region
+            ORDER BY points DESC, wins DESC, top4 DESC
+          `);
+          res.json({ leaderboard: rows.rows });
+        } else {
+          const rows = await db.execute(sql`
+            SELECT prs.player_id,
+                   MAX(prs.player_name) AS player_name,
+                   'Global' AS region,
+                   'All Time' AS season,
+                   SUM(prs.points) AS points,
+                   SUM(prs.tournaments_played) AS tournaments_played,
+                   SUM(prs.wins) AS wins,
+                   SUM(prs.top4) AS top4,
+                   MAX(p.avatar) AS avatar
+            FROM player_regional_stats prs
+            LEFT JOIN cm_players p ON p.id = prs.player_id
+            GROUP BY prs.player_id
+            ORDER BY points DESC, wins DESC, top4 DESC
+          `);
+          res.json({ leaderboard: rows.rows });
+        }
       } else {
-        const rows = await db.execute(sql`
-          SELECT prs.player_id,
-                 MAX(prs.player_name) AS player_name,
-                 'Global' AS region,
-                 prs.season,
-                 SUM(prs.points) AS points,
-                 SUM(prs.tournaments_played) AS tournaments_played,
-                 SUM(prs.wins) AS wins,
-                 SUM(prs.top4) AS top4,
-                 MAX(p.avatar) AS avatar
-          FROM player_regional_stats prs
-          LEFT JOIN cm_players p ON p.id = prs.player_id
-          WHERE prs.season = ${season}
-          GROUP BY prs.player_id, prs.season
-          ORDER BY points DESC, wins DESC, top4 DESC
-        `);
-        res.json({ leaderboard: rows.rows });
+        if (region) {
+          const rows = await db.execute(sql`
+            SELECT prs.player_id,
+                   prs.player_name,
+                   prs.region,
+                   prs.season,
+                   prs.points,
+                   prs.tournaments_played,
+                   prs.wins,
+                   prs.top4,
+                   p.avatar
+            FROM player_regional_stats prs
+            LEFT JOIN cm_players p ON p.id = prs.player_id
+            WHERE prs.season = ${season} AND prs.region = ${region}
+            ORDER BY prs.points DESC, prs.wins DESC, prs.top4 DESC
+          `);
+          res.json({ leaderboard: rows.rows });
+        } else {
+          const rows = await db.execute(sql`
+            SELECT prs.player_id,
+                   MAX(prs.player_name) AS player_name,
+                   'Global' AS region,
+                   prs.season,
+                   SUM(prs.points) AS points,
+                   SUM(prs.tournaments_played) AS tournaments_played,
+                   SUM(prs.wins) AS wins,
+                   SUM(prs.top4) AS top4,
+                   MAX(p.avatar) AS avatar
+            FROM player_regional_stats prs
+            LEFT JOIN cm_players p ON p.id = prs.player_id
+            WHERE prs.season = ${season}
+            GROUP BY prs.player_id, prs.season
+            ORDER BY points DESC, wins DESC, top4 DESC
+          `);
+          res.json({ leaderboard: rows.rows });
+        }
       }
     } catch (error: any) {
       console.error('Error fetching regional leaderboard:', error?.message || error);
@@ -1861,14 +1901,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const r of r6.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
         }
       } catch {}
-      const seasonsArr = Array.from(seasonsSet);
-      seasonsArr.sort((a, b) => {
-        const aKey = a === 'Off Season' ? '0' : a.toLowerCase();
-        const bKey = b === 'Off Season' ? '0' : b.toLowerCase();
-        return aKey.localeCompare(bKey);
-      });
-      if (seasonsArr.length === 0) return res.json({ seasons: ['Off Season', 'Season 2026'] });
-      res.json({ seasons: seasonsArr });
+      const result = ['All Time', 'Off Season 2025'];
+      res.json({ seasons: result });
     } catch (error: any) {
       console.error('Error fetching seasons:', error?.message || error);
       res.status(500).json({ error: error?.message || 'Failed to fetch seasons' });

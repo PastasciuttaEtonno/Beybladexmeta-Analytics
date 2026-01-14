@@ -57,7 +57,7 @@ export default function Players() {
   ];
 
   const [selectedRegion, setSelectedRegion] = useState<string>("global");
-  const [selectedSeason, setSelectedSeason] = useState<string>("Off Season");
+  const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
 
   const { data: seasonsData } = useQuery<{ seasons: string[] }>({
     queryKey: ["/api/seasons"],
@@ -67,7 +67,7 @@ export default function Players() {
       return await resp.json();
     },
   });
-  const seasons = (seasonsData?.seasons || ["Off Season", "Season 2026"]) as string[];
+  const seasons = (seasonsData?.seasons || ["Off Season 2025", "All Time"]) as string[];
   useEffect(() => {
     if (seasons.length && !seasons.includes(selectedSeason)) {
       setSelectedSeason(seasons[0]);

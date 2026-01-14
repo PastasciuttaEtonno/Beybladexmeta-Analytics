@@ -137,7 +137,7 @@ export default function Home() {
           <TabsContent value="components" className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Stagione</span>
+              {/* <span className="text-sm text-muted-foreground">Stagione</span> */}
               <Select value={selectedSeason} onValueChange={setSelectedSeason}>
                 <SelectTrigger className="w-44 h-9">
                   <SelectValue />
