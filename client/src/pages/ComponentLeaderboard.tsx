@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
+import { Seo } from "@/components/Seo";
 
 // Get the public MinIO URL from the environment variables
 // This should be the host, e.g., https://minio.vasquezlisciotto.dev
@@ -75,6 +76,7 @@ export default function ComponentLeaderboard() {
     ratchet: "ratchets",
     bit: "bits",
   };
+  const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
 
   const { data, isLoading } = useQuery<{
     items: any[];
@@ -94,9 +96,30 @@ export default function ComponentLeaderboard() {
   const items = data?.items || [];
   const title = titleMap[type] || "Leaderboard";
   const folder = folderMap[type] || "blades";
+  const firstName = items[0]?.[type] ? String(items[0][type]) : "";
+  const imageUrl = firstName
+    ? `${PUBLIC_MINIO_URL}/beyblades/${folder}/${firstName.toLowerCase().replace(/\s+/g, "-")}.webp`
+    : `${window.location.origin}/meta%20logo.svg`;
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <Seo
+        title={`${title} · Beybladexmeta`}
+        description={`Classifica dei ${title.toLowerCase()}.`}
+        canonical={`${window.location.origin}/leaderboard/${type}`}
+        type="website"
+        imageUrl={imageUrl}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          "name": title,
+          "itemListElement": items.map((row: any, index: number) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "name": String(row[type]),
+          })),
+        }}
+      />
       <PageHeader title={title} action={<HeaderLogo />} />
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-3">
         {isLoading ? (

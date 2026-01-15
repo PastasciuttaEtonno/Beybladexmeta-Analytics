@@ -351,9 +351,15 @@ export default function Analytics() {
   };
 
   const getComboId = (combo: ComboStats) => {
-    return encodeURIComponent(
-      `${combo.blade}|${combo.assistBlade}|${combo.ratchet}|${combo.bit}|${combo.lockChip}`,
-    );
+    const toSlug = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
+    const parts = [
+      combo.lockChip && combo.lockChip.toLowerCase() !== "none" ? combo.lockChip : "",
+      combo.blade,
+      combo.assistBlade && combo.assistBlade.toLowerCase() !== "none" ? combo.assistBlade : "",
+      combo.ratchet && combo.ratchet.toLowerCase() !== "none" ? combo.ratchet : "",
+      combo.bit,
+    ].filter(Boolean).map(toSlug);
+    return parts.join("-");
   };
 
   const handleComboClick = (combo: ComboStats) => {

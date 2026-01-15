@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Trophy, Medal, Award } from "lucide-react";
+import { Seo } from "@/components/Seo";
 
 type ComboStats = {
   blade: string;
@@ -87,13 +88,13 @@ export default function ComboDetail() {
 
   const comboId = params?.id;
 
-  const decodedId = params?.id ? decodeURIComponent(params.id) : null;
+  const decodedSlug = params?.id ? decodeURIComponent(params.id) : null;
 
   const { data, isLoading } = useQuery<{ combo: ComboStats; rank: number }>({
-    queryKey: ["/api/stats/combos/by-key", decodedId],
-    enabled: !!decodedId,
+    queryKey: ["/api/stats/combos/by-slug", decodedSlug],
+    enabled: !!decodedSlug,
     queryFn: async () => {
-      const resp = await fetch(`/api/stats/combos/by-key?key=${encodeURIComponent(decodedId!)}`);
+      const resp = await fetch(`/api/stats/combos/by-slug?slug=${encodeURIComponent(decodedSlug!)}`);
       if (!resp.ok) throw new Error("Failed to fetch combo");
       return resp.json();
     },
@@ -177,8 +178,40 @@ export default function ComboDetail() {
     );
   });
 
+  const comboTitle = [
+    combo.lockChip && combo.lockChip.toLowerCase() !== "none" ? combo.lockChip : "",
+    combo.blade,
+    combo.assistBlade && combo.assistBlade.toLowerCase() !== "none" ? combo.assistBlade : "",
+    combo.ratchet && combo.ratchet.toLowerCase() !== "none" ? combo.ratchet : "",
+    combo.bit,
+  ].filter(Boolean).join(" • ");
+  const toSlug = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
+  const slugParts = [
+    combo.lockChip && combo.lockChip.toLowerCase() !== "none" ? combo.lockChip : "",
+    combo.blade,
+    combo.assistBlade && combo.assistBlade.toLowerCase() !== "none" ? combo.assistBlade : "",
+    combo.ratchet && combo.ratchet.toLowerCase() !== "none" ? combo.ratchet : "",
+    combo.bit,
+  ].filter(Boolean).map(toSlug);
+  const canonical = `${window.location.origin}/combo/${slugParts.join("-")}`;
+  const origin = window.location.origin;
+  const imageUrl = `${origin}/meta%20logo.svg`;
+
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
+      <Seo
+        title={`${comboTitle} · Combo`}
+        description={`Dettagli della combo: ${comboTitle}. Rank #${rank}.`}
+        canonical={canonical}
+        type="website"
+        imageUrl={imageUrl}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": comboTitle,
+          "url": canonical,
+        }}
+      />
       <div className="max-w-2xl mx-auto space-y-6">
         <Button
           variant="ghost"

@@ -34,7 +34,7 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
   const secondiPosti = result.placement === 2 ? 1 : 0;
   const terziPosti = result.placement === 3 ? 1 : 0;
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx.execute(sql`
       INSERT INTO combo_stats (blade, assist_blade, ratchet, bit, lock_chip, season, primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione)
       VALUES (${result.blade}, ${result.assistBlade}, ${result.ratchet}, ${result.bit}, ${result.lockChip}, ${result.season}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points}, NOW())
@@ -111,7 +111,7 @@ export const revertExternalCombo = async (result: ExternalComboResult) => {
   const secondiPosti = result.placement === 2 ? 1 : 0;
   const terziPosti = result.placement === 3 ? 1 : 0;
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx.execute(sql`
       UPDATE combo_stats
       SET primi_posti = GREATEST(primi_posti - ${primiPosti}, 0),

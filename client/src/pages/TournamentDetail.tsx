@@ -3,6 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
+import { Seo } from "@/components/Seo";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -488,6 +489,19 @@ export default function TournamentDetail() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <Seo
+        title={detailResp?.detail?.name ? `${detailResp.detail.name} · Torneo` : "Dettagli torneo"}
+        description={detailResp?.detail?.name ? `Dettagli, stato e partecipanti del torneo ${detailResp.detail.name}` : "Dettagli torneo"}
+        canonical={`${window.location.origin}/tournaments/${tournamentId}`}
+        type="website"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "SportsEvent",
+          "name": detailResp?.detail?.name || "Torneo",
+          "startDate": detailResp?.detail?.schedule?.startedAt || undefined,
+          "url": `${window.location.origin}/tournaments/${tournamentId}`
+        }}
+      />
       <PageHeader title="Dettagli torneo" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full space-y-6">

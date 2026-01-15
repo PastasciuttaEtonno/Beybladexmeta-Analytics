@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /login
+Disallow: /profile
+Sitemap: https://beybladexmeta.com/sitemap.xml
+

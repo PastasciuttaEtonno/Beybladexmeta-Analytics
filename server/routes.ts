@@ -498,6 +498,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch combo by key' });
     }
   });
+  app.get('/api/stats/combos/by-slug', async (req, res) => {
+    try {
+      const slug = String(req.query.slug || '').trim();
+      if (!slug) return res.status(400).json({ error: 'Missing slug' });
+      const result = await db.execute(sql`
+        WITH ranked AS (
+          SELECT blade, assist_blade, ratchet, bit, lock_chip,
+                 primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione,
+                 ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
+          FROM combo_stats
+        )
+        SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
+               primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti",
+               punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
+        FROM ranked
+        WHERE concat_ws('-',
+          CASE WHEN lower(lock_chip) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(lock_chip), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
+          lower(regexp_replace(regexp_replace(trim(blade), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')),
+          CASE WHEN lower(assist_blade) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(assist_blade), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
+          CASE WHEN lower(ratchet) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(ratchet), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
+          lower(regexp_replace(regexp_replace(trim(bit), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g'))
+        ) = ${slug}
+        LIMIT 1
+      `);
+      const row = (result.rows as any[])[0];
+      if (!row) return res.status(404).json({ error: 'Combo not found' });
+      return res.json({ combo: {
+        blade: row.blade,
+        assistBlade: row.assistBlade,
+        ratchet: row.ratchet,
+        bit: row.bit,
+        lockChip: row.lockChip,
+        primiPosti: row.primiPosti,
+        secondiPosti: row.secondiPosti,
+        terziPosti: row.terziPosti,
+        punteggioTotale: row.punteggioTotale,
+        dataCreazione: row.dataCreazione,
+      }, rank: Number(row.rank) });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch combo by slug' });
+    }
+  });
 
   // Get all top components in a single query (OPTIMIZED)
   app.get('/api/stats/top/components', async (req, res) => {
@@ -1095,7 +1137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rows = await db.select().from(externalPlayerCombos)
           .where(and(eq(externalPlayerCombos.tournamentId, data.tournamentId), eq(externalPlayerCombos.playerId, playerId)))
           .orderBy(asc(externalPlayerCombos.comboNumber));
-        return rows.map(r => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip }));
+        return rows.map((r: any) => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip }));
       };
 
       const firstCombos = await loadCombosForPlayer(data.firstPlacePlayerId);
@@ -1310,7 +1352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(cmMatchResults.tournamentId, id))
         .orderBy(asc(cmMatchResults.piazzamento), asc(cmMatchResults.comboNumber));
 
-      const firstPlaceCombos = results.filter(r => r.piazzamento === 1).map(r => ({
+      const firstPlaceCombos = results.filter((r: any) => r.piazzamento === 1).map((r: any) => ({
         blade: r.blade,
         assistBlade: r.assistBlade,
         ratchet: r.ratchet,
@@ -1318,7 +1360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lockChip: r.lockChip,
         puntiGuadagnati: r.puntiGuadagnati,
       }));
-      const secondPlaceCombos = results.filter(r => r.piazzamento === 2).map(r => ({
+      const secondPlaceCombos = results.filter((r: any) => r.piazzamento === 2).map((r: any) => ({
         blade: r.blade,
         assistBlade: r.assistBlade,
         ratchet: r.ratchet,
@@ -1326,7 +1368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lockChip: r.lockChip,
         puntiGuadagnati: r.puntiGuadagnati,
       }));
-      const thirdPlaceCombos = results.filter(r => r.piazzamento === 3).map(r => ({
+      const thirdPlaceCombos = results.filter((r: any) => r.piazzamento === 3).map((r: any) => ({
         blade: r.blade,
         assistBlade: r.assistBlade,
         ratchet: r.ratchet,
@@ -1607,6 +1649,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/sitemap.xml', async (_req, res) => {
+    try {
+      const base = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || '5000'}`;
+      const staticPaths = [
+        { path: '/', priority: '0.9', changefreq: 'daily', lastmod: new Date().toISOString().slice(0, 10) },
+        { path: '/analytics', priority: '0.8', changefreq: 'daily', lastmod: new Date().toISOString().slice(0, 10) },
+        { path: '/favorites', priority: '0.5', changefreq: 'weekly', lastmod: new Date().toISOString().slice(0, 10) },
+        { path: '/tournaments', priority: '0.7', changefreq: 'daily', lastmod: new Date().toISOString().slice(0, 10) },
+        { path: '/players', priority: '0.7', changefreq: 'daily', lastmod: new Date().toISOString().slice(0, 10) },
+        { path: '/leaderboard/blade', priority: '0.6', changefreq: 'weekly', lastmod: new Date().toISOString().slice(0, 10) },
+        { path: '/leaderboard/ratchet', priority: '0.6', changefreq: 'weekly', lastmod: new Date().toISOString().slice(0, 10) },
+        { path: '/leaderboard/bit', priority: '0.6', changefreq: 'weekly', lastmod: new Date().toISOString().slice(0, 10) }
+      ];
+      const nodes = await fetchTournamentsForGame('2024-01-01T00:00:00Z');
+      const limit = 6;
+      const details: Record<string, string | null> = {};
+      let i = 0;
+      const worker = async () => {
+        while (i < (nodes as any[]).length) {
+          const idx = i++;
+          const id = String((nodes as any[])[idx].id);
+          try {
+            const det = await fetchTournamentDetail(id);
+            const d = det?.schedule?.startedAt ? String(det.schedule.startedAt).slice(0, 10) : null;
+            details[id] = d;
+          } catch {
+            details[id] = null;
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: limit }, () => worker()));
+      const tournamentPaths = (nodes as any[]).map((n: any) => ({
+        path: `/tournaments/${String(n.id)}`,
+        priority: '0.6',
+        changefreq: 'weekly',
+        lastmod: details[String(n.id)] || new Date().toISOString().slice(0, 10),
+      }));
+      const topPlayers = await db
+        .select()
+        .from(playerLeaderboardView)
+        .orderBy(desc(playerLeaderboardView.totalPoints))
+        .limit(100);
+      const playerIds = topPlayers.map((r: any) => String(r.playerId));
+      const playerLastMap = new Map<string, string>();
+      if (playerIds.length > 0) {
+        const concurrency = 6;
+        let j = 0;
+        const worker2 = async () => {
+          while (j < playerIds.length) {
+            const idx = j++;
+            const pid = playerIds[idx];
+            try {
+              const row = await db.execute(sql`
+                SELECT MAX(updated_at) AS last
+                FROM cm_match_results
+                WHERE player_id = ${pid}
+              `);
+              const last = (row.rows as any[])[0]?.last ? String((row.rows as any[])[0].last).slice(0, 10) : new Date().toISOString().slice(0, 10);
+              playerLastMap.set(pid, last);
+            } catch {
+              playerLastMap.set(pid, new Date().toISOString().slice(0, 10));
+            }
+          }
+        };
+        await Promise.all(Array.from({ length: concurrency }, () => worker2()));
+      }
+      const playerPaths = topPlayers.map((r: any) => ({
+        path: `/players/${String(r.playerId)}`,
+        priority: '0.6',
+        changefreq: 'weekly',
+        lastmod: playerLastMap.get(String(r.playerId)) || new Date().toISOString().slice(0, 10),
+      }));
+      const combosRows = await db.execute(sql`
+        SELECT blade, assist_blade, ratchet, bit, lock_chip, data_creazione
+        FROM combo_stats
+        ORDER BY punteggio_totale DESC, data_creazione DESC
+        LIMIT 300
+      `);
+      const toSlug = (s: string) => s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+      const comboPaths = (combosRows.rows as any[]).map((r: any) => {
+        const parts = [
+          (String(r.lock_chip || '') && String(r.lock_chip).toLowerCase() !== 'none') ? String(r.lock_chip) : '',
+          String(r.blade),
+          (String(r.assist_blade || '') && String(r.assist_blade).toLowerCase() !== 'none') ? String(r.assist_blade) : '',
+          (String(r.ratchet || '') && String(r.ratchet).toLowerCase() !== 'none') ? String(r.ratchet) : '',
+          String(r.bit),
+        ].filter(Boolean).map(toSlug);
+        const slug = parts.join('-');
+        const lastmod = (r.data_creazione ? String(r.data_creazione).slice(0, 10) : new Date().toISOString().slice(0, 10));
+        return {
+          path: `/combo/${slug}`,
+          priority: '0.6',
+          changefreq: 'weekly',
+          lastmod,
+        };
+      });
+      const entries = [...staticPaths, ...tournamentPaths, ...playerPaths, ...comboPaths];
+      const urls = entries.map((e) => {
+        const loc = `${base}${e.path}`;
+        return `<url><loc>${loc}</loc><lastmod>${e.lastmod}</lastmod><changefreq>${e.changefreq}</changefreq><priority>${e.priority}</priority></url>`;
+      }).join('');
+      const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`;
+      res.setHeader('Content-Type', 'application/xml');
+      res.send(xml);
+    } catch (error: any) {
+      res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+    }
+  });
+
   // Unified tournaments list with region filter and organizer logo (read-only)
   app.get('/api/tournaments', async (req, res) => {
     try {
@@ -1633,7 +1784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = 6;
       const out: any[] = new Array(nodes.length);
       let i = 0;
-      async function worker() {
+      const worker = async () => {
         while (i < nodes.length) {
           const idx = i++;
           const base = nodes[idx] as any;
@@ -1662,7 +1813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
         }
-      }
+      };
       await Promise.all(Array.from({ length: limit }, () => worker()));
       res.json({ tournaments: out.filter((t) => (region ? (t.region === region) : true)) });
     } catch (error: any) {
@@ -1718,17 +1869,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (detail.attendance?.signups?.lineups) {
         const lineups = detail.attendance.signups.lineups;
         const top4 = lineups
-          .filter(l => l.placement?.displayPlacement && parseInt(l.placement.displayPlacement, 10) <= 4)
-          .sort((a, b) => parseInt(a.placement.displayPlacement, 10) - parseInt(b.placement.displayPlacement, 10));
+          .filter((l: any) => l.placement?.displayPlacement && parseInt(l.placement.displayPlacement, 10) <= 4)
+          .sort((a: any, b: any) => parseInt(a.placement?.displayPlacement ?? '999', 10) - parseInt(b.placement?.displayPlacement ?? '999', 10));
 
         detail.attendance.signups.lineups = top4;
 
         // Upsert player info into our `cm_players` table
-        const playerUpserts = top4.flatMap(l => l.members.map(m => ({
-          id: m.user.userId,
-          nickname: m.user.username,
-          avatar: m.user.profilePicture?.url || null,
-        })));
+        const playerUpserts = top4.flatMap((l: any) => (l.members || []).map((m: any) => {
+          const user = m.user;
+          if (!user) return null;
+          return {
+            id: user.userId,
+            nickname: user.username,
+            avatar: user.profilePicture?.url || null,
+          };
+        })).filter(Boolean) as Array<{ id: string; nickname: string; avatar: string | null }>;
 
         if (playerUpserts.length > 0) {
           await db.insert(cmPlayers).values(playerUpserts).onConflictDoUpdate({
@@ -1769,7 +1924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rows = await db.select().from(externalPlayerCombos)
         .where(and(eq(externalPlayerCombos.tournamentId, tournamentId), eq(externalPlayerCombos.playerId, playerId)))
         .orderBy(asc(externalPlayerCombos.comboNumber));
-      const combos = rows.map(r => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip, season: r.season || undefined }));
+      const combos = rows.map((r: any) => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip, season: r.season || undefined }));
       res.json({ combos });
     } catch (error: any) {
       console.error('Failed to fetch player combos:', error?.message || error);
@@ -1959,7 +2114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let affected = 0;
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: any) => {
         const resRows = await tx.execute(sql`
           SELECT blade,
                  assist_blade AS "assistBlade",
@@ -2372,14 +2527,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(cmMatchResults)
         .where(and(eq(cmMatchResults.tournamentId, parsed.tournamentId), eq(cmMatchResults.playerId, parsed.playerId)));
-      const prevMap = new Map<number, any>(prevRows.map(r => [Number(r.comboNumber), r]));
+      const prevMap = new Map<number, any>(prevRows.map((r: any) => [Number(r.comboNumber), r]));
 
       // Upsert into cm_match_results so /api/trends has data (requires date)
       if (tournamentDate) {
 
         // Ensure combo_stats rows exist to satisfy fk_combo_components
         // Use defaults (zeros) for counters; ON CONFLICT DO NOTHING
-        const baseCombos = inserted.map((r) => ({
+        const baseCombos = inserted.map((r: any) => ({
           blade: r.blade,
           assistBlade: r.assistBlade,
           ratchet: r.ratchet,
@@ -2390,7 +2545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await db.insert(comboStats).values(baseCombos as any).onConflictDoNothing();
         }
 
-        const cmValues = inserted.map((r, idx) => ({
+        const cmValues = inserted.map((r: any, idx: number) => ({
           tournamentId: parsed.tournamentId,
           playerId: parsed.playerId,
           comboNumber: r.comboNumber ?? idx + 1,
@@ -2514,7 +2669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } as any);
       } catch {}
 
-      res.json({ success: true, combos: inserted.map(r => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip })) });
+      res.json({ success: true, combos: inserted.map((r: any) => ({ blade: r.blade, assistBlade: r.assistBlade, ratchet: r.ratchet, bit: r.bit, lockChip: r.lockChip })) });
     } catch (error: any) {
       console.error('Failed to upsert player combos:', error);
       res.status(400).json({ error: error?.message || 'Failed to upsert player combos' });
