@@ -28,6 +28,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import type {
   FavoriteCombo,
   FavoriteDeck,
@@ -107,6 +116,10 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
   );
 }
 
+const MAX_COMBOS = 20;
+const MAX_DECKS = 20;
+const PER_PAGE = 10;
+
 export default function Favorites() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -115,6 +128,8 @@ export default function Favorites() {
   const [deckModalOpen, setDeckModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedCombo, setSelectedCombo] = useState<FavoriteCombo | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentDeckPage, setCurrentDeckPage] = useState(1);
 
   // Combo form state
   const [blade, setBlade] = useState("");
@@ -151,12 +166,45 @@ export default function Favorites() {
     enabled: !!user,
   });
 
+  // Pagination logic
+  const allCombos = combosData?.combos || [];
+  const totalCombos = allCombos.length;
+  const totalPages = Math.max(1, Math.ceil(totalCombos / PER_PAGE));
+  const page = Math.min(Math.max(1, currentPage), totalPages);
+  const startIdx = (page - 1) * PER_PAGE;
+  const endIdx = startIdx + PER_PAGE;
+  const pageItems = allCombos.slice(startIdx, endIdx);
+
+  useEffect(() => {
+    // Reset to page 1 if current page is out of bounds
+    if (page !== currentPage) {
+      setCurrentPage(page);
+    }
+  }, [totalCombos, page, currentPage]);
+
   const { data: decksData, isLoading: decksLoading } = useQuery<{
     decks: DeckWithCombos[];
   }>({
     queryKey: ["/api/favorites/decks"],
     enabled: !!user,
   });
+
+  // Pagination logic for decks
+  const allDecks = decksData?.decks || [];
+  const totalDecks = allDecks.length;
+  const totalDeckPages = Math.max(1, Math.ceil(totalDecks / PER_PAGE));
+  const deckPage = Math.min(Math.max(1, currentDeckPage), totalDeckPages);
+  const deckStartIdx = (deckPage - 1) * PER_PAGE;
+  const deckEndIdx = deckStartIdx + PER_PAGE;
+  const deckPageItems = allDecks.slice(deckStartIdx, deckEndIdx);
+
+  useEffect(() => {
+    // Reset to page 1 if current page is out of bounds for decks
+    if (deckPage !== currentDeckPage) {
+      setCurrentDeckPage(deckPage);
+    }
+  }, [totalDecks, deckPage, currentDeckPage]);
+
   const selectedKey = useMemo(() => {
     if (!selectedCombo) return "";
     return [
@@ -231,6 +279,11 @@ export default function Favorites() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/favorites/combos"] });
+      // Reset to page 1 if current page becomes empty after deletion
+      const remainingCount = (combosData?.combos?.length || 0) - 1;
+      if (remainingCount > 0 && currentPage > Math.ceil(remainingCount / PER_PAGE)) {
+        setCurrentPage(Math.ceil(remainingCount / PER_PAGE));
+      }
       toast({
         title: "Success",
         description: "Combo removed from favorites",
@@ -266,6 +319,11 @@ export default function Favorites() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/favorites/decks"] });
+      // Reset to page 1 if current page becomes empty after deletion
+      const remainingCount = (decksData?.decks?.length || 0) - 1;
+      if (remainingCount > 0 && currentDeckPage > Math.ceil(remainingCount / PER_PAGE)) {
+        setCurrentDeckPage(Math.ceil(remainingCount / PER_PAGE));
+      }
       toast({
         title: "Success",
         description: "Deck deleted successfully",
@@ -300,6 +358,17 @@ export default function Favorites() {
       return;
     }
 
+    // Check if user has reached the maximum number of combos
+    const currentComboCount = combosData?.combos?.length || 0;
+    if (currentComboCount >= MAX_COMBOS) {
+      toast({
+        title: "Limite raggiunto",
+        description: `Puoi salvare massimo ${MAX_COMBOS} combo. Elimina una combo esistente per aggiungerne una nuova.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     addComboMutation.mutate({ blade, assistBlade, ratchet, bit, lockChip });
   };
 
@@ -308,6 +377,17 @@ export default function Favorites() {
       toast({
         title: "Error",
         description: "Please enter a deck name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user has reached the maximum number of decks
+    const currentDeckCount = decksData?.decks?.length || 0;
+    if (currentDeckCount >= MAX_DECKS) {
+      toast({
+        title: "Limite raggiunto",
+        description: `Puoi salvare massimo ${MAX_DECKS} deck. Elimina un deck esistente per aggiungerne uno nuovo.`,
         variant: "destructive",
       });
       return;
@@ -413,10 +493,22 @@ export default function Favorites() {
 
           <TabsContent value="combos" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Combo preferite</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Combo preferite</h2>
+                {!combosLoading && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {totalCombos} / {MAX_COMBOS} combo salvate
+                  </p>
+                )}
+              </div>
               <Dialog open={comboModalOpen} onOpenChange={setComboModalOpen}>
                 <DialogTrigger asChild>
-                  <Button size="icon" data-testid="button-add-combo">
+                  <Button 
+                    size="icon" 
+                    data-testid="button-add-combo"
+                    disabled={totalCombos >= MAX_COMBOS}
+                    title={totalCombos >= MAX_COMBOS ? `Limite di ${MAX_COMBOS} combo raggiunto` : "Aggiungi combo"}
+                  >
                     <Plus className="w-5 h-5" />
                   </Button>
                 </DialogTrigger>
@@ -425,6 +517,11 @@ export default function Favorites() {
                     <DialogTitle>Aggiungi combo preferita</DialogTitle>
                     <DialogDescription>
                       Seleziona i 5 componenti della tua combo preferita.
+                      {totalCombos > 0 && (
+                        <span className="block mt-1 text-xs">
+                          {totalCombos} / {MAX_COMBOS} combo salvate
+                        </span>
+                      )}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -545,13 +642,18 @@ export default function Favorites() {
                   <DialogFooter>
                     <Button
                       onClick={handleAddCombo}
-                      disabled={addComboMutation.isPending}
+                      disabled={addComboMutation.isPending || (totalCombos >= MAX_COMBOS)}
                       className="w-full"
                       data-testid="button-save-combo"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Add to Favorites
                     </Button>
+                    {totalCombos >= MAX_COMBOS && (
+                      <p className="text-xs text-muted-foreground text-center w-full mt-2">
+                        Limite di {MAX_COMBOS} combo raggiunto. Elimina una combo per aggiungerne una nuova.
+                      </p>
+                    )}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -566,15 +668,16 @@ export default function Favorites() {
                   />
                 ))}
               </div>
-            ) : combosData?.combos && combosData.combos.length > 0 ? (
-              <div className="space-y-3">
-                {combosData.combos.map((combo, index) => (
-                  <Card
-                    key={combo.id}
-                    className="p-4 hover-elevate cursor-pointer"
-                    data-testid={`card-combo-${index}`}
-                    onClick={() => handleViewCombo(combo)}
-                  >
+            ) : totalCombos > 0 ? (
+              <>
+                <div className="space-y-3">
+                  {pageItems.map((combo, index) => (
+                    <Card
+                      key={combo.id}
+                      className="p-4 hover-elevate cursor-pointer"
+                      data-testid={`card-combo-${startIdx + index}`}
+                      onClick={() => handleViewCombo(combo)}
+                    >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-3">
@@ -640,7 +743,7 @@ export default function Favorites() {
                             e.stopPropagation();
                             handleViewCombo(combo);
                           }}
-                          data-testid={`button-view-combo-${index}`}
+                          data-testid={`button-view-combo-${startIdx + index}`}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -651,15 +754,62 @@ export default function Favorites() {
                             e.stopPropagation();
                             deleteComboMutation.mutate(combo.id);
                           }}
-                          data-testid={`button-delete-combo-${index}`}
+                          data-testid={`button-delete-combo-${startIdx + index}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
                   </Card>
-                ))}
-              </div>
+                  ))}
+
+                {totalPages > 1 && (
+                  <Pagination className="mt-4">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setCurrentPage(Math.max(1, page - 1)); }}
+                        />
+                      </PaginationItem>
+                      {page > 2 && (
+                        <PaginationItem>
+                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>1</PaginationLink>
+                        </PaginationItem>
+                      )}
+                      {page > 3 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      {Array.from({ length: 3 }, (_, i) => page - 1 + i)
+                        .filter((p) => p >= 1 && p <= totalPages)
+                        .map((p) => (
+                          <PaginationItem key={p}>
+                            <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setCurrentPage(p); }}>{p}</PaginationLink>
+                          </PaginationItem>
+                        ))}
+                      {page < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      {page < totalPages - 1 && (
+                        <PaginationItem>
+                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>{totalPages}</PaginationLink>
+                        </PaginationItem>
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setCurrentPage(Math.min(totalPages, page + 1)); }}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+                </div>
+              </>
             ) : (
               <Card className="p-12 text-center">
                 <Star className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
@@ -673,10 +823,22 @@ export default function Favorites() {
 
           <TabsContent value="decks" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Favorite Decks</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Favorite Decks</h2>
+                {!decksLoading && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {totalDecks} / {MAX_DECKS} deck salvati
+                  </p>
+                )}
+              </div>
               <Dialog open={deckModalOpen} onOpenChange={setDeckModalOpen}>
                 <DialogTrigger asChild>
-                  <Button size="icon" data-testid="button-add-deck">
+                  <Button 
+                    size="icon" 
+                    data-testid="button-add-deck"
+                    disabled={totalDecks >= MAX_DECKS}
+                    title={totalDecks >= MAX_DECKS ? `Limite di ${MAX_DECKS} deck raggiunto` : "Aggiungi deck"}
+                  >
                     <Plus className="w-5 h-5" />
                   </Button>
                 </DialogTrigger>
@@ -686,6 +848,11 @@ export default function Favorites() {
                     <DialogDescription>
                       Crea un deck con 3 combo. Ogni combo deve avere componenti
                       diversi.
+                      {totalDecks > 0 && (
+                        <span className="block mt-1 text-xs">
+                          {totalDecks} / {MAX_DECKS} deck salvati
+                        </span>
+                      )}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -834,13 +1001,18 @@ export default function Favorites() {
                   <DialogFooter>
                     <Button
                       onClick={handleAddDeck}
-                      disabled={addDeckMutation.isPending}
+                      disabled={addDeckMutation.isPending || (totalDecks >= MAX_DECKS)}
                       className="w-full"
                       data-testid="button-save-deck"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create Deck
                     </Button>
+                    {totalDecks >= MAX_DECKS && (
+                      <p className="text-xs text-muted-foreground text-center w-full mt-2">
+                        Limite di {MAX_DECKS} deck raggiunto. Elimina un deck per aggiungerne uno nuovo.
+                      </p>
+                    )}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -855,14 +1027,15 @@ export default function Favorites() {
                   />
                 ))}
               </div>
-            ) : decksData?.decks && decksData.decks.length > 0 ? (
-              <div className="space-y-3">
-                {decksData.decks.map((deck, deckIndex) => (
-                  <Card
-                    key={deck.id}
-                    className="p-4"
-                    data-testid={`card-deck-${deckIndex}`}
-                  >
+            ) : totalDecks > 0 ? (
+              <>
+                <div className="space-y-3">
+                  {deckPageItems.map((deck, deckIndex) => (
+                    <Card
+                      key={deck.id}
+                      className="p-4"
+                      data-testid={`card-deck-${deckStartIdx + deckIndex}`}
+                    >
                     <div className="flex items-start justify-between mb-4">
                       <h3 className="font-semibold">{deck.name}</h3>
                       <Button
@@ -942,8 +1115,55 @@ export default function Favorites() {
                       ))}
                     </div>
                   </Card>
-                ))}
-              </div>
+                  ))}
+
+                {totalDeckPages > 1 && (
+                  <Pagination className="mt-4">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setCurrentDeckPage(Math.max(1, deckPage - 1)); }}
+                        />
+                      </PaginationItem>
+                      {deckPage > 2 && (
+                        <PaginationItem>
+                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(1); }}>1</PaginationLink>
+                        </PaginationItem>
+                      )}
+                      {deckPage > 3 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      {Array.from({ length: 3 }, (_, i) => deckPage - 1 + i)
+                        .filter((p) => p >= 1 && p <= totalDeckPages)
+                        .map((p) => (
+                          <PaginationItem key={p}>
+                            <PaginationLink href="#" isActive={p === deckPage} onClick={(e) => { e.preventDefault(); setCurrentDeckPage(p); }}>{p}</PaginationLink>
+                          </PaginationItem>
+                        ))}
+                      {deckPage < totalDeckPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      {deckPage < totalDeckPages - 1 && (
+                        <PaginationItem>
+                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(totalDeckPages); }}>{totalDeckPages}</PaginationLink>
+                        </PaginationItem>
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setCurrentDeckPage(Math.min(totalDeckPages, deckPage + 1)); }}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+                </div>
+              </>
             ) : (
               <Card className="p-12 text-center">
                 <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-3" />

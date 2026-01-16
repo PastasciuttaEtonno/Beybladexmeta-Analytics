@@ -831,6 +831,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.session.userId,
       });
 
+      // Check limit: max 20 combos per user
+      const MAX_COMBOS = 20;
+      const [existingCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(favoriteCombos)
+        .where(eq(favoriteCombos.userId, comboData.userId));
+      
+      if (Number(existingCount?.count || 0) >= MAX_COMBOS) {
+        return res.status(400).json({ error: `You can only save up to ${MAX_COMBOS} combos. Delete a combo to add a new one.` });
+      }
+
       // Server-side existence checks against known component stats
       const [[bladeExists], [assistExists], [ratchetExists], [bitExists], [lockChipExists]] = await Promise.all([
         db.select({ count: sql`count(*)` }).from(bladeStats).where(eq(bladeStats.blade, comboData.blade)),
@@ -902,6 +913,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!name || !combos || combos.length !== 3) {
         return res.status(400).json({ error: 'Deck must have a name and exactly 3 combos' });
+      }
+
+      // Check limit: max 20 decks per user
+      const MAX_DECKS = 20;
+      const [existingCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(favoriteDecks)
+        .where(eq(favoriteDecks.userId, req.session.userId!));
+      
+      if (Number(existingCount?.count || 0) >= MAX_DECKS) {
+        return res.status(400).json({ error: `You can only save up to ${MAX_DECKS} decks. Delete a deck to add a new one.` });
       }
 
       // Validate that all parts are unique across all combos (except "None" for Assist Blade and Lock Chip)
