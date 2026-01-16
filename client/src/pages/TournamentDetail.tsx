@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
@@ -505,10 +505,12 @@ export default function TournamentDetail() {
       <PageHeader title="Dettagli torneo" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full space-y-6">
-        <Button variant="ghost" onClick={() => setLocation('/tournaments')} className="gap-2 w-fit" data-testid="button-back">
-          <ArrowLeft className="w-4 h-4" />
-          Indietro
-        </Button>
+        <Link href="/tournaments">
+          <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]" data-testid="button-back">
+            <ArrowLeft className="w-4 h-4" />
+            Indietro
+          </a>
+        </Link>
 
         <Card>
           <CardHeader className="space-y-1">
@@ -526,7 +528,15 @@ export default function TournamentDetail() {
             </div>
             {detailResp?.detail?.contactUrl && (
               <p className="text-xs">
-                <a className="text-blue-600 hover:underline" href={detailResp.detail.contactUrl} target="_blank" rel="noreferrer">Contatti / Info</a>
+                <a 
+                  className="text-blue-600 hover:underline no-underline" 
+                  href={detailResp.detail.contactUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  aria-label="Contatti e informazioni torneo (si apre in una nuova scheda)"
+                >
+                  Contatti / Info
+                </a>
               </p>
             )}
             {user?.isAdmin && detailResp?.detail?.hasCombos && (

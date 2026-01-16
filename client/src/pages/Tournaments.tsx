@@ -711,7 +711,15 @@ export default function Tournaments() {
                   )}
                   {t.contactUrl && (
                     <p className="mt-2 text-xs">
-                      <a className="text-blue-600 hover:underline" href={t.contactUrl} target="_blank" rel="noreferrer">Contatti / Info</a>
+                      <a 
+                        className="text-blue-600 hover:underline no-underline" 
+                        href={t.contactUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        aria-label="Contatti e informazioni torneo (si apre in una nuova scheda)"
+                      >
+                        Contatti / Info
+                      </a>
                     </p>
                   )}
                   {/* Placeholder for future filters and per-card dialog */}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -88,13 +88,13 @@ export default function ComboDetail() {
 
   const comboId = params?.id;
 
-  const decodedSlug = params?.id ? decodeURIComponent(params.id) : null;
+  const decodedId = params?.id ? decodeURIComponent(params.id) : null;
 
-  const { data, isLoading } = useQuery<{ combo: ComboStats; rank: number }>({
-    queryKey: ["/api/stats/combos/by-slug", decodedSlug],
-    enabled: !!decodedSlug,
+  const { data, isLoading, error } = useQuery<{ combo: ComboStats; rank: number }>({
+    queryKey: ["/api/stats/combos/by-key", decodedId],
+    enabled: !!decodedId,
     queryFn: async () => {
-      const resp = await fetch(`/api/stats/combos/by-slug?slug=${encodeURIComponent(decodedSlug!)}`);
+      const resp = await fetch(`/api/stats/combos/by-key?key=${encodeURIComponent(decodedId!)}`);
       if (!resp.ok) throw new Error("Failed to fetch combo");
       return resp.json();
     },
@@ -130,29 +130,38 @@ export default function ComboDetail() {
     );
   }
 
-  if (!combo) {
+  if (!combo && !isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 pb-24">
         <div className="max-w-2xl mx-auto space-y-6">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/analytics")}
-            className="gap-2"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
+          <Link href="/analytics">
+            <a
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Indietro
+            </a>
+          </Link>
           <Card>
             <CardContent className="p-6">
               <p className="text-center text-muted-foreground">
-                Combo not found
+                {error ? `Errore: ${error.message}` : "Combo non trovata"}
               </p>
+              {decodedId && (
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Key: {decodedId}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
     );
+  }
+
+  if (!combo) {
+    return null;
   }
 
   const allComponents = [
@@ -185,15 +194,7 @@ export default function ComboDetail() {
     combo.ratchet && combo.ratchet.toLowerCase() !== "none" ? combo.ratchet : "",
     combo.bit,
   ].filter(Boolean).join(" • ");
-  const toSlug = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
-  const slugParts = [
-    combo.lockChip && combo.lockChip.toLowerCase() !== "none" ? combo.lockChip : "",
-    combo.blade,
-    combo.assistBlade && combo.assistBlade.toLowerCase() !== "none" ? combo.assistBlade : "",
-    combo.ratchet && combo.ratchet.toLowerCase() !== "none" ? combo.ratchet : "",
-    combo.bit,
-  ].filter(Boolean).map(toSlug);
-  const canonical = `${window.location.origin}/combo/${slugParts.join("-")}`;
+  const canonical = `${window.location.origin}/combo/${encodeURIComponent(decodedId || "")}`;
   const origin = window.location.origin;
   const imageUrl = `${origin}/meta%20logo.svg`;
 
@@ -212,16 +213,16 @@ export default function ComboDetail() {
           "url": canonical,
         }}
       />
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Button
-          variant="ghost"
-          onClick={() => setLocation("/analytics")}
-          className="gap-2"
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Indietro
-        </Button>
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Link href="/analytics">
+            <a
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Indietro
+            </a>
+          </Link>
 
         <Card>
           <CardHeader>

@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -175,34 +175,36 @@ export default function Players() {
         ) : filteredPlayers.length === 0 ? (
           <Card className="p-6 text-center">Nessun giocatore trovato</Card>
         ) : (
-          <div className="space-y-2 overflow-y-auto">
+          <div className="overflow-y-auto">
             {pageItems.map((p, idx) => (
-              <Card
-                key={p.id}
-                className="p-3 flex items-center gap-3 cursor-pointer"
-                onClick={() => setLocation(`/players/${encodeURIComponent(p.id)}`)}
+              <Link 
+                key={p.id} 
+                href={`/players/${encodeURIComponent(p.id)}`}
+                className="block no-underline mb-2 last:mb-0"
               >
-                <div className="w-10 text-center">
-                  <Badge variant="secondary" className="text-xs">
-                    {(page - 1) * perPage + idx + 1}
-                  </Badge>
-                </div>
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                  {p.avatar ? (
-                    <img src={p.avatar} alt={p.nickname} className="w-12 h-12 object-cover" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">N/A</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{p.nickname}</p>
-                  <div className="mt-1">
-                    <Badge variant="outline" className="text-xs">
-                      Punti: {Number(p.totalPoints).toLocaleString()}
-                    </Badge>
-                  </div>
-                </div>
-              </Card>
+                <Card className="p-3 flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
+                    <div className="w-10 text-center">
+                      <Badge variant="secondary" className="text-xs">
+                        {(page - 1) * perPage + idx + 1}
+                      </Badge>
+                    </div>
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                      {p.avatar ? (
+                        <img src={p.avatar} alt={`Avatar di ${p.nickname}`} className="w-12 h-12 object-cover" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{p.nickname}</p>
+                      <div className="mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          Punti: {Number(p.totalPoints).toLocaleString()}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Card>
+              </Link>
             ))}
             {filteredPlayers.length > perPage && (
               <Pagination className="mt-2">

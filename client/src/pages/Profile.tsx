@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
+import { Seo } from "@/components/Seo";
 import {
   Camera,
   LogOut,
@@ -135,6 +136,11 @@ export default function Profile() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <Seo
+        title="Profilo · Beybladexmeta Analytics"
+        description="Gestisci il tuo profilo e le tue preferenze"
+        robots="noindex, nofollow"
+      />
       <PageHeader title="Profilo" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
@@ -329,13 +335,14 @@ export default function Profile() {
             Log Out
           </Button>
         ) : (
-          <Button
-            onClick={() => setLocation("/login")}
-            className="w-full h-12"
-            data-testid="button-login-register"
-          >
-            Login / Register
-          </Button>
+          <Link href="/login">
+            <a
+              className="inline-flex items-center justify-center w-full h-12 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors no-underline min-w-[44px] min-h-[44px]"
+              data-testid="button-login-register"
+            >
+              Login / Register
+            </a>
+          </Link>
         )}
       </main>
       <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>

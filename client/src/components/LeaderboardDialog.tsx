@@ -133,7 +133,8 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
           img.src = sources[nextIndex];
         }
       }}
-      alt={name}
+      alt={`${name} component image`}
+      loading="lazy"
       className="w-12 h-12 object-contain"
     />
   );

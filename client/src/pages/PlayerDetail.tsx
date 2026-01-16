@@ -1,4 +1,4 @@
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -148,10 +148,12 @@ export default function PlayerDetail() {
             <TabsTrigger value="players">Giocatori</TabsTrigger>
           </TabsList>
           <div className="mb-4">
-            <Button variant="ghost" onClick={() => setLocation('/players')} className="gap-2 w-fit">
-              <ArrowLeft className="w-4 h-4" />
-              Indietro
-            </Button>
+            <Link href="/players">
+              <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]">
+                <ArrowLeft className="w-4 h-4" />
+                Indietro
+              </a>
+            </Link>
           </div>
 
           <TabsContent value="players" className="space-y-4">
@@ -263,27 +265,27 @@ export default function PlayerDetail() {
             ) : (
               <div className="space-y-2">
                 {(tourData?.tournaments || []).map((t) => (
-                  <Card
-                    key={t.tournamentId}
-                    className="p-3 cursor-pointer"
-                    onClick={() => setLocation(`/tournaments/${encodeURIComponent(t.tournamentId)}`)}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {t.bestPlacement != null && (
-                          <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
-                        )}
-                        <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
-                        {/* <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge> */}
-                      </div>
-                    </div>
-                  </Card>
+                  <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+                    <a className="block no-underline">
+                      <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {t.bestPlacement != null && (
+                              <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
+                            )}
+                            <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
+                            {/* <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge> */}
+                          </div>
+                        </div>
+                      </Card>
+                    </a>
+                  </Link>
                 ))}
               </div>
             )}

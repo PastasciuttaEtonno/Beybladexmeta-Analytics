@@ -6,7 +6,7 @@ export function HeaderLogo() {
   return (
     <img
       src={src}
-      alt="Logo"
+      alt="Beybladexmeta Analytics Logo"
       className="h-12 w-auto"
       data-testid="img-header-logo"
     />

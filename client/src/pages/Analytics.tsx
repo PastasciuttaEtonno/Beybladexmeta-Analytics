@@ -37,7 +37,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import type { ComboStats } from "../../shared/schema";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -351,19 +351,13 @@ export default function Analytics() {
   };
 
   const getComboId = (combo: ComboStats) => {
-    const toSlug = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
-    const parts = [
-      combo.lockChip && combo.lockChip.toLowerCase() !== "none" ? combo.lockChip : "",
+    return [
       combo.blade,
-      combo.assistBlade && combo.assistBlade.toLowerCase() !== "none" ? combo.assistBlade : "",
-      combo.ratchet && combo.ratchet.toLowerCase() !== "none" ? combo.ratchet : "",
+      combo.assistBlade,
+      combo.ratchet,
       combo.bit,
-    ].filter(Boolean).map(toSlug);
-    return parts.join("-");
-  };
-
-  const handleComboClick = (combo: ComboStats) => {
-    setLocation(`/combo/${getComboId(combo)}`);
+      combo.lockChip,
+    ].join("|");
   };
 
   return (
@@ -559,12 +553,12 @@ export default function Analytics() {
             ) : data?.combos && data.combos.length > 0 ? (
               <div className="space-y-3">
                 {data.combos.map((combo, index) => (
-                  <Card
+                  <Link
                     key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
-                    className="p-4 hover-elevate active-elevate-2 cursor-pointer"
-                    onClick={() => handleComboClick(combo)}
-                    data-testid={`card-combo-${index}`}
+                    href={`/combo/${getComboId(combo)}`}
                   >
+                    <a className="block no-underline" data-testid={`card-combo-${index}`}>
+                      <Card className="p-4 hover-elevate active-elevate-2 cursor-pointer transition-colors">
                     <div className="flex items-start gap-3">
                       <div className="flex flex-col items-center gap-1 min-w-[3rem]">
                         {getRankIcon(index)}
@@ -679,7 +673,9 @@ export default function Analytics() {
                         </div>
                       </div>
                     </div>
-                  </Card>
+                      </Card>
+                    </a>
+                  </Link>
                 ))}
               </div>
             ) : (

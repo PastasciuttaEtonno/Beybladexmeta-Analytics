@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeProvider";
+import { Seo } from "@/components/Seo";
 
 // Helpers for sanitization and validation
 const normalizeEmail = (s: string) => s.trim().toLowerCase();
@@ -156,6 +157,11 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Seo
+        title="Login · Beybladexmeta Analytics"
+        description="Accedi al tuo account Beybladexmeta Analytics"
+        robots="noindex, nofollow"
+      />
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center text-center space-y-3">
           <img
