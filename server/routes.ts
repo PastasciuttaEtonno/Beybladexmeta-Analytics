@@ -695,7 +695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : 0,
         }));
         await db.insert(cmMatchResults).values(cmValues as any).onConflictDoUpdate({
-          target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber],
+          target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber] as any,
           set: {
             blade: sql`excluded.blade`,
             assistBlade: sql`excluded.assist_blade`,
@@ -1250,7 +1250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await db.insert(cmMatchResults).values(insertValues as any).onConflictDoUpdate({
-        target: cmMatchResults.pk,
+        target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber] as any,
         set: {
           blade: sql`excluded.blade`,
           assistBlade: sql`excluded.assist_blade`,
@@ -2314,7 +2314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           puntiGuadagnati: placement && totalParticipants ? calcExternalPoints(placement, totalParticipants) : 0,
           updatedAt: sql`now()`,
         } as any).onConflictDoUpdate({
-          target: cmMatchResults.pk,
+          target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber] as any,
           set: {
             blade: sql`excluded.blade`,
             assistBlade: sql`excluded.assist_blade`,
@@ -2584,7 +2584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : 0,
         }));
         await db.insert(cmMatchResults).values(cmValues as any).onConflictDoUpdate({
-          target: cmMatchResults.pk,
+          target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber],
           set: {
             blade: sql`excluded.blade`,
             assistBlade: sql`excluded.assist_blade`,
