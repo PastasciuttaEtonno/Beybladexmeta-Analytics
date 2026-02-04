@@ -187,7 +187,7 @@ app.use((req, res, next) => {
       });
       console.log("Using PostgreSQL session store");
     } catch (error) {
-      console.log("PostgreSQL connection failed, using memory session store:", error.message);
+      console.log("PostgreSQL connection failed, using memory session store:", (error as Error).message);
       sessionStore = undefined; // Fall back to memory store
     }
   } else {

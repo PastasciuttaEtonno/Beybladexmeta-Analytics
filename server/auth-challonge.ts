@@ -19,10 +19,13 @@ export function registerChallongeAuth(app: express.Express) {
 
     router.get("/login", (req, res) => {
         const clientId = process.env.CHALLONGE_APP_CLIENT_ID;
-        if (!clientId) return res.redirect("/profile?error=" + encodeURIComponent("Challonge OAuth misconfigured (Missing Client ID)"));
+
+        if (!clientId) {
+            return res.redirect("/profile?error=" + encodeURIComponent("Challonge OAuth misconfigured (Missing Client ID)"));
+        }
 
         const redirectUri = computeRedirectUri(req);
-        console.log("DEBUG: Challonge OAuth Redirect URI (login):", redirectUri);
+
         const scope = "me tournaments:read tournaments:write matches:read matches:write"; // Requested scopes
         const state = crypto.randomBytes(16).toString("hex");
         (req.session as any).challonge_oauth_state = state;
@@ -61,7 +64,7 @@ export function registerChallongeAuth(app: express.Express) {
             const clientId = process.env.CHALLONGE_APP_CLIENT_ID;
             const clientSecret = process.env.CHALLONGE_APP_CLIENT_SECRET;
             const redirectUri = computeRedirectUri(req);
-            console.log("DEBUG: Challonge OAuth Redirect URI (callback):", redirectUri);
+
 
             if (!clientId || !clientSecret) {
                 return res.redirect("/profile?error=" + encodeURIComponent("Challonge OAuth misconfigured"));
@@ -111,7 +114,7 @@ export function registerChallongeAuth(app: express.Express) {
             }
 
             const userData = await userRes.json();
-            console.log("DEBUG: Challonge User Data:", JSON.stringify(userData, null, 2));
+
             // Adjust according to actual response structure. 
             // Assuming standard JSON:API response or similar.
             // Based on docs, it returns a user object.
@@ -188,13 +191,10 @@ export function registerChallongeAuth(app: express.Express) {
                         challongeUsername: username,
                     }).returning();
 
-                    console.log("DEBUG: Created new user", newUser.id);
                     req.session.userId = newUser.id;
                 }
             }
 
-            console.log("DEBUG: Setting session userId:", req.session.userId);
-            console.log("DEBUG: Session ID before save:", req.sessionID);
 
             // Store access token in session if needed for temporary API calls, 
             // or maybe we should store in DB? For now, session is fine for immediate specific actions, 

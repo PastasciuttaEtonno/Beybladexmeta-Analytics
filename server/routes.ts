@@ -278,8 +278,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user
   app.get('/api/auth/me', requireAuth, async (req, res) => {
     try {
-      console.log("DEBUG: /api/auth/me hit. Session ID:", req.sessionID);
-      console.log("DEBUG: /api/auth/me req.session:", req.session);
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
