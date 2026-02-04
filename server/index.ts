@@ -39,8 +39,9 @@ function serveStatic(app: express.Express) {
   });
 }
 
-// Trust proxy for Replit's infrastructure
-app.set('trust proxy', 1);
+// Trust proxy for Replit's infrastructure and Cloudflare/Coolify
+// Using a higher number to trust standard reverse proxy chains (Cloudflare -> Ingress -> App)
+app.set('trust proxy', 5);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -202,7 +203,7 @@ app.use((req, res, next) => {
     rolling: true, // Reset expiration on every request
     proxy: true, // Trust the proxy for secure cookies
     cookie: {
-      secure: process.env.REPL_SLUG ? true : false, // Secure in production (published)
+      secure: process.env.NODE_ENV === 'production' || !!process.env.REPL_SLUG, // Secure in production
       httpOnly: true,
       sameSite: 'lax', // Important for mobile browsers
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days

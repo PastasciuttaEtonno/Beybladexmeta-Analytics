@@ -188,9 +188,13 @@ export function registerChallongeAuth(app: express.Express) {
                         challongeUsername: username,
                     }).returning();
 
+                    console.log("DEBUG: Created new user", newUser.id);
                     req.session.userId = newUser.id;
                 }
             }
+
+            console.log("DEBUG: Setting session userId:", req.session.userId);
+            console.log("DEBUG: Session ID before save:", req.sessionID);
 
             // Store access token in session if needed for temporary API calls, 
             // or maybe we should store in DB? For now, session is fine for immediate specific actions, 
