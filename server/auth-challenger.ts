@@ -170,6 +170,15 @@ export function registerChallengerAuth(app: express.Express) {
       }
 
       req.session.userId = userRow.id;
+
+      // Explicitly save session before redirect to prevent race conditions
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+
       res.redirect("/profile");
     } catch (e) {
       res.redirect("/profile?error=" + encodeURIComponent("OAuth error"));

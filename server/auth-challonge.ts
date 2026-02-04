@@ -198,6 +198,14 @@ export function registerChallongeAuth(app: express.Express) {
             // Construct didn't specify storing tokens, just authentication.
             (req.session as any).challonge_access_token = accessToken;
 
+            // Explicitly save session before redirect to ensure persistence
+            await new Promise<void>((resolve, reject) => {
+                req.session.save((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+
             res.redirect("/profile");
         } catch (e) {
             console.error("Cb Error:", e);
