@@ -19,7 +19,7 @@ export function registerChallongeAuth(app: express.Express) {
 
     router.get("/login", (req, res) => {
         const clientId = process.env.CHALLONGE_APP_CLIENT_ID;
-        if (!clientId) return res.status(500).send("Challonge OAuth misconfigured (Missing Client ID)");
+        if (!clientId) return res.redirect("/profile?error=" + encodeURIComponent("Challonge OAuth misconfigured (Missing Client ID)"));
 
         const redirectUri = computeRedirectUri(req);
         console.log("DEBUG: Challonge OAuth Redirect URI (login):", redirectUri);
@@ -55,7 +55,7 @@ export function registerChallongeAuth(app: express.Express) {
             (req.session as any).challonge_oauth_state = null;
 
             if (!state || state !== expectedState) {
-                return res.status(400).send("Invalid state parameter");
+                return res.redirect("/profile?error=" + encodeURIComponent("Invalid state parameter"));
             }
 
             const clientId = process.env.CHALLONGE_APP_CLIENT_ID;
@@ -64,7 +64,7 @@ export function registerChallongeAuth(app: express.Express) {
             console.log("DEBUG: Challonge OAuth Redirect URI (callback):", redirectUri);
 
             if (!clientId || !clientSecret) {
-                return res.status(500).send("Challonge OAuth misconfigured");
+                return res.redirect("/profile?error=" + encodeURIComponent("Challonge OAuth misconfigured"));
             }
 
             // Exchange code for token
@@ -83,14 +83,14 @@ export function registerChallongeAuth(app: express.Express) {
             if (!tokenRes.ok) {
                 const text = await tokenRes.text();
                 console.error("Challonge Token Error:", text);
-                return res.status(500).send("Failed to exchange token with Challonge");
+                return res.redirect("/profile?error=" + encodeURIComponent("Failed to exchange token with Challonge"));
             }
 
             const tokenData = await tokenRes.json();
             const accessToken = tokenData.access_token;
 
             if (!accessToken) {
-                return res.status(500).send("No access token received");
+                return res.redirect("/profile?error=" + encodeURIComponent("No access token received"));
             }
 
             // Fetch User Info
@@ -107,10 +107,11 @@ export function registerChallongeAuth(app: express.Express) {
             if (!userRes.ok) {
                 const text = await userRes.text();
                 console.error("Challonge User Info Error:", text);
-                return res.status(500).send("Failed to fetch user info from Challonge");
+                return res.redirect("/profile?error=" + encodeURIComponent("Failed to fetch user info from Challonge"));
             }
 
             const userData = await userRes.json();
+            console.log("DEBUG: Challonge User Data:", JSON.stringify(userData, null, 2));
             // Adjust according to actual response structure. 
             // Assuming standard JSON:API response or similar.
             // Based on docs, it returns a user object.
@@ -121,7 +122,7 @@ export function registerChallongeAuth(app: express.Express) {
             const avatarUrl = attributes.image_url || attributes.avatar_url || attributes.avatar?.usage?.url || null; // Making best guess on avatar field
 
             if (!challongeId) {
-                return res.status(500).send("Could not retrieve Challonge User ID");
+                return res.redirect("/profile?error=" + encodeURIComponent("Could not retrieve Challonge User ID"));
             }
 
             // DB Operations
@@ -155,15 +156,19 @@ export function registerChallongeAuth(app: express.Express) {
                 if (!currentUser) return res.status(500).send("Current user not found");
 
                 if (existingUserWithChallongeId && existingUserWithChallongeId.id !== currentUserId) {
-                    return res.status(409).send("This Challonge account is already linked to another user.");
+                    return res.redirect("/profile?error=" + encodeURIComponent("This Challonge account is already linked to another user."));
                 }
 
-                await db.update(users).set({ challongeId }).where(eq(users.id, currentUserId));
+                await db.update(users).set({ challongeId, challongeUsername: username }).where(eq(users.id, currentUserId));
             } else {
                 // User not logged in
                 if (existingUserWithChallongeId) {
                     // Log them in
                     req.session.userId = existingUserWithChallongeId.id;
+                    // Ensure username is up to date
+                    if (existingUserWithChallongeId.challongeUsername !== username) {
+                        await db.update(users).set({ challongeUsername: username }).where(eq(users.id, existingUserWithChallongeId.id));
+                    }
                 } else {
                     // Create new user? 
                     // Similar to auth-challenger: create a new user or just fail?
@@ -180,6 +185,7 @@ export function registerChallongeAuth(app: express.Express) {
                         isAdmin: false,
                         is_verified: true, // Auto-verify OAuth users
                         challongeId: challongeId,
+                        challongeUsername: username,
                     }).returning();
 
                     req.session.userId = newUser.id;
@@ -195,7 +201,7 @@ export function registerChallongeAuth(app: express.Express) {
             res.redirect("/profile");
         } catch (e) {
             console.error("Cb Error:", e);
-            res.status(500).send("Internal Server Error during Challonge Auth");
+            res.redirect("/profile?error=" + encodeURIComponent("Internal Server Error during Challonge Auth"));
         }
     });
 

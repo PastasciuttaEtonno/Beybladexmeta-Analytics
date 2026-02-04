@@ -31,7 +31,7 @@ export function registerChallengerAuth(app: express.Express) {
   router.get("/login", async (req, res) => {
     const clientId = process.env.CM_CLIENT_ID;
     const redirectUri = computeRedirectUri(req);
-    if (!clientId || !redirectUri) return res.status(500).send("OAuth misconfigured");
+    if (!clientId || !redirectUri) return res.redirect("/profile?error=" + encodeURIComponent("OAuth misconfigured"));
     const state = crypto.randomBytes(16).toString("hex");
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = generateCodeChallengeS256(codeVerifier);
@@ -60,15 +60,15 @@ export function registerChallengerAuth(app: express.Express) {
       }
       const expected = (req.session as any).cm_oauth_state || "";
       (req.session as any).cm_oauth_state = null;
-      if (!state || state !== expected) return res.status(400).send("Invalid state");
+      if (!state || state !== expected) return res.redirect("/profile?error=" + encodeURIComponent("Invalid state"));
 
       const clientId = process.env.CM_CLIENT_ID;
       const clientSecret = process.env.CM_CLIENT_SECRET;
       const redirectUri = computeRedirectUri(req);
-      if (!clientId || !clientSecret || !redirectUri) return res.status(500).send("OAuth misconfigured");
+      if (!clientId || !clientSecret || !redirectUri) return res.redirect("/profile?error=" + encodeURIComponent("OAuth misconfigured"));
       const codeVerifier: string = (req.session as any).cm_code_verifier || "";
       (req.session as any).cm_code_verifier = null;
-      if (!codeVerifier) return res.status(400).send("Missing PKCE code_verifier");
+      if (!codeVerifier) return res.redirect("/profile?error=" + encodeURIComponent("Missing PKCE code_verifier"));
 
       const tokenBody = new URLSearchParams({
         grant_type: "authorization_code",
@@ -84,12 +84,12 @@ export function registerChallengerAuth(app: express.Express) {
         body: tokenBody,
       });
       const tokenText = await tokenRes.text();
-      if (!tokenRes.ok) return res.status(500).send("Token exchange failed");
+      if (!tokenRes.ok) return res.redirect("/profile?error=" + encodeURIComponent("Token exchange failed"));
       let tokenJson: any = {};
-      try { tokenJson = JSON.parse(tokenText); } catch {}
+      try { tokenJson = JSON.parse(tokenText); } catch { }
       const accessToken: string = tokenJson?.access_token || tokenJson?.token || "";
       const idToken: string | undefined = tokenJson?.id_token;
-      if (!accessToken) return res.status(500).send("Missing access token");
+      if (!accessToken) return res.redirect("/profile?error=" + encodeURIComponent("Missing access token"));
       (req.session as any).cm_access_token = accessToken;
 
       const USERINFO_URL = process.env.CM_USERINFO_URL || "https://publicapi.challengermode.com/mk1/v1/me/userinfo";
@@ -97,20 +97,20 @@ export function registerChallengerAuth(app: express.Express) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const userinfoText = await userinfoRes.text();
-      if (!userinfoRes.ok) return res.status(500).send("Failed to fetch userinfo");
+      if (!userinfoRes.ok) return res.redirect("/profile?error=" + encodeURIComponent("Failed to fetch userinfo"));
       let userinfo: any = {};
-      try { userinfo = JSON.parse(userinfoText); } catch {}
+      try { userinfo = JSON.parse(userinfoText); } catch { }
       const challengerId: string = String(userinfo?.sub || "");
       let username: string = String(userinfo?.preferred_username || userinfo?.username || userinfo?.name || "");
       let avatar: string | null = userinfo?.picture ? String(userinfo.picture) : null;
-      if (!challengerId) return res.status(500).send("Missing user id");
+      if (!challengerId) return res.redirect("/profile?error=" + encodeURIComponent("Missing user id"));
 
       if (!username || username.trim().length === 0) {
         try {
           const me = await fetchMeBasic(accessToken);
           if (me?.username) username = me.username;
           if (!avatar && me?.profilePictureUrl) avatar = me.profilePictureUrl;
-        } catch {}
+        } catch { }
       }
 
       const existingByChallenger = (await db.select().from(users).where(eq(users.challengerId, challengerId)).limit(1))[0];
@@ -119,11 +119,11 @@ export function registerChallengerAuth(app: express.Express) {
       if (currentUserId) {
         const currentUserRows = await db.select().from(users).where(eq(users.id, currentUserId)).limit(1);
         const currentUser = currentUserRows[0];
-        if (!currentUser) return res.status(500).send("Sessione invalida");
+        if (!currentUser) return res.redirect("/profile?error=" + encodeURIComponent("Sessione invalida"));
         if (existingByChallenger && existingByChallenger.id !== currentUser.id) {
-          return res.status(409).send("Questo Challengermode ID è già collegato a un altro account");
+          return res.redirect("/profile?error=" + encodeURIComponent("Questo Challengermode ID è già collegato a un altro account"));
         }
-        const updates: any = { challengerId };
+        const updates: any = { challengerId, challengermodeUsername: username };
         if (username && username !== currentUser.displayName) updates.displayName = username;
         if (avatar && avatar !== (currentUser.photoURL || null)) updates.photoURL = avatar;
         const updated = await db.update(users).set(updates).where(eq(users.id, currentUser.id)).returning();
@@ -140,15 +140,18 @@ export function registerChallengerAuth(app: express.Express) {
             photoURL: avatar,
             isAdmin: false,
             is_verified: true,
-            verification_token: null,
             verification_token_expires_at: null,
             challengerId,
+            challengermodeUsername: username,
           }).returning();
           userRow = inserted[0];
         } else {
           const updates: any = {};
           if (username && username !== existingByChallenger.displayName) updates.displayName = username;
           if (avatar && avatar !== (existingByChallenger.photoURL || null)) updates.photoURL = avatar;
+          // Ensure challengermodeUsername is set/updated
+          if (username && username !== existingByChallenger.challengermodeUsername) updates.challengermodeUsername = username;
+
           if (Object.keys(updates).length) {
             const updated = await db.update(users).set(updates).where(eq(users.id, existingByChallenger.id)).returning();
             userRow = updated[0] || existingByChallenger;
@@ -169,7 +172,7 @@ export function registerChallengerAuth(app: express.Express) {
       req.session.userId = userRow.id;
       res.redirect("/profile");
     } catch (e) {
-      res.status(500).send("OAuth error");
+      res.redirect("/profile?error=" + encodeURIComponent("OAuth error"));
     }
   });
 

@@ -117,7 +117,7 @@ export default function Tournaments() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<'add'|'list'>('list');
+  const [activeTab, setActiveTab] = useState<'add' | 'list'>('list');
   const [nomeTorneo, setNomeTorneo] = useState<string>("");
   const [dataTorneo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [descrizione, setDescrizione] = useState<string>("");
@@ -431,9 +431,10 @@ export default function Tournaments() {
   const DEFAULT_END_DATE = format(new Date(), "yyyy-MM-dd");
   const [endDateFilter, setEndDateFilter] = useState<string>(DEFAULT_END_DATE);
   const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
 
   const { data: tournamentsData, refetch: refetchTournaments, isLoading: tournamentsLoading } = useQuery<{ tournaments: TorneoCard[] }>({
-    queryKey: ["/api/tournaments", startDateFilter || "", endDateFilter || "", selectedRegion || ""],
+    queryKey: ["/api/tournaments", startDateFilter || "", endDateFilter || "", selectedRegion || "", selectedPlatform || "all"],
     queryFn: async () => {
       const afterIso = startDateFilter
         ? new Date(startDateFilter).toISOString()
@@ -441,6 +442,8 @@ export default function Tournaments() {
       const qs = new URLSearchParams();
       if (afterIso) qs.set("after", afterIso);
       if (selectedRegion) qs.set("region", selectedRegion);
+      if (selectedPlatform && selectedPlatform !== 'all') qs.set("platform", selectedPlatform);
+
       const resp = await fetch(`/api/tournaments?${qs.toString()}`, {
         credentials: "include",
       });
@@ -536,11 +539,19 @@ export default function Tournaments() {
     const ssStart = sessionStorage.getItem("tournaments_start");
     const ssEnd = sessionStorage.getItem("tournaments_end");
     const ssRegion = sessionStorage.getItem("tournaments_region");
+    const ssPlatform = sessionStorage.getItem("tournaments_platform");
+
     if (q !== null || ssQ !== null) setSearchTerm((q ?? ssQ ?? "") as string);
     if (start !== null || ssStart !== null) setStartDateFilter((start ?? ssStart ?? "") as string);
     // Default end date to today if missing
     setEndDateFilter((end ?? ssEnd ?? DEFAULT_END_DATE) as string);
     if (region !== null || ssRegion !== null) setSelectedRegion((region ?? ssRegion ?? "") as string);
+
+    // Platform (URL param 'platform' or session 'tournaments_platform')
+    const urlPlatform = params.get("platform");
+    if (urlPlatform !== null || ssPlatform !== null) {
+      setSelectedPlatform((urlPlatform ?? ssPlatform ?? "all") as string);
+    }
   }, []);
 
   useEffect(() => {
@@ -562,12 +573,16 @@ export default function Tournaments() {
     if (startDateFilter) params.set("start", startDateFilter); else params.delete("start");
     if (endDateFilter) params.set("end", endDateFilter); else params.delete("end");
     if (selectedRegion) params.set("region", selectedRegion); else params.delete("region");
+    if (selectedPlatform && selectedPlatform !== 'all') params.set("platform", selectedPlatform); else params.delete("platform");
+
     sessionStorage.setItem("tournaments_q", searchTerm);
     sessionStorage.setItem("tournaments_start", startDateFilter);
     sessionStorage.setItem("tournaments_end", endDateFilter);
     sessionStorage.setItem("tournaments_region", selectedRegion);
+    sessionStorage.setItem("tournaments_platform", selectedPlatform);
+
     setLocation(`${base}?${params.toString()}`, { replace: true });
-  }, [searchTerm, startDateFilter, endDateFilter, selectedRegion]);
+  }, [searchTerm, startDateFilter, endDateFilter, selectedRegion, selectedPlatform]);
 
   const renderListView = () => {
     const tournaments = tournamentsData?.tournaments ?? [];
@@ -640,6 +655,18 @@ export default function Tournaments() {
               </SelectContent>
             </Select>
           </div>
+          <div className="w-[180px] space-y-1">
+            <Select value={selectedPlatform} onValueChange={(val) => setSelectedPlatform(val)}>
+              <SelectTrigger className="h-9 text-sm" aria-label="Piattaforma">
+                <SelectValue placeholder="Piattaforma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le piattaforme</SelectItem>
+                <SelectItem value="challengermode">Challengermode</SelectItem>
+                <SelectItem value="challonge">Challonge</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -649,6 +676,7 @@ export default function Tournaments() {
               setStartDateFilter("");
               setEndDateFilter(DEFAULT_END_DATE);
               setSelectedRegion("");
+              setSelectedPlatform("all");
             }}
           >
             <Eraser className="w-4 h-4" aria-label="Clear filters" />
@@ -711,10 +739,10 @@ export default function Tournaments() {
                   )}
                   {t.contactUrl && (
                     <p className="mt-2 text-xs">
-                      <a 
-                        className="text-blue-600 hover:underline no-underline" 
-                        href={t.contactUrl} 
-                        target="_blank" 
+                      <a
+                        className="text-blue-600 hover:underline no-underline"
+                        href={t.contactUrl}
+                        target="_blank"
                         rel="noopener noreferrer"
                         aria-label="Contatti e informazioni torneo (si apre in una nuova scheda)"
                       >
@@ -799,7 +827,7 @@ export default function Tournaments() {
             {renderListView()}
           </TabsContent>
 
-          
+
         </Tabs>
         <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
           <DialogContent className="sm:max-w-md">

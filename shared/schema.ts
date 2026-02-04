@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date, jsonb, pgView, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date, jsonb, pgView, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -18,7 +18,9 @@ export const users = pgTable("users", {
   verification_token: text("verification_token"),
   verification_token_expires_at: timestamp("verification_token_expires_at", { withTimezone: true }),
   challengerId: text("challenger_id").unique(),
+  challengermodeUsername: text("challengermode_username"),
   challongeId: text("challonge_id").unique(),
+  challongeUsername: text("challonge_username"),
 }, (table) => {
   return {
     emailIdx: index("users_email_idx").on(table.email),
@@ -308,6 +310,7 @@ export const challongePlayers = pgTable("challonge_players", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
 });
 
+// Tabella per i risultati dei match di ChallengerMode
 export const cmMatchResults = pgTable("cm_match_results", {
   tournamentId: varchar("tournament_id").notNull(),
   playerId: varchar("player_id").notNull().references(() => cmPlayers.id, { onDelete: 'cascade' }),
@@ -327,6 +330,14 @@ export const cmMatchResults = pgTable("cm_match_results", {
   tournamentIdx: index("cm_match_results_tournament_idx").on(table.tournamentId),
   playerIdx: index("cm_match_results_player_idx").on(table.playerId),
 }));
+
+// Tabella per i dati grezzi di Challonge
+export const challongeMatchResults = pgTable("challonge_match_results", {
+  id: serial("id").primaryKey(),
+  tournamentId: text("tournament_id").notNull().unique(),
+  data: jsonb("data").notNull(),
+  fetchedAt: timestamp("fetched_at").defaultNow(),
+});
 
 export const loginAttempts = pgTable("login_attempts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -440,6 +451,19 @@ export const challongePlayersRelations = relations(challongePlayers, ({ one }) =
 // 8. VISTE SQL E LEADERBOARD
 // ----------------------------------------------------------------------
 
+export const unifiedMetaView = pgView("unified_meta_view", {
+  uniqueId: text("unique_id").notNull(),
+  blade: text("blade"),
+  assistBlade: text("assist_blade"),
+  ratchet: text("ratchet"),
+  bit: text("bit"),
+  lockChip: text("lock_chip"),
+  rank: integer("rank"),
+  date: date("date"),
+  participantCount: integer("participant_count"), // <--- NUOVO CAMPO
+  platform: text("platform"),
+}).existing();
+
 export const playerLeaderboardView = pgView("player_leaderboard", {
   playerId: varchar("player_id").primaryKey(),
   nickname: text("nickname").notNull(),
@@ -457,7 +481,7 @@ export const topComponentSnapshot = pgView("top_component_snapshot", {
   season: text("season").notNull(),
 }).existing();
 
-// VISTA JSON TORNEI (Metadati + Regione)
+// VISTA JSON TORNEI (Metadati + Regione + Piattaforma)
 export const tournamentsView = pgView("tournaments_view", {
   id: text("id").notNull(),
   name: text("name"),
@@ -465,10 +489,41 @@ export const tournamentsView = pgView("tournaments_view", {
   organizerName: text("organizer_name"),
   region: text("region"),
   city: text("city"),
+  platform: text("platform"),
 }).existing();
 
 // ----------------------------------------------------------------------
-// 9. STATISTICHE REGIONALI (Leaderboard)
+// 9. CHALLONGE REPORTED COMBOS
+// ----------------------------------------------------------------------
+
+export const challongeReportedCombos = pgTable("challonge_reported_combos", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tournamentId: text("tournament_id").notNull(),
+  comboNumber: integer("combo_number").notNull(),
+
+  // Struttura Full
+  blade: text("blade").notNull(),
+  assistBlade: text("assist_blade"), // Opzionale nel DB, gestito da UI
+  ratchet: text("ratchet").notNull(),
+  bit: text("bit").notNull(),
+  lockChip: text("lock_chip"),       // Opzionale nel DB
+
+  rank: integer("rank").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  uniqueIdx: uniqueIndex("unique_user_tournament_combo_num_idx").on(table.userId, table.tournamentId, table.comboNumber),
+}));
+
+// Mantieni le relazioni come prima
+export const challongeReportedCombosRelations = relations(challongeReportedCombos, ({ one }) => ({
+  user: one(users, {
+    fields: [challongeReportedCombos.userId],
+    references: [users.id],
+  }),
+}));
+// ----------------------------------------------------------------------
+// 10. STATISTICHE REGIONALI (Leaderboard)
 // ----------------------------------------------------------------------
 
 export const playerRegionalStats = pgTable("player_regional_stats", {
@@ -476,11 +531,12 @@ export const playerRegionalStats = pgTable("player_regional_stats", {
   playerName: text("player_name").notNull(),
   region: text("region").notNull(),
   season: text("season").default("Season 2026").notNull(),
+  platform: text("platform").default("challengermode").notNull(),
   points: integer("points").default(0).notNull(),
   tournamentsPlayed: integer("tournaments_played").default(0).notNull(),
   wins: integer("wins").default(0).notNull(),
   top4: integer("top4").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
-  pk: primaryKey({ columns: [table.playerId, table.region, table.season] }),
+  pk: primaryKey({ columns: [table.playerId, table.region, table.season, table.platform] }),
 }));

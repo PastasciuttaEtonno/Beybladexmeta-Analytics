@@ -58,6 +58,7 @@ export default function Players() {
 
   const [selectedRegion, setSelectedRegion] = useState<string>("global");
   const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
 
   const { data: seasonsData } = useQuery<{ seasons: string[] }>({
     queryKey: ["/api/seasons"],
@@ -76,11 +77,12 @@ export default function Players() {
   }, [seasonsData?.seasons?.length]);
 
   const { data, isLoading } = useQuery<{ leaderboard: any[] }>({
-    queryKey: ["/api/leaderboard/regional", selectedRegion, selectedSeason],
+    queryKey: ["/api/leaderboard/regional", selectedRegion, selectedSeason, selectedPlatform],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set("season", selectedSeason);
       if (selectedRegion && selectedRegion !== "global") params.set("region", selectedRegion);
+      if (selectedPlatform && selectedPlatform !== "all") params.set("platform", selectedPlatform);
       const resp = await fetch(`/api/leaderboard/regional?${params.toString()}`);
       if (!resp.ok) throw new Error("Failed to fetch regional leaderboard");
       return await resp.json();
@@ -109,7 +111,7 @@ export default function Players() {
 
   useEffect(() => {
     setPage(1);
-  }, [players.length, query, selectedRegion, selectedSeason]);
+  }, [players.length, query, selectedRegion, selectedSeason, selectedPlatform]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -129,130 +131,142 @@ export default function Players() {
           </TabsList>
 
           <TabsContent value="players" className="space-y-3">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex-1 min-w-0 w-full sm:w-auto">
-            <Input
-              id="player-search"
-              aria-label="Search players"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca giocatori..."
-              className="h-9 text-sm"
-            />
-          </div>
-          <div className="w-full sm:w-[200px]">
-            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Globale" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="global">Globale</SelectItem>
-                {REGIONS.map((r) => (
-                  <SelectItem key={r} value={r}>{r}</SelectItem>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex-1 min-w-0 w-full sm:w-auto">
+                <Input
+                  id="player-search"
+                  aria-label="Search players"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Cerca giocatori..."
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div className="w-full sm:w-[180px]">
+                <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Piattaforma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutte le Piattaforme</SelectItem>
+                    <SelectItem value="challengermode">Challengermode</SelectItem>
+                    <SelectItem value="challonge">Challonge</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full sm:w-[130px]">
+                <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Globale" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="global">Globale</SelectItem>
+                    {REGIONS.map((r) => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full sm:w-[140px]">
+                <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Stagione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seasons.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="h-20 bg-muted/30 animate-pulse" />
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-full sm:w-[180px]">
-            <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Stagione" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasons.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="h-20 bg-muted/30 animate-pulse" />
-            ))}
-          </div>
-        ) : filteredPlayers.length === 0 ? (
-          <Card className="p-6 text-center">Nessun giocatore trovato</Card>
-        ) : (
-          <div className="overflow-y-auto">
-            {pageItems.map((p, idx) => (
-              <Link 
-                key={p.id} 
-                href={`/players/${encodeURIComponent(p.id)}`}
-                className="block no-underline mb-2 last:mb-0"
-              >
-                <Card className="p-3 flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
-                    <div className="w-10 text-center">
-                      <Badge variant="secondary" className="text-xs">
-                        {(page - 1) * perPage + idx + 1}
-                      </Badge>
-                    </div>
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                      {p.avatar ? (
-                        <img src={p.avatar} alt={`Avatar di ${p.nickname}`} className="w-12 h-12 object-cover" />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">N/A</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{p.nickname}</p>
-                      <div className="mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          Punti: {Number(p.totalPoints).toLocaleString()}
+              </div>
+            ) : filteredPlayers.length === 0 ? (
+              <Card className="p-6 text-center">Nessun giocatore trovato</Card>
+            ) : (
+              <div className="overflow-y-auto">
+                {pageItems.map((p, idx) => (
+                  <Link
+                    key={p.id}
+                    href={`/players/${encodeURIComponent(p.id)}`}
+                    className="block no-underline mb-2 last:mb-0"
+                  >
+                    <Card className="p-3 flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
+                      <div className="w-10 text-center">
+                        <Badge variant="secondary" className="text-xs">
+                          {(page - 1) * perPage + idx + 1}
                         </Badge>
                       </div>
-                    </div>
-                  </Card>
-              </Link>
-            ))}
-            {filteredPlayers.length > perPage && (
-              <Pagination className="mt-2">
-                <PaginationContent className="flex-wrap">
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); setPage(Math.max(1, page - 1)); }}
-                    />
-                  </PaginationItem>
-                  {page > 2 && (
-                    <PaginationItem>
-                      <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(1); }}>1</PaginationLink>
-                    </PaginationItem>
-                  )}
-                  {page > 3 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-                  {Array.from({ length: 3 }, (_, i) => page - 1 + i)
-                    .filter((p) => p >= 1 && p <= totalPages)
-                    .map((p) => (
-                      <PaginationItem key={p}>
-                        <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setPage(p); }}>{p}</PaginationLink>
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                        {p.avatar ? (
+                          <img src={p.avatar} alt={`Avatar di ${p.nickname}`} className="w-12 h-12 object-cover" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{p.nickname}</p>
+                        <div className="mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            Punti: {Number(p.totalPoints).toLocaleString()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+                {filteredPlayers.length > perPage && (
+                  <Pagination className="mt-2">
+                    <PaginationContent className="flex-wrap">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setPage(Math.max(1, page - 1)); }}
+                        />
                       </PaginationItem>
-                    ))}
-                  {page < totalPages - 2 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-                  {page < totalPages - 1 && (
-                    <PaginationItem>
-                      <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(totalPages); }}>{totalPages}</PaginationLink>
-                    </PaginationItem>
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); setPage(Math.min(totalPages, page + 1)); }}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                      {page > 2 && (
+                        <PaginationItem>
+                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(1); }}>1</PaginationLink>
+                        </PaginationItem>
+                      )}
+                      {page > 3 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      {Array.from({ length: 3 }, (_, i) => page - 1 + i)
+                        .filter((p) => p >= 1 && p <= totalPages)
+                        .map((p) => (
+                          <PaginationItem key={p}>
+                            <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setPage(p); }}>{p}</PaginationLink>
+                          </PaginationItem>
+                        ))}
+                      {page < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      {page < totalPages - 1 && (
+                        <PaginationItem>
+                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(totalPages); }}>{totalPages}</PaginationLink>
+                        </PaginationItem>
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setPage(Math.min(totalPages, page + 1)); }}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </div>
             )}
-          </div>
-        )}
           </TabsContent>
         </Tabs>
       </main>

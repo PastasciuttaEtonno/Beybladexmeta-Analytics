@@ -18,197 +18,172 @@ function seasonForDate(dateStr: string | null | undefined): string {
   }
 }
 
-function participantMultiplier(n: number | null | undefined): number {
-  const num = Number(n || 0);
-  if (!Number.isFinite(num) || num <= 0) return 1.0;
-  const clamped = Math.max(8, Math.min(num, 256));
-  const linear = clamped / 16;
-  const min = 0.75;
-  const max = 8.0;
-  return Math.max(min, Math.min(linear, max));
+// New scoring table based on placement
+function calculatePoints(placement: number): number {
+  if (placement === 1) return 100;
+  if (placement === 2) return 80;
+  if (placement === 3) return 65;
+  if (placement === 4) return 55;
+  if (placement >= 5 && placement <= 8) return 40;
+  if (placement >= 9 && placement <= 16) return 25;
+  if (placement >= 17 && placement <= 32) return 10;
+  if (placement >= 33 && placement <= 64) return 5;
+  if (placement >= 65) return 2;
+  return 0;
 }
 
 export async function recalculateAllRegionalStats(): Promise<{ inserted: number }> {
-  await db.execute(sql`DELETE FROM player_regional_stats`);
+  // Clear existing stats for Challengermode. 
+  // Note: If we had other platforms, we should filter by platform = 'challengermode'
+  await db.execute(sql`DELETE FROM player_regional_stats WHERE platform = 'challengermode'`);
+
+  // Fetch all match results. 
+  // Note: match results table (cm_match_results) is populated from the external JSONs via the refresh mechanism.
+  // We rely on the refresh mechanism to populate cm_match_results correctly with ALL participants.
+  // Wait, the previous logic populated cm_match_results ONLY for top 4 during claim.
+  // The user requirement says: "Itera su tutti i partecipanti presenti nel JSON (row.data)".
+  // This implies we should be reading from `external_api_cache` where the tournament details are stored!
+  // BUT the instruction says: "Itera su tutti i partecipanti presenti nel JSON (row.data)".
+  // row.data refers to `external_api_cache` data probably?
+  // Let's look at how the data is structured. 
+  // Actually, the user says "Modifica server/lib/regionalScoring.ts".
+  // And "Itera su tutti i partecipanti presenti nel JSON (row.data)".
+
+  // Queries external_api_cache for tournament details
   const rows = await db.execute(sql`
-    SELECT r.tournament_id, r.player_id, r.piazzamento, r.numero_partecipanti, r.data_torneo, p.nickname AS player_name, tv.region
-    FROM cm_match_results r
-    JOIN tournaments_view tv ON tv.id = r.tournament_id
-    LEFT JOIN cm_players p ON p.id = r.player_id
-    WHERE tv.region IS NOT NULL
+    SELECT c.data, tv.region
+    FROM external_api_cache c
+    JOIN tournaments_view tv ON tv.id = substring(c.cache_key from 'cm:tournamentDetail:(.*)')
+    WHERE c.cache_key LIKE 'cm:tournamentDetail:%'
+      AND tv.region IS NOT NULL
   `);
-  const byTournamentPlayer = new Map<string, { playerId: string; playerName: string; region: string; season: string; placement: number; participants: number; tournamentId: string }>();
-  for (const r of rows.rows as any[]) {
-    const tournamentId = String(r.tournament_id);
-    const playerId = String(r.player_id);
-    const key = `${tournamentId}|${playerId}`;
-    const placement = Number(r.piazzamento || 0) || 0;
-    const existing = byTournamentPlayer.get(key);
-    const season = seasonForDate(r.data_torneo ? String(r.data_torneo) : null);
-    const playerName = r.player_name ? String(r.player_name) : playerId;
-    const region = r.region ? String(r.region) : "";
-    const participants = Number(r.numero_partecipanti || 0) || 0;
-    if (!existing) {
-      byTournamentPlayer.set(key, { playerId, playerName, region, season, placement, participants, tournamentId });
-    } else {
-      if (placement > 0 && (existing.placement === 0 || placement < existing.placement)) {
-        existing.placement = placement;
-        existing.participants = participants;
+
+  const agg = new Map<AggregateKey, {
+    playerId: string;
+    playerName: string;
+    region: string;
+    season: string;
+    platform: string;
+    points: number;
+    tournamentsPlayed: number;
+    wins: number;
+    top4: number
+  }>();
+
+  for (const row of rows.rows as any[]) {
+    const data = row.data as any; // ExternalTournamentDetail
+    const region = String(row.region);
+
+    // Determine season from startedAt
+    const startedAt = data.schedule?.startedAt;
+    const season = seasonForDate(startedAt);
+
+    // Parse lineups
+    const lineups = data.attendance?.signups?.lineups || [];
+
+    // Track unique players per tournament to avoid double counting if bad data
+    const playersInTournament = new Set<string>();
+
+    for (const lineup of lineups) {
+      const displayPlacement = lineup.placement?.displayPlacement;
+      let placement = 999999;
+
+      // Parse placement
+      if (displayPlacement) {
+        if (/^\d+$/.test(displayPlacement)) {
+          placement = parseInt(displayPlacement, 10);
+        } else {
+          // Handle "1st", "2nd" etc if necessary, though CM API usually gives integer-like
+          const m = displayPlacement.match(/(\d+)/);
+          if (m) placement = parseInt(m[1], 10);
+        }
+      }
+
+      const members = lineup.members || [];
+      for (const member of members) {
+        const user = member.user;
+        if (!user || !user.userId) continue;
+
+        const playerId = user.userId;
+        const username = user.username || "Unknown";
+
+        if (playersInTournament.has(playerId)) continue;
+        playersInTournament.add(playerId);
+
+        const key: AggregateKey = `${playerId}|${region}|${season}`;
+
+        let stats = agg.get(key);
+        if (!stats) {
+          stats = {
+            playerId,
+            playerName: username,
+            region,
+            season,
+            platform: 'challengermode',
+            points: 0,
+            tournamentsPlayed: 0,
+            wins: 0,
+            top4: 0
+          };
+          agg.set(key, stats);
+        }
+
+        // Update stats
+        stats.tournamentsPlayed += 1;
+        const pts = calculatePoints(placement);
+        stats.points += pts;
+
+        if (placement === 1) stats.wins += 1;
+        if (placement <= 4) stats.top4 += 1;
       }
     }
   }
-  const agg = new Map<AggregateKey, { playerId: string; playerName: string; region: string; season: string; points: number; tournamentsPlayed: number; wins: number; top4: number }>();
-  for (const rec of byTournamentPlayer.values()) {
-    const k: AggregateKey = `${rec.playerId}|${rec.region}|${rec.season}`;
-    let current = agg.get(k);
-    if (!current) {
-      current = { playerId: rec.playerId, playerName: rec.playerName, region: rec.region, season: rec.season, points: 0, tournamentsPlayed: 0, wins: 0, top4: 0 };
-      agg.set(k, current);
-    }
-    current.tournamentsPlayed += 1;
-    let pts = 0;
-    if (rec.placement === 1) {
-      pts = 15;
-      current.wins += 1;
-      current.top4 += 1;
-    } else if (rec.placement === 2) {
-      pts = 10;
-      current.top4 += 1;
-    } else if (rec.placement === 3) {
-      pts = 7;
-      current.top4 += 1;
-    } else if (rec.placement === 4) {
-      pts = 5;
-      current.top4 += 1;
-    } else {
-      pts = 0;
-    }
-    if (rec.placement >= 1 && rec.placement <= 4) {
-      const mult = participantMultiplier(rec.participants);
-      pts = Math.round(pts * mult);
-    }
-    current.points += pts;
-  }
-  const values = Array.from(agg.values()).map((v) => ({
+
+  const values = Array.from(agg.values()).map(v => ({
     playerId: v.playerId,
     playerName: v.playerName,
     region: v.region,
     season: v.season,
+    platform: v.platform,
     points: v.points,
     tournamentsPlayed: v.tournamentsPlayed,
     wins: v.wins,
     top4: v.top4,
+    updatedAt: new Date()
   }));
+
   if (values.length > 0) {
+    // Batch insert/update
+    // We can use a loop for safety or huge insert
+    // For now, assuming manageable size
     await db.insert(playerRegionalStats).values(values).onConflictDoUpdate({
-      target: [playerRegionalStats.playerId, playerRegionalStats.region, playerRegionalStats.season],
+      target: [playerRegionalStats.playerId, playerRegionalStats.region, playerRegionalStats.season, playerRegionalStats.platform],
       set: {
         points: sql`excluded.points`,
-        tournaments_played: sql`excluded.tournaments_played`,
+        tournamentsPlayed: sql`excluded.tournaments_played`,
         wins: sql`excluded.wins`,
         top4: sql`excluded.top4`,
-        updated_at: sql`now()`,
-      } as any,
+        updatedAt: sql`now()`,
+        playerName: sql`excluded.player_name` // Update name if changed
+      }
     });
   }
+
   return { inserted: values.length };
 }
 
+// We remove the per-tournament recalculation because it's complex to do partial updates with global points
+// Actually, the previous implementation did per-tournament calc. 
+// But now we are scanning ALL JSONs to rebuild the stats.
+// So we can keep this empty or aliasing to full recalc if needed, but for now let's just export the main one.
 export async function recalculateRegionalStatsForTournament(tournamentId: string): Promise<{ inserted: number }> {
-  const pidRows = await db.execute(sql`
-    SELECT DISTINCT player_id
-    FROM cm_match_results
-    WHERE tournament_id = ${tournamentId}
-  `);
-  const playerIds = (pidRows.rows as any[]).map((r) => String(r.player_id)).filter((s) => !!s);
-  if (playerIds.length === 0) return { inserted: 0 };
-  let total = 0;
-  for (const playerId of playerIds) {
-    const rows = await db.execute(sql`
-      SELECT r.tournament_id, r.player_id, r.piazzamento, r.numero_partecipanti, r.data_torneo, p.nickname AS player_name, tv.region
-      FROM cm_match_results r
-      JOIN tournaments_view tv ON tv.id = r.tournament_id
-      LEFT JOIN cm_players p ON p.id = r.player_id
-      WHERE tv.region IS NOT NULL AND r.player_id = ${playerId}
-    `);
-    const byTournamentPlayer = new Map<string, { playerId: string; playerName: string; region: string; season: string; placement: number; participants: number; tournamentId: string }>();
-    for (const r of rows.rows as any[]) {
-      const tid = String(r.tournament_id);
-      const pid = String(r.player_id);
-      const key = `${tid}|${pid}`;
-      const placement = Number(r.piazzamento || 0) || 0;
-      const existing = byTournamentPlayer.get(key);
-      const season = seasonForDate(r.data_torneo ? String(r.data_torneo) : null);
-      const playerName = r.player_name ? String(r.player_name) : pid;
-      const region = r.region ? String(r.region) : "";
-      const participants = Number(r.numero_partecipanti || 0) || 0;
-      if (!existing) {
-        byTournamentPlayer.set(key, { playerId: pid, playerName, region, season, placement, participants, tournamentId: tid });
-      } else {
-        if (placement > 0 && (existing.placement === 0 || placement < existing.placement)) {
-          existing.placement = placement;
-          existing.participants = participants;
-        }
-      }
-    }
-    const agg = new Map<AggregateKey, { playerId: string; playerName: string; region: string; season: string; points: number; tournamentsPlayed: number; wins: number; top4: number }>();
-    for (const rec of byTournamentPlayer.values()) {
-      const k: AggregateKey = `${rec.playerId}|${rec.region}|${rec.season}`;
-      let current = agg.get(k);
-      if (!current) {
-        current = { playerId: rec.playerId, playerName: rec.playerName, region: rec.region, season: rec.season, points: 0, tournamentsPlayed: 0, wins: 0, top4: 0 };
-        agg.set(k, current);
-      }
-      current.tournamentsPlayed += 1;
-      let pts = 0;
-      if (rec.placement === 1) {
-        pts = 15;
-        current.wins += 1;
-        current.top4 += 1;
-      } else if (rec.placement === 2) {
-        pts = 10;
-        current.top4 += 1;
-      } else if (rec.placement === 3) {
-        pts = 7;
-        current.top4 += 1;
-      } else if (rec.placement === 4) {
-        pts = 5;
-        current.top4 += 1;
-      } else {
-        pts = 0;
-      }
-      if (rec.placement >= 1 && rec.placement <= 4) {
-        const mult = participantMultiplier(rec.participants);
-        pts = Math.round(pts * mult);
-      }
-      current.points += pts;
-    }
-    const values = Array.from(agg.values()).map((v) => ({
-      playerId: v.playerId,
-      playerName: v.playerName,
-      region: v.region,
-      season: v.season,
-      points: v.points,
-      tournamentsPlayed: v.tournamentsPlayed,
-      wins: v.wins,
-      top4: v.top4,
-    }));
-    await db.transaction(async (tx: any) => {
-      await tx.execute(sql`DELETE FROM player_regional_stats WHERE player_id = ${playerId}`);
-      if (values.length > 0) {
-        await tx.insert(playerRegionalStats).values(values).onConflictDoUpdate({
-          target: [playerRegionalStats.playerId, playerRegionalStats.region, playerRegionalStats.season],
-          set: {
-            points: sql`excluded.points`,
-            tournaments_played: sql`excluded.tournaments_played`,
-            wins: sql`excluded.wins`,
-            top4: sql`excluded.top4`,
-            updated_at: sql`now()`,
-          } as any,
-        });
-      }
-    });
-    total += values.length;
-  }
-  return { inserted: total };
+  // With the new architecture (reading from Cache JSONs directly), 
+  // it's safer to just run a full recalc or at least fetch that specific JSON and update.
+  // However, since the user asked for "recalculateAllRegionalStats", we will use that as the primary engine.
+  // For performance, we could implement a single-tournament updater, but let's stick to the request for now.
+  // We can just call the main function here if we want to support the hook, 
+  // OR just leave it as a no-op since the "Claim" flow might verify top 4 but we want the background job to handle stats.
+  // Better yet: just run the full recalc. It's safe.
+  return recalculateAllRegionalStats();
 }
+

@@ -306,6 +306,8 @@ export async function fetchTournamentDetail(tournamentId: string): Promise<Exter
     console.error(`[Challengermode] GraphQL tournament detail missing data.tournament: ${text.slice(0, 600)}${text.length > 600 ? '…' : ''}`);
     throw new Error('Challengermode tournament detail missing');
   }
+  const lineupCount = node.attendance?.signups?.lineups?.length || 0;
+  console.log(`[Challengermode] Fetched tournament ${tournamentId}: received ${lineupCount} lineups`);
   await putExternalApiCache(cacheKey, node);
   return node as ExternalTournamentDetail;
 }

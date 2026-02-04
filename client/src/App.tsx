@@ -31,27 +31,27 @@ function AppRoutes() {
         <Home />
         <BottomNav />
       </Route>
-      
+
       <Route path="/analytics">
         <Analytics />
         <BottomNav />
       </Route>
-      
+
       <Route path="/favorites">
         <Favorites />
         <BottomNav />
       </Route>
-      
+
       <Route path="/tournaments">
         <Tournaments />
         <BottomNav />
       </Route>
-      
+
       <Route path="/tournaments/:id">
         <TournamentDetail />
         <BottomNav />
       </Route>
-      
+
       <Route path="/profile">
         <Profile />
         <BottomNav />
@@ -90,7 +90,7 @@ export default function App() {
     useEffect(() => {
       const paramForce = new URLSearchParams(window.location.search).get('showCmBanner');
       if (paramForce === '1') { setOpen(true); return; }
-      const dismissedAtStr = localStorage.getItem("cm_auth_info_dismissed_at");
+      const dismissedAtStr = localStorage.getItem("challonge_auth_info_dismissed_at");
       if (!dismissedAtStr) { setOpen(true); return; }
       const dismissedAt = new Date(dismissedAtStr).getTime();
       const now = Date.now();
@@ -100,7 +100,7 @@ export default function App() {
       }
     }, []);
     const close = () => {
-      localStorage.setItem("cm_auth_info_dismissed_at", new Date().toISOString());
+      localStorage.setItem("challonge_auth_info_dismissed_at", new Date().toISOString());
       setOpen(false);
     };
     if (!open) return null;
@@ -108,7 +108,7 @@ export default function App() {
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-md pointer-events-auto">
         <div className="rounded-md border bg-background shadow-lg p-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">Autenticazione con Challengermode disponibile e funzionante 🐱</p>
+            <p className="text-sm text-muted-foreground">autenticazione con challonge ora disponibile! 😸</p>
             <div className="flex items-center gap-2">
               {!user?.challengerId && (
                 <Button type="button" size="sm" onClick={() => { window.location.href = "/login"; }}>

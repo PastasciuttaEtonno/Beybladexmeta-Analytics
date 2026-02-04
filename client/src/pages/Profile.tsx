@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
@@ -13,6 +13,7 @@ import { useLocation, Link } from "wouter";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import { Seo } from "@/components/Seo";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Camera,
   LogOut,
@@ -37,9 +38,26 @@ export default function Profile() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+
   const [tosOpen, setTosOpen] = useState(false);
 
 
+  // Linking State
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+    if (error) {
+      toast({
+        title: "Account Linking Error",
+        description: decodeURIComponent(error),
+        variant: "destructive",
+      });
+      // Remove error from URL without reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [toast]);
   const handleSaveName = async () => {
     if (!displayName.trim()) {
       toast({
@@ -118,6 +136,9 @@ export default function Profile() {
     }
   };
 
+
+
+
   const handleSettingClick = (label: string) => {
     let description = "";
     switch (label) {
@@ -156,30 +177,7 @@ export default function Profile() {
                 </h2>
               </div>
             </div>
-            {!user?.challengerId && (
-              <div className="mt-3 mb-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => { window.location.href = "/api/challenger/login"; }}
-                >
-                  Collega account Challengermode
-                </Button>
-              </div>
-            )}
-            {!user?.challongeId && (
-              <div className="mt-3 mb-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full border-orange-500 text-orange-500 hover:bg-orange-500/10"
-                  onClick={() => { window.location.href = "/api/challonge/login"; }}
-                >
-                  Collega account Challonge
-                </Button>
-              </div>
-            )}
+            {/* Old Link buttons removed */}
             {!user?.challengerId && (
               isEditingName ? (
                 <div className="space-y-3">
@@ -230,6 +228,53 @@ export default function Profile() {
             )}
           </Card>
         )}
+
+
+
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground px-1">
+            Account Collegati
+          </h2>
+          <Card className="p-4 space-y-6">
+            {/* Challengermode Section */}
+            <div className="space-y-2">
+
+              {user?.challengerId ? (
+                <div className="p-3 bg-green-500/10 text-green-700 dark:text-green-400 rounded-md text-sm border border-green-500/20">
+                  Challengermode: <strong>{(user as any).challengermodeUsername || user.challengerId}</strong>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full bg-[#171A21] text-white hover:bg-[#171A21]/90 border-0"
+                  onClick={() => { window.location.href = "/api/challenger/login"; }}
+                >
+                  Collega account Challengermode
+                </Button>
+              )}
+            </div>
+
+            {/* Challonge Section */}
+            <div className="space-y-2 pt-4 border-t">
+
+              {(user as any)?.challongeUsername || user?.challongeId ? (
+                <div className="p-3 bg-orange-500/10 text-orange-700 dark:text-orange-400 rounded-md text-sm border border-orange-500/20">
+                  Challonge: <strong>{(user as any).challongeUsername || "Challonge User"}</strong>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                  onClick={() => { window.location.href = "/api/challonge/login"; }}
+                >
+                  Collega account Challonge
+                </Button>
+              )}
+            </div>
+          </Card>
+        </div>
 
         {user?.challengerId && (
           <Card className="p-6">
@@ -379,6 +424,7 @@ export default function Profile() {
                 <li>Technical Data: IP Address (for security, abuse prevention, and rate limiting); Session Cookies ; minimized technical logs of requests (date, time, action) used for security and debugging.</li>
                 <li>Third-Party Public Data: Public tournament and profile data retrieved from sources like Challengermode, processed solely for statistical display and metagame analysis.</li>
                 <li>Challengermode OAuth: used to link your Challengermode account to your Beybladexmeta account, enabling access to Challengermode-specific features.</li>
+                <li>Challonge OAuth: used to link your Challonge account to your Beybladexmeta account, enabling access to Challonge-specific features.</li>
               </ul>
             </div>
 
@@ -406,7 +452,7 @@ export default function Profile() {
                 <li>Email Provider for essential communications.</li>
                 <li>Google reCAPTCHA for anti-bot protection (may set functional cookies).</li>
                 <li>Hosting and Storage Services for infrastructure and database.</li>
-                <li>External Data Sources (Challengermode) for public tournament and profile data.</li>
+                <li>External Data Sources (Challengermode, Challonge) for public tournament and profile data.</li>
                 <li>BeybladeWiki for images.</li>
               </ul>
             </div>
