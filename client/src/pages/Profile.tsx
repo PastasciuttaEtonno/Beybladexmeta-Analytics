@@ -168,6 +168,18 @@ export default function Profile() {
                 </Button>
               </div>
             )}
+            {!user?.challongeId && (
+              <div className="mt-3 mb-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                  onClick={() => { window.location.href = "/api/challonge/login"; }}
+                >
+                  Collega account Challonge
+                </Button>
+              </div>
+            )}
             {!user?.challengerId && (
               isEditingName ? (
                 <div className="space-y-3">
@@ -247,14 +259,12 @@ export default function Profile() {
                 <span className="font-medium">Dark Mode</span>
               </div>
               <div
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  theme === "dark" ? "bg-primary" : "bg-muted"
-                }`}
+                className={`w-12 h-6 rounded-full transition-colors ${theme === "dark" ? "bg-primary" : "bg-muted"
+                  }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                    theme === "dark" ? "translate-x-6" : "translate-x-0.5"
-                  } mt-0.5`}
+                  className={`w-5 h-5 rounded-full bg-white transition-transform ${theme === "dark" ? "translate-x-6" : "translate-x-0.5"
+                    } mt-0.5`}
                 />
               </div>
             </button>

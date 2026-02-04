@@ -4,6 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { registerRoutes } from "./routes";
 import { registerChallengerAuth } from "./auth-challenger";
+import { registerChallongeAuth } from "./auth-challonge";
 import fs from "fs";
 import path from "path";
 
@@ -51,18 +52,18 @@ declare module 'http' {
 app.use((req, res, next) => {
   // Prevent clickjacking attacks
   res.setHeader('X-Frame-Options', 'DENY');
-  
+
   // Prevent MIME type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  
+
   // Enable XSS protection
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  
+
   // Strict Transport Security (HSTS) - only in production
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
-  
+
   // Content Security Policy
   // Allow Google reCAPTCHA Enterprise resources
   res.setHeader(
@@ -79,7 +80,7 @@ app.use((req, res, next) => {
         const candidate = process.env.PUBLIC_MINIO_URL || process.env.VITE_PUBLIC_MINIO_URL || '';
         try {
           if (candidate) origins.push(new URL(candidate).origin);
-        } catch {}
+        } catch { }
         return `connect-src ${origins.join(' ')}`;
       })(),
       // invisible v3 may create iframes
@@ -89,7 +90,7 @@ app.use((req, res, next) => {
       "object-src 'none'",
     ].join('; ')
   );
-  
+
   next();
 });
 
@@ -168,16 +169,16 @@ app.use((req, res, next) => {
         // Add connection timeout to prevent hanging
         connectionTimeoutMillis: 5000,
       });
-      
+
       // Test the connection first with a timeout
       const testConnection = async () => {
         const client = await pgPool.connect();
         await client.query('SELECT 1');
         client.release();
       };
-      
+
       await testConnection();
-      
+
       sessionStore = new PgStore({
         pool: pgPool,
         tableName: 'session',
@@ -210,6 +211,7 @@ app.use((req, res, next) => {
   }));
 
   registerChallengerAuth(app);
+  registerChallongeAuth(app);
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

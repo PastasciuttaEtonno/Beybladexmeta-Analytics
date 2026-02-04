@@ -23,7 +23,7 @@ function resolveRecaptchaSiteKey(): string | null {
       const url = new URL(script.src);
       const key = url.searchParams.get("render");
       if (key) return key;
-    } catch {}
+    } catch { }
   }
   return null;
 }
@@ -235,6 +235,16 @@ export default function Login() {
           data-testid="button-login-challengermode"
         >
           Sign in with Challengermode
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-12 border-[#ff9100] text-[#ff9100] hover:bg-[#ff9100]/10 hover:text-[#ff9100]"
+          onClick={() => { window.location.href = "/api/challonge/login"; }}
+          data-testid="button-login-challonge"
+        >
+          Sign in with Challonge
         </Button>
 
         <div className="text-xs text-center text-muted-foreground">

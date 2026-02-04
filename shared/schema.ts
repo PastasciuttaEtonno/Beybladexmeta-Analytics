@@ -1,96 +1,57 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date, jsonb, pgView } from "drizzle-orm/pg-core";
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, integer, doublePrecision, primaryKey, boolean, timestamp, index, date, jsonb, pgView, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ----------------------------------------------------------------------
+// 1. AUTH & SESSIONI
+// ----------------------------------------------------------------------
+
 export const users = pgTable("users", {
-  // --- Colonne esistenti ---
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
-
-  // 1. MODIFICATA: Rinominata da 'password'
   password_hash: text("password_hash").notNull(),
-
   displayName: text("display_name").notNull(),
   photoURL: text("photo_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
-
-  // 2. AGGIUNTE: Nuove colonne per la verifica
   is_verified: boolean("is_verified").notNull().default(false),
   verification_token: text("verification_token"),
-  verification_token_expires_at: timestamp("verification_token_expires_at", {
-    withTimezone: true,
-  }),
+  verification_token_expires_at: timestamp("verification_token_expires_at", { withTimezone: true }),
   challengerId: text("challenger_id").unique(),
+  challongeId: text("challonge_id").unique(),
 }, (table) => {
-  // 3. AGGIUNTI: Indici per le performance
   return {
-    // L'indice su 'email' è già gestito da .unique()
-    // ma aggiungerlo qui si allinea agli indici creati manualmente.
     emailIdx: index("users_email_idx").on(table.email),
     tokenIdx: index("users_token_idx").on(table.verification_token),
   };
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
+export const session = pgTable("session", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+}, (table) => ({
+  expireIdx: index("session_expire_idx").on(table.expire),
+}));
+
+// ----------------------------------------------------------------------
+// 2. ANAGRAFICA CLUB
+// ----------------------------------------------------------------------
+
+export const clubs = pgTable("clubs", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  region: text("region"),
+  city: text("city"),
+  logo: text("logo"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const loginSchema = z.object({
-  email: z.string()
-    .email()
-    .max(320)
-    .transform((s) => s.trim().toLowerCase()),
-  password: z.string()
-    .min(8)
-    .max(128)
-    .transform((s) => s.trim()),
-});
+export const insertClubSchema = createInsertSchema(clubs);
 
-export const registerSchema = z.object({
-  email: z.string()
-    .email()
-    .max(320)
-    .transform((s) => s.trim().toLowerCase()),
-  password: z.string()
-    .min(8)
-    .max(128)
-    .transform((s) => s.trim())
-    .superRefine((val, ctx) => {
-      if (!/[a-z]/.test(val)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one lowercase letter" });
-      }
-      if (!/[A-Z]/.test(val)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one uppercase letter" });
-      }
-      if (!/[0-9]/.test(val)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one number" });
-      }
-      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]/.test(val)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one special character" });
-      }
-    }),
-  displayName: z.string()
-    .min(1)
-    .max(100)
-    .transform((s) => s.replace(/\s+/g, " ").trim()),
-  captchaToken: z.string().min(10).max(4000).transform((s) => s.trim()),
-});
-
-export const updateProfileSchema = z.object({
-  displayName: z.string()
-    .min(1)
-    .max(100)
-    .transform((s) => s.replace(/\s+/g, " ").trim())
-    .optional(),
-  photoURL: z.string().max(500).transform((s) => s.trim()).optional(),
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-export type LoginInput = z.infer<typeof loginSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+// ----------------------------------------------------------------------
+// 3. STATISTICHE DI GIOCO (COMPONENTI)
+// ----------------------------------------------------------------------
 
 export const comboStats = pgTable("combo_stats", {
   blade: text("blade").notNull(),
@@ -109,7 +70,7 @@ export const comboStats = pgTable("combo_stats", {
 }));
 
 export const bladeStats = pgTable("blade_stats", {
-  blade: text("blade").primaryKey(),
+  blade: text("blade").notNull(),
   season: text("season").notNull(),
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
@@ -119,13 +80,17 @@ export const bladeStats = pgTable("blade_stats", {
   pk: primaryKey({ columns: [table.blade, table.season] })
 }));
 
+// MODIFICATA: Aggiunta season e Primary Key composta
 export const assistBladeStats = pgTable("assist_blade_stats", {
-  assistBlade: text("assist_blade").primaryKey(),
+  assistBlade: text("assist_blade").notNull(),
+  season: text("season").notNull(), // <--- Aggiunta
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
-});
+}, (table) => ({
+  pk: primaryKey({ columns: [table.assistBlade, table.season] }) // <--- PK Composta
+}));
 
 export const ratchetStats = pgTable("ratchet_stats", {
   ratchet: text("ratchet").notNull(),
@@ -150,33 +115,21 @@ export const bitStats = pgTable("bit_stats", {
   pk: primaryKey({ columns: [table.bit, table.season] })
 }));
 
+// MODIFICATA: Aggiunta season e Primary Key composta
 export const lockChipStats = pgTable("lock_chip_stats", {
-  lockChip: text("lock_chip").primaryKey(),
+  lockChip: text("lock_chip").notNull(),
+  season: text("season").notNull(), // <--- Aggiunta
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
-});
+}, (table) => ({
+  pk: primaryKey({ columns: [table.lockChip, table.season] }) // <--- PK Composta
+}));
 
-export const insertComboStatsSchema = createInsertSchema(comboStats);
-export const insertBladeStatsSchema = createInsertSchema(bladeStats);
-export const insertAssistBladeStatsSchema = createInsertSchema(assistBladeStats);
-export const insertRatchetStatsSchema = createInsertSchema(ratchetStats);
-export const insertBitStatsSchema = createInsertSchema(bitStats);
-export const insertLockChipStatsSchema = createInsertSchema(lockChipStats);
-
-export type InsertComboStats = z.infer<typeof insertComboStatsSchema>;
-export type ComboStats = typeof comboStats.$inferSelect;
-export type InsertBladeStats = z.infer<typeof insertBladeStatsSchema>;
-export type BladeStats = typeof bladeStats.$inferSelect;
-export type InsertAssistBladeStats = z.infer<typeof insertAssistBladeStatsSchema>;
-export type AssistBladeStats = typeof assistBladeStats.$inferSelect;
-export type InsertRatchetStats = z.infer<typeof insertRatchetStatsSchema>;
-export type RatchetStats = typeof ratchetStats.$inferSelect;
-export type InsertBitStats = z.infer<typeof insertBitStatsSchema>;
-export type BitStats = typeof bitStats.$inferSelect;
-export type InsertLockChipStats = z.infer<typeof insertLockChipStatsSchema>;
-export type LockChipStats = typeof lockChipStats.$inferSelect;
+// ----------------------------------------------------------------------
+// 4. PREFERITI
+// ----------------------------------------------------------------------
 
 export const favoriteCombos = pgTable("favorite_combos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -205,7 +158,61 @@ export const favoriteDeckCombos = pgTable("favorite_deck_combos", {
   lockChip: text("lock_chip").notNull(),
 });
 
-// Safer input schemas with trimming and sane limits
+// ----------------------------------------------------------------------
+// 5. ZOD SCHEMAS & TYPES
+// ----------------------------------------------------------------------
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+
+export const loginSchema = z.object({
+  email: z.string().email().max(320).transform((s) => s.trim().toLowerCase()),
+  password: z.string().min(8).max(128).transform((s) => s.trim()),
+});
+
+export const registerSchema = z.object({
+  email: z.string().email().max(320).transform((s) => s.trim().toLowerCase()),
+  password: z.string().min(8).max(128).transform((s) => s.trim())
+    .superRefine((val, ctx) => {
+      if (!/[a-z]/.test(val)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one lowercase letter" });
+      if (!/[A-Z]/.test(val)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one uppercase letter" });
+      if (!/[0-9]/.test(val)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one number" });
+      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]/.test(val)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Include at least one special character" });
+    }),
+  displayName: z.string().min(1).max(100).transform((s) => s.replace(/\s+/g, " ").trim()),
+  captchaToken: z.string().min(10).max(4000).transform((s) => s.trim()),
+});
+
+export const updateProfileSchema = z.object({
+  displayName: z.string().min(1).max(100).transform((s) => s.replace(/\s+/g, " ").trim()).optional(),
+  photoURL: z.string().max(500).transform((s) => s.trim()).optional(),
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const insertComboStatsSchema = createInsertSchema(comboStats);
+export const insertBladeStatsSchema = createInsertSchema(bladeStats);
+export const insertAssistBladeStatsSchema = createInsertSchema(assistBladeStats);
+export const insertRatchetStatsSchema = createInsertSchema(ratchetStats);
+export const insertBitStatsSchema = createInsertSchema(bitStats);
+export const insertLockChipStatsSchema = createInsertSchema(lockChipStats);
+
+export type InsertComboStats = z.infer<typeof insertComboStatsSchema>;
+export type ComboStats = typeof comboStats.$inferSelect;
+export type InsertBladeStats = z.infer<typeof insertBladeStatsSchema>;
+export type BladeStats = typeof bladeStats.$inferSelect;
+export type InsertAssistBladeStats = z.infer<typeof insertAssistBladeStatsSchema>;
+export type AssistBladeStats = typeof assistBladeStats.$inferSelect;
+export type InsertRatchetStats = z.infer<typeof insertRatchetStatsSchema>;
+export type RatchetStats = typeof ratchetStats.$inferSelect;
+export type InsertBitStats = z.infer<typeof insertBitStatsSchema>;
+export type BitStats = typeof bitStats.$inferSelect;
+export type InsertLockChipStats = z.infer<typeof insertLockChipStatsSchema>;
+export type LockChipStats = typeof lockChipStats.$inferSelect;
+
 export const addFavoriteComboSchema = z.object({
   userId: z.string().min(1).max(64).transform((s) => s.trim()),
   blade: z.string().min(1).max(100).transform((s) => s.trim()),
@@ -251,26 +258,10 @@ export const tournamentResultSchema = z.object({
   descrizione: z.string().max(500).transform((s) => s.trim()).optional(),
   participants: z.number().int().min(6).max(200),
   regione: z.enum([
-    "Piemonte",
-    "Valle d'Aosta",
-    "Lombardia",
-    "Trentino-Alto Adige",
-    "Veneto",
-    "Friuli-Venezia Giulia",
-    "Liguria",
-    "Emilia-Romagna",
-    "Toscana",
-    "Umbria",
-    "Marche",
-    "Lazio",
-    "Abruzzo",
-    "Molise",
-    "Campania",
-    "Puglia",
-    "Basilicata",
-    "Calabria",
-    "Sicilia",
-    "Sardegna",
+    "Piemonte", "Valle d'Aosta", "Lombardia", "Trentino-Alto Adige", "Veneto",
+    "Friuli-Venezia Giulia", "Liguria", "Emilia-Romagna", "Toscana", "Umbria",
+    "Marche", "Lazio", "Abruzzo", "Molise", "Campania", "Puglia", "Basilicata",
+    "Calabria", "Sicilia", "Sardegna",
   ]),
   firstPlaceCombos: z.array(tournamentComboSchema).length(3),
   secondPlaceCombos: z.array(tournamentComboSchema).length(3),
@@ -280,33 +271,16 @@ export const tournamentResultSchema = z.object({
 export type TournamentCombo = z.infer<typeof tournamentComboSchema>;
 export type TournamentResult = z.infer<typeof tournamentResultSchema>;
 
-// Results submitted using external player combos
 export const externalTournamentResultSchema = z.object({
   nomeTorneo: z.string().min(1).max(100).transform((s) => s.trim()),
   dataTorneo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   descrizione: z.string().max(500).transform((s) => s.trim()).optional(),
   participants: z.number().int().min(6).max(200),
   regione: z.enum([
-    "Piemonte",
-    "Valle d'Aosta",
-    "Lombardia",
-    "Trentino-Alto Adige",
-    "Veneto",
-    "Friuli-Venezia Giulia",
-    "Liguria",
-    "Emilia-Romagna",
-    "Toscana",
-    "Umbria",
-    "Marche",
-    "Lazio",
-    "Abruzzo",
-    "Molise",
-    "Campania",
-    "Puglia",
-    "Basilicata",
-    "Calabria",
-    "Sicilia",
-    "Sardegna",
+    "Piemonte", "Valle d'Aosta", "Lombardia", "Trentino-Alto Adige", "Veneto",
+    "Friuli-Venezia Giulia", "Liguria", "Emilia-Romagna", "Toscana", "Umbria",
+    "Marche", "Lazio", "Abruzzo", "Molise", "Campania", "Puglia", "Basilicata",
+    "Calabria", "Sicilia", "Sardegna",
   ]),
   tournamentId: z.string().min(1).max(64).transform((s) => s.trim()),
   firstPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()),
@@ -316,27 +290,33 @@ export const externalTournamentResultSchema = z.object({
 
 export type ExternalTournamentResult = z.infer<typeof externalTournamentResultSchema>;
 
-// Nuove tabelle per Challengermode
-// Anagrafica giocatori (Challengermode)
+// ----------------------------------------------------------------------
+// 6. INTEGRAZIONE CHALLENGERMODE & CHALLONGE
+// ----------------------------------------------------------------------
+
 export const cmPlayers = pgTable("cm_players", {
-  id: varchar("id").primaryKey(), // Challengermode player ID
+  id: varchar("id").primaryKey(),
   nickname: text("nickname").notNull(),
   avatar: text("avatar"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
 });
 
-// Storico combo e risultati per torneo/giocatore
+export const challongePlayers = pgTable("challonge_players", {
+  id: varchar("id").primaryKey(),
+  nickname: text("nickname").notNull(),
+  avatar: text("avatar"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
 export const cmMatchResults = pgTable("cm_match_results", {
   tournamentId: varchar("tournament_id").notNull(),
   playerId: varchar("player_id").notNull().references(() => cmPlayers.id, { onDelete: 'cascade' }),
   comboNumber: integer("combo_number").notNull(),
-  // componenti della combo
   blade: text("blade").notNull(),
   assistBlade: text("assist_blade").notNull(),
   ratchet: text("ratchet").notNull(),
   bit: text("bit").notNull(),
   lockChip: text("lock_chip").notNull(),
-  // campi aggiuntivi per lo scoring
   piazzamento: integer("piazzamento").notNull(),
   numeroPartecipanti: integer("numero_partecipanti").notNull(),
   dataTorneo: date("data_torneo").notNull(),
@@ -364,8 +344,6 @@ export const insertLoginAttemptSchema = createInsertSchema(loginAttempts).omit({
 export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
 
-// Cache table for external API responses (e.g., Challengermode GraphQL)
-// Stores payloads with a TTL via expires_at and simple retrieval by key
 export const externalApiCache = pgTable("external_api_cache", {
   cacheKey: text("cache_key").primaryKey(),
   data: jsonb("data").notNull(),
@@ -375,11 +353,6 @@ export const externalApiCache = pgTable("external_api_cache", {
 export type ExternalApiCache = typeof externalApiCache.$inferSelect;
 export type InsertExternalApiCache = typeof externalApiCache.$inferInsert;
 
-// Players table to store references to external (Challengermode) players
-// Deprecated: players (sostituita da cm_players)
-// Manteniamo i tipi altrove ma usiamo cmPlayers
-
-// Combos per external (Challengermode) tournament and player
 export const externalPlayerCombos = pgTable("external_player_combos", {
   tournamentId: varchar("tournament_id").notNull(),
   playerId: varchar("player_id").notNull().references(() => cmPlayers.id, { onDelete: 'cascade' }),
@@ -389,7 +362,6 @@ export const externalPlayerCombos = pgTable("external_player_combos", {
   ratchet: text("ratchet").notNull(),
   bit: text("bit").notNull(),
   lockChip: text("lock_chip").notNull(),
-  // Campi di scoring opzionali per supportare inserimenti diretti
   placement: integer("placement"),
   totalParticipants: integer("total_participants"),
   tournamentDate: date("tournament_date"),
@@ -402,7 +374,6 @@ export const externalPlayerCombos = pgTable("external_player_combos", {
   comboIdx: index("external_player_combos_combo_idx").on(table.blade, table.ratchet, table.bit),
 }));
 
-// Upsert schema for editing combos for a specific player in a tournament
 export const upsertTournamentPlayerCombosSchema = z.object({
   tournamentId: z.string().min(1).max(64).transform((s) => s.trim()),
   playerId: z.string().min(1).max(128).transform((s) => s.trim()),
@@ -430,9 +401,44 @@ export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type ExternalPlayerCombo = typeof externalPlayerCombos.$inferSelect;
 export type InsertExternalPlayerCombo = typeof externalPlayerCombos.$inferInsert;
 export type UpsertTournamentPlayerCombos = z.infer<typeof upsertTournamentPlayerCombosSchema>;
-
 export type CmMatchResult = typeof cmMatchResults.$inferSelect;
 export type InsertCmMatchResult = typeof cmMatchResults.$inferInsert;
+
+export type ChallongePlayer = typeof challongePlayers.$inferSelect;
+export type InsertChallongePlayer = typeof challongePlayers.$inferInsert;
+
+// ----------------------------------------------------------------------
+// 7. RELATIONS
+// ----------------------------------------------------------------------
+
+export const usersRelations = relations(users, ({ one }) => ({
+  challengerProfile: one(cmPlayers, {
+    fields: [users.challengerId],
+    references: [cmPlayers.id],
+  }),
+  challongeProfile: one(challongePlayers, {
+    fields: [users.challongeId],
+    references: [challongePlayers.id],
+  }),
+}));
+
+export const cmPlayersRelations = relations(cmPlayers, ({ one }) => ({
+  user: one(users, {
+    fields: [cmPlayers.id],
+    references: [users.challengerId],
+  }),
+}));
+
+export const challongePlayersRelations = relations(challongePlayers, ({ one }) => ({
+  user: one(users, {
+    fields: [challongePlayers.id],
+    references: [users.challongeId],
+  }),
+}));
+
+// ----------------------------------------------------------------------
+// 8. VISTE SQL E LEADERBOARD
+// ----------------------------------------------------------------------
 
 export const playerLeaderboardView = pgView("player_leaderboard", {
   playerId: varchar("player_id").primaryKey(),
@@ -450,6 +456,20 @@ export const topComponentSnapshot = pgView("top_component_snapshot", {
   punteggioTotale: doublePrecision("punteggio_totale").notNull(),
   season: text("season").notNull(),
 }).existing();
+
+// VISTA JSON TORNEI (Metadati + Regione)
+export const tournamentsView = pgView("tournaments_view", {
+  id: text("id").notNull(),
+  name: text("name"),
+  date: date("date"),
+  organizerName: text("organizer_name"),
+  region: text("region"),
+  city: text("city"),
+}).existing();
+
+// ----------------------------------------------------------------------
+// 9. STATISTICHE REGIONALI (Leaderboard)
+// ----------------------------------------------------------------------
 
 export const playerRegionalStats = pgTable("player_regional_stats", {
   playerId: text("player_id").notNull(),

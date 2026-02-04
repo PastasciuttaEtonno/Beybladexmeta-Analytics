@@ -7,6 +7,7 @@ interface User {
   photoURL: string | null;
   isAdmin: boolean;
   challengerId?: string | null;
+  challongeId?: string | null;
 }
 
 interface AuthContextType {
@@ -30,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await fetch('/api/auth/me', {
           credentials: 'include',
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);

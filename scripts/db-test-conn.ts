@@ -9,6 +9,7 @@ async function testConn() {
   const password = process.env.PGPASSWORD || "";
 
   const client = new Client({ host, port, user, password, database: "postgres" });
+  console.log(`Connecting to ${host}:${port} as ${user}...`);
   try {
     await client.connect();
     const { rows } = await client.query("SELECT current_user, current_database()");
