@@ -273,46 +273,63 @@ export default function Profile() {
             Storico Nickname / Alias
           </h2>
           <Card className="p-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Aggiungi Nickname</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newAlias}
-                  onChange={(e) => setNewAlias(e.target.value)}
-                  placeholder="Vecchio nickname usato nei tornei..."
-                />
+            {!user?.challongeId ? (
+              <div className="p-3 bg-orange-500/10 text-orange-700 dark:text-orange-400 rounded-md text-sm border border-orange-500/20">
+                <p className="font-medium mb-2">Autenticazione Challonge richiesta</p>
+                <p className="text-xs mb-3">Per richiedere alias devi prima collegare il tuo account Challonge.</p>
                 <Button
-                  onClick={() => createAliasMutation.mutate(newAlias)}
-                  disabled={!newAlias.trim() || createAliasMutation.isPending}
+                  variant="outline"
+                  size="sm"
+                  className="w-full bg-orange-600 text-white hover:bg-orange-700 border-0"
+                  onClick={() => { window.location.href = "/api/challonge/login"; }}
                 >
-                  {createAliasMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : "Richiedi"}
+                  Collega account Challonge
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Dichiara i nickname che hai usato in passato su Challonge/Challengermode per abbinare i risultati ai tornei.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              {aliases?.map((alias: any) => (
-                <div key={alias.id} className="flex items-center justify-between p-2 border rounded-md">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{alias.alias}</span>
-                    {alias.isVerified ? (
-                      <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded border border-green-200 dark:border-green-800">Verificato</span>
-                    ) : (
-                      <span className="text-[10px] bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800">In Attesa</span>
-                    )}
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Aggiungi Nickname</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newAlias}
+                      onChange={(e) => setNewAlias(e.target.value)}
+                      placeholder="Vecchio nickname usato nei tornei..."
+                    />
+                    <Button
+                      onClick={() => createAliasMutation.mutate(newAlias)}
+                      disabled={!newAlias.trim() || createAliasMutation.isPending}
+                    >
+                      {createAliasMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : "Richiedi"}
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteAliasMutation.mutate(alias.id)} disabled={deleteAliasMutation.isPending}>
-                    <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Dichiara i nickname che hai usato in passato su Challonge per abbinare i risultati ai tornei.
+                  </p>
                 </div>
-              ))}
-              {!aliases?.length && (
-                <p className="text-sm text-muted-foreground text-center py-2">Nessun alias registrato.</p>
-              )}
-            </div>
+
+                <div className="space-y-2">
+                  {aliases?.map((alias: any) => (
+                    <div key={alias.id} className="flex items-center justify-between p-2 border rounded-md">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{alias.alias}</span>
+                        {alias.isVerified ? (
+                          <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded border border-green-200 dark:border-green-800">Verificato</span>
+                        ) : (
+                          <span className="text-[10px] bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800">In Attesa</span>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteAliasMutation.mutate(alias.id)} disabled={deleteAliasMutation.isPending}>
+                        <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  {!aliases?.length && (
+                    <p className="text-sm text-muted-foreground text-center py-2">Nessun alias registrato.</p>
+                  )}
+                </div>
+              </>
+            )}
           </Card>
         </div>
 

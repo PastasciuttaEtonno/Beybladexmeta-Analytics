@@ -302,6 +302,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/aliases', requireAuth, async (req, res) => {
     try {
+      // Require Challonge authentication
+      if (!req.user!.challongeId) {
+        return res.status(403).json({ error: 'Devi autenticarti con Challonge per richiedere alias.' });
+      }
+
       const alias = String(req.body.alias || '').trim();
       if (!alias) {
         return res.status(400).json({ error: 'Alias is required' });
