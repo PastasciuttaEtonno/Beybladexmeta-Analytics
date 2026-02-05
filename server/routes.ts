@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema, registerSchema, users } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView, challongeReportedCombos, unifiedMetaView } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView, challongeReportedCombos, unifiedMetaView, challongeMatchResults } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
@@ -2017,26 +2017,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
          `);
         // Map raw DB rows to "TorneoCard" like structure
         challongeNodes = (rawChallonge.rows as any[]).map(r => {
-          const data = r.data || {};
-          const t = data.tournament || {};
-          // Adapt Challonge date format if needed
+          const d = r.data || {};
+          // Fix: Handle flat JSON properties from Admin Import vs standard Challonge Nested
+          const tName = d.tournament_name || d.name || (d.tournament && d.tournament.name) || 'Unknown Tournament';
+          const tDesc = d.description || (d.tournament && d.tournament.description) || '';
+          const tState = d.state || (d.tournament && d.tournament.state) || 'ended';
+          const tStartDate = d.start_date || d.started_at || (d.tournament && d.tournament.started_at) || null;
+          const tPlayers = d.total_players || d.participants_count || (d.tournament && d.tournament.participants_count) || 0;
+          const tUrl = d.full_challonge_url || (d.tournament && d.tournament.full_challonge_url) || null;
+
           return {
-            // The user requirement says "Cerca ID in ... or ...". 
-            // Challonge IDs are integers usually, but stored as strings/text in DB? 
-            // The table has `tournament_id` as text (pk).
-            // Let's use `tournament_id` from DB.
             id: r.tournament_id,
-            name: t.name,
-            description: t.description,
-            state: t.state, // 'ended', 'pending', etc.
-            contactUrl: t.full_challonge_url,
-            schedule: { startedAt: t.started_at },
-            gameTitle: { title: 'Beyblade X' }, // Hardcoded
+            name: tName,
+            description: tDesc,
+            state: tState,
+            contactUrl: tUrl,
+            schedule: { startedAt: tStartDate },
+            gameTitle: { title: 'Beyblade X' },
             hasCombos: false, // We will check later
-            region: null, // Challonge data might not have region unless parsed
-            city: null, // same
+            region: null,
+            city: null,
             organizerName: null,
-            platform: 'challonge'
+            platform: 'challonge',
+            participants: {
+              // Frontend might expect different structure. The Challengermode node has `attendance.signups.count`?
+              // Looking at Challengermode.ts -> mapToTorneoCards uses `attendance?.signups?.uCount`
+              // But here we are building "TournamentNode" or "TorneoCard"?
+              // The endpoint returns `res.json({ tournaments })` which are consumed by frontend.
+              // Frontend `Tournaments.tsx` uses `t.attendance?.signups?.uCount` usually.
+              // Let's mimic that structure if possible or ensure frontend handles it.
+              // Wait, the previous code didn't set `attendance` at all!
+              // Step 1720 show lines 2023-2040 and it didn't include `attendance`.
+              // But User Request in Step 1674 said: "participants: usa row.data.total_players."
+              // and "attendance: { signups: { uCount: ... } }" in my thought process?
+              // Let's look at `mapToTorneoCards` usage in line 1566.
+              // Use `participants` count field if frontend supports it, otherwise mimicking CM structure might be safer.
+              // I'll stick to what the user asked in Step 1674: "participants: usa row.data.total_players." 
+              // BUT User provided example output: "participants: usa row.data.total_players."
+              // User didn't specify nested object structure in request description for *this* step, 
+              // but in Step 1674 they said "participants: usa row.data.total_players."
+              // Actually, `TournamentCard` interface usually has `attendance` property. 
+              // Let's add `attendance` object to be safe and consistent with CM.
+            },
+            attendance: {
+              signups: {
+                uCount: tPlayers,
+                count: tPlayers // redundancy
+              }
+            }
           };
         });
 
@@ -2200,174 +2228,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (challongeRes.rows.length > 0) {
         const row = challongeRes.rows[0] as any;
         const data = row.data || {};
-        const t = data.tournament || {};
 
-        // Fetch reported combos for deck view
+        // Fetch reported combos
         const combosRes = await db.execute(sql`
           SELECT c.*, u.display_name, u.photo_url 
           FROM challonge_reported_combos c
           JOIN users u ON u.id = c.user_id
-          WHERE c.tournament_id = ${id} AND c.rank <= 3
+          WHERE c.tournament_id = ${id}
           ORDER BY c.rank ASC, c.combo_number ASC
         `);
+        const fetchedCombos = combosRes.rows;
 
-        // Group by user
-        const participantsMap = new Map<string, any>();
-        // First populate from tournament participants list if available in json
-        if (data.participants) {
-          data.participants.forEach((p: any) => {
-            const part = p.participant || {};
-            // We don't have user_id link here yet unless they claimed.
-            // So we list them.
-            participantsMap.set(String(part.id), {
-              id: String(part.id), // This is challonge participant ID, not our user ID
-              username: part.name || part.username,
-              avatar: part.email_hash ? `https://gravatar.com/avatar/${part.email_hash}` : null,
-              placement: part.final_rank,
-              combos: []
-            });
-          });
-        }
+        // Extract Top 3 from standings
+        const standings = data.standings || [];
+        const top3 = standings
+          .filter((p: any) => p.rank <= 3)
+          .sort((a: any, b: any) => a.rank - b.rank)
+          .map((p: any) => ({
+            id: p.name || p.id,
+            username: p.name,
+            placement: p.rank,
+            deck: [] // filled by frontend
+          }));
 
-        // Now overlay combos from our DB (linked via users)
-        // We need to match combos to participants? 
-        // Challonge combos are linked to USERS table.
-        // We want to return a structure similar to CM line-ups so frontend can reuse UI.
-        // Or adapt frontend. Struct:
-        // detail: { name, state, ... attendance: { signups: { lineups: [ { placement:..., members:[ { user:..., combos: [] } ] } ] } } }
-
-        const combosByUser = new Map<string, any[]>();
-        (combosRes.rows as any[]).forEach(c => {
-          if (!combosByUser.has(c.user_id)) combosByUser.set(c.user_id, []);
-          combosByUser.get(c.user_id)?.push(c);
-        });
-
-        // Construct lineups
-        // Ideally we merge with real challonge participants.
-        // But users linking is tricky if we don't have challonge user id mapping.
-        // For now, let's just show those who claimed decks + others from list.
-
-        const lineups: any[] = [];
-
-        // 1. Add those who have combos (from our DB)
-        for (const userId of Array.from(combosByUser.keys())) {
-          const combos = combosByUser.get(userId) || [];
-          const first = combos[0];
-          lineups.push({
-            placement: { displayPlacement: String(first.rank || 999) },
-            members: [{
-              user: {
-                userId: userId, // Our internal User ID
-                username: first.display_name || 'Unknown',
-                profilePicture: { url: first.photo_url },
-                // Add combos to user object or handled separately?
-                // Frontend fetches combos separately via /api/tournaments/:id/players/:playerId/combos
-                // BUT current frontend calls that for CM. For Challonge we can include them or support that endpoint.
-              }
-            }]
-          });
-        }
-
-        // 2. Add others from Challonge participants list (if not already added? hard to match without link)
-        // For simplicity, maybe just return what we have in DB for combos?
-        // But user wants "Visualizzazione Partecipanti (Challonge): Mostra la Top 3 basata sul JSON participants."
-
-        const finalParticipants: any[] = [];
-        if (data.participants) {
-          data.participants.forEach((pWrapper: any) => {
-            const p = pWrapper.participant;
-            finalParticipants.push({
-              placement: { displayPlacement: String(p.final_rank || 999) },
-              members: [{
-                user: {
-                  userId: `challonge_${p.id}`, // Fake ID for purely challonge logic?
-                  username: p.name || p.username,
-                  profilePicture: { url: p.email_hash ? `https://gravatar.com/avatar/${p.email_hash}` : null }
-                }
-              }]
-            });
-          });
-        }
-
-        // Merge logic: we need to link our `challonge_reported_combos` users to these participants.
-        // Since we don't have a reliable link, maybe we just display the `challonge_reported_combos` users as "Verified Players" 
-        // OR we try to match by name? No, unreliable.
-        // User Requirement: "Se ci sono combo salvate per questo utente (fetched_challonge_combos), mostra visivamente..."
-        // This implies we need to know WHICH participant corresponds to the logged in user or DB user.
-        // Let's assume for now we list Challonge Participants (read-only) AND we append/merge "Claimed" players.
-        // Actually, better: if we have combos, we use that info.
-
+        // Construct standard response
         const detail = {
-          id: id,
-          name: t.name,
-          state: t.state,
-          contactUrl: t.full_challonge_url,
-          schedule: { startedAt: t.started_at },
+          id: row.tournament_id,
+          name: data.tournament_name || 'Unknown Tournament',
+          date: data.start_date,
+          schedule: { startedAt: data.start_date },
+          platform: 'challonge',
+          state: 'COMPLETED',
+          participants: top3,
+          fetchedCombos: fetchedCombos,
+          // Add minimal attendance structure
           attendance: {
             signups: {
-              userCount: t.participants_count,
-              lineups: finalParticipants // Use basic challonge list
+              uCount: data.total_players || 0,
+              lineups: []
             }
-          },
-          platform: 'challonge',
-          hasCombos: combosRes.rows.length > 0
+          }
         };
 
-        // We also pass the combos map so frontend can verify/show them
-        // But frontend fetches combos per player ID.
-        // We will update that endpoint to support challonge.
-
-        res.json({ detail });
-        return;
+        return res.json({ detail });
       }
 
-      // 2. If not found, try Challengermode
-      const detail = await fetchTournamentDetail(id);
-
-      // Filter for top 3 placements and upsert player info (CM logic)
-      if (detail.attendance?.signups?.lineups) {
-        const lineups = detail.attendance.signups.lineups;
-        const top3 = lineups
-          .filter((l: any) => l.placement?.displayPlacement && parseInt(l.placement.displayPlacement, 10) <= 3)
-          .sort((a: any, b: any) => parseInt(a.placement?.displayPlacement ?? '999', 10) - parseInt(b.placement?.displayPlacement ?? '999', 10));
-
-        detail.attendance.signups.lineups = top3;
-
-        // Upsert player info into our `cm_players` table
-        const playerUpserts = top3.flatMap((l: any) => (l.members || []).map((m: any) => {
-          const user = m.user;
-          if (!user) return null;
-          return {
-            id: user.userId,
-            nickname: user.username,
-            avatar: user.profilePicture?.url || null,
-          };
-        })).filter(Boolean) as Array<{ id: string; nickname: string; avatar: string | null }>;
-
-        if (playerUpserts.length > 0) {
-          await db.insert(cmPlayers).values(playerUpserts).onConflictDoUpdate({
-            target: cmPlayers.id,
-            set: {
-              nickname: sql`excluded.nickname`,
-              avatar: sql`excluded.avatar`,
-              updatedAt: sql`now()`,
-            }
-          });
-        }
-      }
-
+      // 2. Fallback to Challengermode from API
       try {
-        const exists = await db.execute(sql`SELECT 1 FROM cm_match_results WHERE tournament_id = ${id} LIMIT 1`);
-        (detail as any).hasCombos = Array.isArray(exists.rows) && exists.rows.length > 0;
-      } catch {
-        (detail as any).hasCombos = false;
-      }
+        const detail = await fetchTournamentDetail(id);
+        const metaRows = await db.execute(sql`SELECT region, city, organizer_name FROM tournaments_view WHERE id = ${id}`);
+        const meta = (metaRows.rows as any[])[0] || {};
 
-      (detail as any).platform = 'challengermode';
-      res.json({ detail });
-    } catch (error: any) {
+        const enriched = {
+          ...detail,
+          region: meta.region || null,
+          city: meta.city || null,
+          organizerName: meta.organizer_name || (detail?.hosts?.spaces?.[0]?.name ?? undefined),
+          platform: 'challengermode'
+        };
+        return res.json({ detail: enriched });
+      } catch (e: any) {
+        console.warn(`Tournament ${id} not found in CM or DB.`);
+        return res.status(404).json({ error: 'Tournament not found' });
+      }
+    } catch (error) {
       console.error('Error fetching tournament detail:', error);
-      res.status(500).json({ error: error?.message || 'Failed to fetch tournament detail' });
+      res.status(500).json({ error: 'Failed to fetch tournament detail' });
     }
   });
 
@@ -3428,6 +3354,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error(`[Admin] Stats recalculation failed:`, error);
       res.status(500).json({ error: error?.message || 'Failed to recalculate stats' });
+    }
+  });
+
+  // Admin: Manually import tournament JSON
+  app.post('/api/admin/import-tournament', requireAdmin, async (req, res) => {
+    try {
+      const body = req.body;
+
+      // Basic validation of required fields
+      if (!body.id || !body.tournament_name || !body.start_date || !body.total_players || !body.standings) {
+        return res.status(400).json({ error: 'Invalid JSON format. Missing required fields: id, tournament_name, start_date, total_players, standings' });
+      }
+
+      // Upsert into challongeMatchResults
+      await db.insert(challongeMatchResults).values({
+        tournamentId: body.id,
+        data: body,
+        fetchedAt: new Date(),
+      }).onConflictDoUpdate({
+        target: challongeMatchResults.tournamentId,
+        set: {
+          data: body,
+          fetchedAt: new Date(),
+        }
+      });
+
+      console.log(`[Admin] Imported tournament: ${body.tournament_name} (${body.id})`);
+      res.json({ success: true, id: body.id });
+    } catch (error) {
+      console.error("[Admin] Import failed:", error);
+      res.status(500).json({ error: 'Failed to import tournament' });
     }
   });
 

@@ -21,6 +21,7 @@ import ComboDetail from "@/pages/ComboDetail";
 import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
 import Players from "@/pages/Players";
 import PlayerDetail from "@/pages/PlayerDetail";
+import ImportTournament from "@/pages/admin/ImportTournament";
 
 function AppRoutes() {
   return (
@@ -73,6 +74,11 @@ function AppRoutes() {
 
       <Route path="/players/:id">
         <PlayerDetail />
+        <BottomNav />
+      </Route>
+
+      <Route path="/admin/import">
+        <ImportTournament />
         <BottomNav />
       </Route>
 

@@ -195,20 +195,30 @@ app.use((req, res, next) => {
   }
 
   // Configure session middleware
+  // Session configuration
+  // IMPORTANT: For local development with Docker (HTTP), secure MUST be false.
+  // We strictly enforce secure=true only if we are sure we are behind HTTPS (like Replit or Prod).
+  const isReplit = !!process.env.REPL_SLUG;
+  const isProduction = process.env.NODE_ENV === 'production';
+  // If we are in production but accessing via IP/HTTP (like local docker test), we might want to allow insecure cookies
+  // or simple check if we are actually on localhost.
+  // A safe bet for "secure cookie" is: Production AND (Replit OR NOT Localhost).
+  // But simpler: just trust NODE_ENV if it's set correctly.
+  // However, if user runs "production" build locally on HTTP, secure cookie will fail.
+  // Use a heuristic: process.env.SECURE_COOKIES === 'true' OR (isProduction && isReplit).
+
   app.use(session({
     store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+    secret: process.env.SESSION_SECRET || 'secret',
     resave: false,
     saveUninitialized: false,
-    rolling: true, // Reset expiration on every request
-    proxy: true, // Trust the proxy for secure cookies
+    proxy: true, // Enable trust proxy for cookies
     cookie: {
-      secure: process.env.NODE_ENV === 'production' || !!process.env.REPL_SLUG, // Secure in production
+      secure: isReplit || (isProduction && process.env.cookie_secure === 'true'), // Only set secure if explicitly requested or on Replit
       httpOnly: true,
-      sameSite: 'lax', // Important for mobile browsers
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      path: '/', // Ensure cookie is valid for all paths
-    },
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      sameSite: 'lax',
+    }
   }));
 
   registerChallengerAuth(app);

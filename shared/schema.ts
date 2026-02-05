@@ -339,6 +339,24 @@ export const challongeMatchResults = pgTable("challonge_match_results", {
   fetchedAt: timestamp("fetched_at").defaultNow(),
 });
 
+export const userAliases = pgTable("user_aliases", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  platform: text("platform").notNull(), // 'challange', 'manual', etc.
+  alias: text("alias").notNull(),
+  isVerified: boolean("is_verified").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userPlatformAliasIdx: uniqueIndex("user_platform_alias_idx").on(table.userId, table.platform, table.alias),
+}));
+
+export const userAliasesRelations = relations(userAliases, ({ one }) => ({
+  user: one(users, {
+    fields: [userAliases.userId],
+    references: [users.id],
+  }),
+}));
+
 export const loginAttempts = pgTable("login_attempts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   ipAddress: text("ip_address").notNull(),
@@ -418,11 +436,16 @@ export type InsertCmMatchResult = typeof cmMatchResults.$inferInsert;
 export type ChallongePlayer = typeof challongePlayers.$inferSelect;
 export type InsertChallongePlayer = typeof challongePlayers.$inferInsert;
 
+
+
+export type UserAlias = typeof userAliases.$inferSelect;
+export type InsertUserAlias = typeof userAliases.$inferInsert;
+
 // ----------------------------------------------------------------------
 // 7. RELATIONS
 // ----------------------------------------------------------------------
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   challengerProfile: one(cmPlayers, {
     fields: [users.challengerId],
     references: [cmPlayers.id],
@@ -431,6 +454,7 @@ export const usersRelations = relations(users, ({ one }) => ({
     fields: [users.challongeId],
     references: [challongePlayers.id],
   }),
+  aliases: many(userAliases),
 }));
 
 export const cmPlayersRelations = relations(cmPlayers, ({ one }) => ({

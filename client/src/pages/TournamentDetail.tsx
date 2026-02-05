@@ -379,12 +379,59 @@ export default function TournamentDetail() {
 
   const renderLineups = () => {
     const detail = detailResp?.detail;
-    const lineups: any[] = detail?.attendance?.signups?.lineups || [];
+
+    // Unify logic: If Challonge, build lineups from participants + fetchedCombos
+    let lineups: any[] = [];
+
+    if (detail?.platform === 'challonge' && (detail as any).participants) {
+      const parts = (detail as any).participants || [];
+      const fetched = (detail as any).fetchedCombos || [];
+
+      lineups = parts.map((p: any) => {
+        // Match combos by rank
+        const rank = parseInt(p.placement, 10);
+        // Find combos for this rank (assuming backend sends rank in fetchedCombos)
+        // Check schema: challonge_reported_combos has "rank" field. Backend "SELECT c.*" includes it.
+        const matches = fetched.filter((c: any) => c.rank === rank).sort((a: any, b: any) => a.combo_number - b.combo_number);
+
+        let combos: ComboForm[] = [];
+        if (matches.length > 0) {
+          // Map to ComboForm
+          combos = matches.map((m: any) => ({
+            blade: m.blade,
+            assistBlade: m.assist_blade || m.assistBlade,
+            ratchet: m.ratchet,
+            bit: m.bit,
+            lockChip: m.lock_chip || m.lockChip
+          }));
+        }
+
+        // We can inject these combos directly into the render logic if we adapt it, 
+        // OR we can pre-populate playerCombosById. 
+        // Passing them in the member object is cleaner if we adjust the map below.
+        return {
+          placement: { displayPlacement: String(p.placement) },
+          members: [{
+            user: {
+              userId: String(p.id), // Use the ID from backend (name or challonge ID)
+              username: p.username,
+              profilePicture: { url: null } // Avatar not always available
+            },
+            // Attach combos directly for local usage
+            _directCombos: combos
+          }]
+        };
+      });
+    } else {
+      lineups = detail?.attendance?.signups?.lineups || [];
+    }
+
     const sorted = lineups.slice().sort((a, b) => {
       const ap = parseInt(a?.placement?.displayPlacement ?? '999', 10);
       const bp = parseInt(b?.placement?.displayPlacement ?? '999', 10);
       return ap - bp;
     });
+
     if (sorted.length === 0) {
       return <p className="text-sm text-muted-foreground">Nessun dato di classifica disponibile.</p>;
     }
@@ -393,14 +440,9 @@ export default function TournamentDetail() {
         {sorted.map((lu, idx) => {
           const placement = lu?.placement?.displayPlacement ?? `${idx + 1}`;
           const members: any[] = lu?.members || [];
-          // const fakeSelfName = new URLSearchParams(window.location.search || '').get('fakeSelfName');
-          const isSelfInLineup = members.some((m: any) => {
-            const mid = String(m?.user?.userId || '').trim();
-            // const mname = String(m?.user?.username || m?.user?.userId || '').trim();
-            return mid === selfId;
-          });
+
           return (
-            <Card key={idx} className={`border ${isSelfInLineup ? 'border-primary bg-primary/10' : ''}`}>
+            <Card key={idx} className="border">
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Posizione {placement}</CardTitle>
               </CardHeader>
@@ -412,19 +454,51 @@ export default function TournamentDetail() {
                     const url = pic?.url || '';
                     const memberId = String(cmUser?.userId || '').trim();
                     const rawSelfId = String(user?.challengerId || '').trim();
-                    // const selfId = String(new URLSearchParams(window.location.search || '').get('fakeSelf') || rawSelfId).trim();
                     const selfId = rawSelfId;
                     const memberName = cmUser?.username || cmUser?.userId || 'Giocatore';
-                    // const fakeSelfName = new URLSearchParams(window.location.search || '').get('fakeSelfName');
-                    const isSelf = (memberId && memberId === selfId);
+
+                    // For Challonge, we might not have 'selfId' match seamlessly if not linked. 
+                    // But if user matches, we allow edit.
+                    const isSelf = (memberId && memberId === selfId); // Might fail if memberId is a name
+                    // Allow edit if admin for top 3
                     const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 3);
-                    const combosList = (playerCombosById && memberId) ? (playerCombosById[memberId] ?? []) : [];
+
+                    // COMBO RESOLUTION: 
+                    // 1. Check direct attached (Challonge logic)
+                    // 2. Check playerCombosById (CM logic)
+                    let combosList: ComboForm[] = m._directCombos || [];
+                    if (combosList.length === 0 && memberId && playerCombosById[memberId]) {
+                      combosList = playerCombosById[memberId];
+                    }
+
                     return (
                       <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2' : ''}`}
                         onClick={() => {
                           if (!canEdit) return;
                           if (!memberId) return;
+
+                          // If Challonge "Direct combos", we might want to populate edit form with them?
+                          // Yes, setEditCombos logic needs to handle this or the Effect will overwrite it?
+                          // The Effect `useEffect(() => { if (playerCombosResp...)` listens to query.
+                          // If we click, we set `selectedPlayer`. `playerCombosResp` might be empty for Challonge key.
+                          // We should probably set `editCombos` state manually immediately if we have data.
+
                           setSelectedPlayer({ id: memberId, username: String(memberName) });
+
+                          // Auto-detect rank from placement for Challonge
+                          setEditRank(String(placement));
+
+                          if (m._directCombos && m._directCombos.length > 0) {
+                            // Pad to 3
+                            const current = m._directCombos;
+                            const filled = [0, 1, 2].map((k: number) => {
+                              const c = current[k];
+                              return c ? c : { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+                            });
+                            setEditCombos(filled);
+                            // We also need to PREVENT the `useEffect` from overwriting it with empty data if query returns null.
+                            // But query key depends on `selectedPlayer`.
+                          }
                           setEditDialogOpen(true);
                         }}>
                         <div className="flex items-center gap-3">
@@ -436,11 +510,9 @@ export default function TournamentDetail() {
                             </div>
                           )}
                           <span className="text-sm font-medium">{String(memberName)}</span>
-                          {isSelf && (
-                            <>
-                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">Tu</span>
-                              <Pencil className="ml-1 w-4 h-4 text-primary" />
-                            </>
+                          {/* Admin Edit Pencil */}
+                          {canEdit && (
+                            <Pencil className="ml-2 w-4 h-4 text-muted-foreground opacity-50 hover:opacity-100" />
                           )}
                         </div>
                         <div className="mt-2 flex flex-col gap-2 max-w-full">
@@ -465,9 +537,6 @@ export default function TournamentDetail() {
                                     <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="ratchets" name={combo.ratchet} /></div>
                                   )}
                                   <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="bits" name={combo.bit} /></div>
-                                  {/* {combo.lockChip && combo.lockChip !== 'None' && (
-                                    <div className="w-9 h-9 sm:w-10 sm:h-10"><ComponentImage folder="chips" name={combo.lockChip} /></div>
-                                  )} */}
                                 </div>
                               </div>
                             ))
@@ -631,7 +700,7 @@ export default function TournamentDetail() {
                 <DialogHeader>
                   <DialogTitle>
                     {detailResp?.detail?.platform === 'challonge'
-                      ? 'Registra Deck (Challonge)'
+                      ? `Modifica combo: ${selectedPlayer?.username || 'Giocatore'}`
                       : (selectedPlayer ? `Modifica combo: ${selectedPlayer.username}` : 'Modifica combo')}
                   </DialogTitle>
                 </DialogHeader>
@@ -642,23 +711,6 @@ export default function TournamentDetail() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {detailResp?.detail?.platform === 'challonge' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="rank-input">Posizione (Rank) Finale</Label>
-                        <input
-                          id="rank-input"
-                          type="number"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          placeholder="Es. 1, 2, 3"
-                          min={1}
-                          max={3}
-                          value={editRank}
-                          onChange={(e) => setEditRank(e.target.value)}
-                        />
-                        <p className="text-xs text-muted-foreground">Inserisci il tuo piazzamento finale nel torneo.</p>
-                      </div>
-                    )}
-
                     {[0, 1, 2].map((idx) => (
                       <div key={idx} className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0">
                         <div className="flex items-center justify-between">
