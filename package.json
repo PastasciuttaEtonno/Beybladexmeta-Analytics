@@ -15,7 +15,9 @@
     "db:push": "drizzle-kit push",
     "db:migrate:tournaments": "tsx scripts/db-add-tournaments.ts",
     "user:create": "tsx server/create-user.ts",
-    "players:view": "tsx scripts/player-leaderboard-view.ts"
+    "players:view": "tsx scripts/player-leaderboard-view.ts",
+    "migrate:challonge-combos": "tsx scripts/migrate-challonge-combos.ts",
+    "debug:challonge-data": "tsx scripts/debug-challonge-data.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.927.0",

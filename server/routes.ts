@@ -2769,6 +2769,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to fetch user's existing Challonge combos (Authenticated)
+  app.get('/api/tournaments/:id/my-combos', requireAuth, async (req, res) => {
+    try {
+      const tournamentId = String(req.params.id || '').trim();
+      const user = req.user!;
+
+      if (!tournamentId) return res.status(400).json({ error: 'Missing tournament id' });
+
+      // Fetch combos for this user and tournament from challonge_reported_combos
+      const combosRes = await db.execute(sql`
+        SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", combo_number as "comboNumber"
+        FROM challonge_reported_combos
+        WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}
+        ORDER BY combo_number ASC
+      `);
+
+      const combos = (combosRes.rows as any[]).map(row => ({
+        blade: row.blade || '',
+        assistBlade: row.assistBlade || 'None',
+        ratchet: row.ratchet || '',
+        bit: row.bit || '',
+        lockChip: row.lockChip || 'None',
+      }));
+
+      res.json({ combos });
+    } catch (error: any) {
+      console.error('Error fetching Challonge combos:', error);
+      res.status(500).json({ error: 'Failed to fetch combos' });
+    }
+  });
+
   // Endpoint to claim/update Challonge combos (Authenticated)
   app.post('/api/tournaments/:id/claim', requireAuth, async (req, res) => {
     try {
@@ -2808,6 +2839,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Solo i primi 3 classificati possono registrare le combo.' });
       }
 
+      // 3.5. Calculate Season from Tournament Date
+      let computedSeason: string | null = null;
+      try {
+        const tournamentDate = data.start_date || data.started_at || (data.tournament && data.tournament.started_at);
+        if (tournamentDate) {
+          computedSeason = determineSeason(new Date(tournamentDate));
+        }
+      } catch (err) {
+        console.warn('Failed to determine season for tournament:', tournamentId, err);
+      }
+
       // 4. Validate & Save Combos
       const payload = req.body; // Expect { combos: [...] }
       const combos = Array.isArray(payload.combos) ? payload.combos : [];
@@ -2823,6 +2865,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Regola Deck Unico violata: Non puoi usare la stessa Blade più volte.' });
       }
 
+      // Extract total participants from tournament data (needed for revert)
+      const totalParticipants = data.total_players || data.participants_count || (data.tournament && data.tournament.participants_count) || 0;
+
       // Delete existing reported combos for this user/tournament
       // Note: participant.id might be Challonge Participant ID, but we want to link to our User ID?
       // challonge_reported_combos schema: tournament_id, user_id (our db user id), combo_number, ... match?
@@ -2831,6 +2876,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       //   id: uuid("id").defaultRandom().primaryKey(),
       //   tournamentId: text("tournament_id").notNull(),
       //   userId: uuid("user_id").notNull().references(() => users.id), ...
+
+      // REVERT LOGIC: Before deleting, revert old combos from stats to prevent duplicates
+      const existingCombosRes = await db.execute(sql`
+        SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", rank, season
+        FROM challonge_reported_combos
+        WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}
+      `);
+
+      // Revert each existing combo from stats
+      if (existingCombosRes.rows.length > 0 && totalParticipants > 0) {
+        for (const oldCombo of existingCombosRes.rows as any[]) {
+          if (oldCombo.season) {
+            try {
+              await revertExternalCombo({
+                blade: oldCombo.blade,
+                assistBlade: oldCombo.assistBlade || 'None',
+                ratchet: oldCombo.ratchet,
+                bit: oldCombo.bit,
+                lockChip: oldCombo.lockChip || 'None',
+                season: oldCombo.season,
+                placement: oldCombo.rank,
+                totalParticipants: totalParticipants,
+              });
+            } catch (err) {
+              console.warn('Failed to revert combo:', oldCombo, err);
+            }
+          }
+        }
+      }
 
       await db.execute(sql`DELETE FROM challonge_reported_combos WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}`);
 
@@ -2848,8 +2922,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ratchet: c.ratchet,
             bit: c.bit,
             lockChip: c.lockChip || 'None',
+            season: computedSeason, // Calculated from tournament date
           });
+
+          // Aggregate into combo_stats (same as Challengermode)
+          if (computedSeason && totalParticipants > 0) {
+            await processExternalCombo({
+              blade: c.blade,
+              assistBlade: c.assistBlade || 'None',
+              ratchet: c.ratchet,
+              bit: c.bit,
+              lockChip: c.lockChip || 'None',
+              season: computedSeason,
+              placement: participant.rank,
+              totalParticipants: totalParticipants,
+            });
+          }
         }
+      }
+
+      // Refresh materialized view to update Analytics
+      try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY top_component_snapshot`);
+      } catch {
+        // Fallback if CONCURRENTLY fails
+        await db.execute(sql`REFRESH MATERIALIZED VIEW top_component_snapshot`);
       }
 
       res.json({ success: true });

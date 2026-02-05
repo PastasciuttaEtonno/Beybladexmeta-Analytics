@@ -481,9 +481,10 @@ export const unifiedMetaView = pgView("unified_meta_view", {
   bit: text("bit"),
   lockChip: text("lock_chip"),
   rank: integer("rank"),
-  date: date("date"),
-  participantCount: integer("participant_count"), // <--- NUOVO CAMPO
+  date: timestamp("date"),
+  participantCount: integer("participant_count"),
   platform: text("platform"),
+  season: text("season"),
 }).existing();
 
 export const playerLeaderboardView = pgView("player_leaderboard", {
@@ -532,6 +533,7 @@ export const challongeReportedCombos = pgTable("challonge_reported_combos", {
   lockChip: text("lock_chip"),       // Opzionale nel DB
 
   rank: integer("rank").notNull(),
+  season: text("season"), // Stagione calcolata dalla data del torneo
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (table) => ({
   uniqueIdx: uniqueIndex("unique_user_tournament_combo_num_idx").on(table.userId, table.tournamentId, table.comboNumber),

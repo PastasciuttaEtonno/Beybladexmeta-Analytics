@@ -197,11 +197,13 @@ export default function TournamentDetail() {
 
 
 
-  // Compute total players: prefer Challengermode-provided count, fallback to counting lineup members
+  // Compute total players: support both Challengermode and Challonge formats
   const totalPlayers = (() => {
-    const userCount = detailResp?.detail?.attendance?.signups?.userCount ?? null;
+    const signups = detailResp?.detail?.attendance?.signups;
+    // Try userCount (Challengermode), then uCount (Challonge), then count (Challonge fallback)
+    const userCount = signups?.userCount ?? signups?.uCount ?? signups?.count ?? null;
     if (typeof userCount === 'number' && userCount > 0) return userCount;
-    const lineups = detailResp?.detail?.attendance?.signups?.lineups ?? [];
+    const lineups = signups?.lineups ?? [];
     const sum = (lineups || []).reduce((acc: number, lu: any) => acc + ((lu?.members ?? []).length), 0);
     return sum || 0;
   })();
@@ -235,13 +237,20 @@ export default function TournamentDetail() {
   });
 
   const { data: playerCombosResp, isLoading: playerCombosLoading, refetch: refetchPlayerCombos } = useQuery<{ combos: ComboForm[] }>({
-    queryKey: ["/api/tournaments", tournamentId, selectedPlayer?.id || "", "combos"],
+    queryKey: ["/api/tournaments", tournamentId, selectedPlayer?.id || "", "combos", detailResp?.detail?.platform],
     queryFn: async () => {
-      const resp = await fetch(`/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, { credentials: "include" });
+      // For Challonge, use /my-combos endpoint (user-specific)
+      // For Challengermode, use /players/:id/combos endpoint
+      const isChallonge = detailResp?.detail?.platform === 'challonge';
+      const endpoint = isChallonge
+        ? `/api/tournaments/${tournamentId}/my-combos`
+        : `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`;
+
+      const resp = await fetch(endpoint, { credentials: "include" });
       if (!resp.ok) throw new Error("Failed to fetch player combos");
       return await resp.json();
     },
-    enabled: editDialogOpen && !!tournamentId && !!selectedPlayer?.id,
+    enabled: editDialogOpen && !!tournamentId && (detailResp?.detail?.platform === 'challonge' || !!selectedPlayer?.id),
   });
 
   const rawSelfId = String(user?.challengerId || '').trim();
