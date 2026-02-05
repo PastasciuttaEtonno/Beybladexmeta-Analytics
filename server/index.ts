@@ -197,24 +197,16 @@ app.use((req, res, next) => {
   // Configure session middleware
   // Session configuration
   // IMPORTANT: For local development with Docker (HTTP), secure MUST be false.
-  // We strictly enforce secure=true only if we are sure we are behind HTTPS (like Replit or Prod).
-  const isReplit = !!process.env.REPL_SLUG;
   const isProduction = process.env.NODE_ENV === 'production';
-  // If we are in production but accessing via IP/HTTP (like local docker test), we might want to allow insecure cookies
-  // or simple check if we are actually on localhost.
-  // A safe bet for "secure cookie" is: Production AND (Replit OR NOT Localhost).
-  // But simpler: just trust NODE_ENV if it's set correctly.
-  // However, if user runs "production" build locally on HTTP, secure cookie will fail.
-  // Use a heuristic: process.env.SECURE_COOKIES === 'true' OR (isProduction && isReplit).
 
   app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET || 'secret',
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Enable trust proxy for cookies
+    proxy: true,
     cookie: {
-      secure: isReplit || (isProduction && process.env.cookie_secure === 'true'), // Only set secure if explicitly requested or on Replit
+      secure: isProduction, // Enforce HTTPS in production
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
       sameSite: 'lax',

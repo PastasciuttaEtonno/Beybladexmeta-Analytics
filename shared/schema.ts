@@ -332,6 +332,20 @@ export const cmMatchResults = pgTable("cm_match_results", {
 }));
 
 // Tabella per i dati grezzi di Challonge
+export const userAliases = pgTable("user_aliases", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(), // Intentionally text to match users.id (which is uuid string but sometimes cast) - check users table definition
+  alias: text("alias").notNull(),
+  platform: text("platform").notNull().default("challonge"),
+  isVerified: boolean("is_verified").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("user_aliases_user_id_idx").on(table.userId),
+  aliasIdx: index("user_aliases_alias_idx").on(table.alias)
+}));
+
+export const insertUserAliasSchema = createInsertSchema(userAliases);
+
 export const challongeMatchResults = pgTable("challonge_match_results", {
   id: serial("id").primaryKey(),
   tournamentId: text("tournament_id").notNull().unique(),
@@ -339,23 +353,7 @@ export const challongeMatchResults = pgTable("challonge_match_results", {
   fetchedAt: timestamp("fetched_at").defaultNow(),
 });
 
-export const userAliases = pgTable("user_aliases", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  platform: text("platform").notNull(), // 'challange', 'manual', etc.
-  alias: text("alias").notNull(),
-  isVerified: boolean("is_verified").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => ({
-  userPlatformAliasIdx: uniqueIndex("user_platform_alias_idx").on(table.userId, table.platform, table.alias),
-}));
 
-export const userAliasesRelations = relations(userAliases, ({ one }) => ({
-  user: one(users, {
-    fields: [userAliases.userId],
-    references: [users.id],
-  }),
-}));
 
 export const loginAttempts = pgTable("login_attempts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

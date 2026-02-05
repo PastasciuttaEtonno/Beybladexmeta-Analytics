@@ -4,9 +4,9 @@ import { RecaptchaEnterpriseServiceClient } from "@google-cloud/recaptcha-enterp
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
-import { loginSchema, updateProfileSchema, registerSchema, users } from "@shared/schema";
+import { loginSchema, updateProfileSchema, registerSchema, users, User } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView, challongeReportedCombos, unifiedMetaView, challongeMatchResults } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView, challongeReportedCombos, unifiedMetaView, challongeMatchResults, userAliases } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
@@ -57,7 +57,30 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
   }
 }
 
+// Extend Express Request to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Global Auth Middleware: Populate req.user if session exists
+  app.use(async (req, res, next) => {
+    if (req.session.userId) {
+      try {
+        const user = await storage.getUser(req.session.userId);
+        if (user) {
+          req.user = user;
+        }
+      } catch (err) {
+        console.error("Error populating req.user:", err);
+      }
+    }
+    next();
+  });
   // Register endpoint with reCAPTCHA verification
   app.post('/api/auth/register', async (req, res) => {
     try {
@@ -273,6 +296,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ success: true });
     });
+  });
+
+  // --- USER ALIAS ROUTES ---
+
+  app.post('/api/user/aliases', requireAuth, async (req, res) => {
+    try {
+      const alias = String(req.body.alias || '').trim();
+      if (!alias) {
+        return res.status(400).json({ error: 'Alias is required' });
+      }
+
+      // Check current alias count
+      const userAliasesList = await db.select().from(userAliases).where(eq(userAliases.userId, req.user!.id));
+      if (userAliasesList.length >= 3) {
+        return res.status(400).json({ error: 'Limite di 3 alias raggiunto.' });
+      }
+
+      // Check for global duplicates
+      const existing = await db.select().from(userAliases).where(eq(userAliases.alias, alias)).limit(1);
+      if (existing.length > 0) {
+        return res.status(409).json({ error: 'Alias già reclamato' });
+      }
+
+      const [newAlias] = await db.insert(userAliases).values({
+        userId: req.user!.id,
+        alias: alias,
+        platform: 'challonge',
+        isVerified: false
+      }).returning();
+
+      res.status(201).json(newAlias);
+    } catch (error: any) {
+      console.error('Error creating alias:', error);
+      res.status(500).json({ error: 'Failed to create alias' });
+    }
+  });
+
+  app.get('/api/user/aliases', requireAuth, async (req, res) => {
+    try {
+      const aliases = await db.select().from(userAliases).where(eq(userAliases.userId, req.user!.id));
+      res.json(aliases);
+    } catch (error: any) {
+      console.error('Error fetching aliases:', error);
+      res.status(500).json({ error: 'Failed to fetch aliases' });
+    }
+  });
+
+  app.delete('/api/user/aliases/:id', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+      // Verify ownership
+      const [alias] = await db.select().from(userAliases).where(and(eq(userAliases.id, id), eq(userAliases.userId, req.user!.id))).limit(1);
+      if (!alias) {
+        return res.status(404).json({ error: 'Alias not found or unauthorized' });
+      }
+
+      await db.delete(userAliases).where(eq(userAliases.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting alias:', error);
+      res.status(500).json({ error: 'Failed to delete alias' });
+    }
   });
 
   // Get current user
@@ -2221,6 +2308,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/tournaments/:id', async (req, res) => {
     try {
       const id = String(req.params.id || '');
+      // console.log(`[DEBUG] GET /api/tournaments/${id} hit. User present? ${!!req.user}`);
+
       if (!id) return res.status(400).json({ error: 'Missing tournament id' });
 
       // 1. Check if it's a Challonge ID (exists in challonge_match_results)
@@ -2239,17 +2328,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
         const fetchedCombos = combosRes.rows;
 
+        // PERMISSION LOGIC: Determine valid names for the current user
+        let validUserNames: string[] = [];
+        const normalize = (s: string) => s?.trim().toLowerCase() || '';
+
+        if (req.user) {
+
+          // Fetch aliases
+          const aliasesRes = await db.execute(sql`
+             SELECT alias FROM user_aliases 
+             WHERE user_id = ${req.user.id} AND is_verified = TRUE
+           `);
+          const aliases = aliasesRes.rows.map((r: any) => r.alias);
+          validUserNames = [...aliases];
+
+          // If users table has challonge_username (user.challongeUsername), add it
+          if (req.user.challongeUsername) {
+            validUserNames.push(req.user.challongeUsername);
+          }
+        }
+
         // Extract Top 3 from standings
         const standings = data.standings || [];
         const top3 = standings
           .filter((p: any) => p.rank <= 3)
           .sort((a: any, b: any) => a.rank - b.rank)
-          .map((p: any) => ({
-            id: p.name || p.id,
-            username: p.name,
-            placement: p.rank,
-            deck: [] // filled by frontend
-          }));
+          .map((p: any) => {
+            const pName = p.name || p.username || '';
+            const pNameNorm = normalize(pName);
+
+            // Check permission
+            const isCurrentUser = validUserNames.some(v => {
+              const vNorm = normalize(v);
+              const match = vNorm === pNameNorm;
+              if (!match && req.user) {
+                // Verbose debug only if failing? Or maybe just log matches to reduce noise?
+                // Let's log potential near-matches or just one line per check if needed.
+                // console.log(`[DEBUG] Compare '${vNorm}' vs '${pNameNorm}' -> ${match}`);
+              }
+              return match;
+            });
+
+            if (req.user) {
+              // console.log(`[DEBUG] Participant '${pName}' (norm: '${pNameNorm}') isCurrentUser? ${isCurrentUser}`);
+            }
+
+            return {
+              id: p.name || p.id,
+              username: pName,
+              placement: p.rank,
+              isCurrentUser: isCurrentUser, // Permission flag
+              deck: [] // filled by frontend
+            };
+          });
 
         // Construct standard response
         const detail = {
@@ -2633,6 +2764,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to claim/update Challonge combos (Authenticated)
+  app.post('/api/tournaments/:id/claim', requireAuth, async (req, res) => {
+    try {
+      const tournamentId = String(req.params.id || '').trim();
+      const user = req.user!; // Populated by global middleware
+
+      if (!tournamentId) return res.status(400).json({ error: 'Missing tournament id' });
+
+      // 1. Fetch Tournament Data (Challonge)
+      const challongeRes = await db.execute(sql`SELECT data FROM challonge_match_results WHERE tournament_id = ${tournamentId} LIMIT 1`);
+      if (challongeRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Tournament not found' });
+      }
+      const data = challongeRes.rows[0].data as any;
+
+      // 2. Identify Participant
+      // PERMISSION LOGIC: Same as GET /tournaments/:id
+      const normalize = (s: string) => s?.trim().toLowerCase() || '';
+
+      let validUserNames: string[] = [];
+      const aliasesRes = await db.execute(sql`SELECT alias FROM user_aliases WHERE user_id = ${user.id} AND is_verified = TRUE`);
+      validUserNames = aliasesRes.rows.map((r: any) => r.alias);
+      if (user.challongeUsername) validUserNames.push(user.challongeUsername);
+
+      const standings = data.standings || [];
+      const participant = standings.find((p: any) => {
+        const pName = p.name || p.username || '';
+        const pNameNorm = normalize(pName);
+        return validUserNames.some(v => normalize(v) === pNameNorm);
+      });
+
+      // 3. Check Permissions (User Match & Top 3)
+      if (!participant) {
+        return res.status(403).json({ error: 'Utente non trovato tra i partecipanti del torneo.' });
+      }
+      if (participant.rank > 3) {
+        return res.status(403).json({ error: 'Solo i primi 3 classificati possono registrare le combo.' });
+      }
+
+      // 4. Validate & Save Combos
+      const payload = req.body; // Expect { combos: [...] }
+      const combos = Array.isArray(payload.combos) ? payload.combos : [];
+
+      // Basic validation handled by frontend, but we enforce strictly here?
+      // For now trust schema parsing or do basic loop.
+      // We expect fixed array of 3 combos.
+
+      // --- ANTI-CHEAT: UNIQUE BLADE RULE ---
+      const blades = combos.map((c: any) => c.blade?.trim()).filter((b: any) => b);
+      const uniqueBlades = new Set(blades.map((b: string) => b.toLowerCase()));
+      if (uniqueBlades.size !== blades.length) {
+        return res.status(400).json({ error: 'Regola Deck Unico violata: Non puoi usare la stessa Blade più volte.' });
+      }
+
+      // Delete existing reported combos for this user/tournament
+      // Note: participant.id might be Challonge Participant ID, but we want to link to our User ID?
+      // challonge_reported_combos schema: tournament_id, user_id (our db user id), combo_number, ... match?
+      // Re-read schema:
+      // export const challongeReportedCombos = pgTable("challonge_reported_combos", {
+      //   id: uuid("id").defaultRandom().primaryKey(),
+      //   tournamentId: text("tournament_id").notNull(),
+      //   userId: uuid("user_id").notNull().references(() => users.id), ...
+
+      await db.execute(sql`DELETE FROM challonge_reported_combos WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}`);
+
+      for (let i = 0; i < combos.length; i++) {
+        const c = combos[i];
+        // Only insert if blade is set
+        if (c.blade) {
+          await db.insert(challongeReportedCombos).values({
+            tournamentId,
+            userId: user.id,
+            comboNumber: i + 1,
+            rank: participant.rank, // Verified from Challonge data
+            blade: c.blade,
+            assistBlade: c.assistBlade || 'None',
+            ratchet: c.ratchet,
+            bit: c.bit,
+            lockChip: c.lockChip || 'None',
+          });
+        }
+      }
+
+      res.json({ success: true });
+
+    } catch (error: any) {
+      console.error('Error claiming Challonge combos:', error);
+      res.status(500).json({ error: 'Failed to claim combos' });
+    }
+  });
+
   app.put('/api/tournaments/:id/combos/:num', requireAuth, async (req, res) => {
     try {
       const tournamentId = String(req.params.id || '').trim();
@@ -2684,6 +2906,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const placement = Number(existing.placement ?? 0);
       const totalParticipants = Number(existing.totalParticipants ?? 0);
+
+      // Enforce Top 3 check for CM
+      if (placement > 3) {
+        return res.status(403).json({ error: 'Solo i primi 3 classificati possono registrare le combo.' });
+      }
 
       if (placement > 0 && totalParticipants > 0) {
         const seasonForDelete = existing?.season || (existing?.tournamentDate ? determineSeason(new Date(existing.tournamentDate as any)) : determineSeason(new Date()));

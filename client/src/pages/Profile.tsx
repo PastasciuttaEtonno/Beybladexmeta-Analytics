@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
   Info,
   ChevronRight,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 export default function Profile() {
@@ -42,7 +43,43 @@ export default function Profile() {
   const [tosOpen, setTosOpen] = useState(false);
 
 
-  // Linking State
+  // Aliases Management
+  const { data: aliases, refetch: refetchAliases } = useQuery({
+    queryKey: ['/api/user/aliases'],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/user/aliases");
+      return await res.json();
+    }
+  });
+
+  const [newAlias, setNewAlias] = useState("");
+
+  const createAliasMutation = useMutation({
+    mutationFn: async (alias: string) => {
+      await apiRequest("POST", "/api/user/aliases", { alias });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Alias requested" });
+      setNewAlias("");
+      refetchAliases();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to create alias", variant: "destructive" });
+    }
+  });
+
+  const deleteAliasMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/user/aliases/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Alias removed" });
+      refetchAliases();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to delete alias", variant: "destructive" });
+    }
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -230,6 +267,54 @@ export default function Profile() {
         )}
 
 
+
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground px-1">
+            Storico Nickname / Alias
+          </h2>
+          <Card className="p-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Aggiungi Nickname</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newAlias}
+                  onChange={(e) => setNewAlias(e.target.value)}
+                  placeholder="Vecchio nickname usato nei tornei..."
+                />
+                <Button
+                  onClick={() => createAliasMutation.mutate(newAlias)}
+                  disabled={!newAlias.trim() || createAliasMutation.isPending}
+                >
+                  {createAliasMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : "Richiedi"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Dichiara i nickname che hai usato in passato su Challonge/Challengermode per abbinare i risultati ai tornei.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {aliases?.map((alias: any) => (
+                <div key={alias.id} className="flex items-center justify-between p-2 border rounded-md">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{alias.alias}</span>
+                    {alias.isVerified ? (
+                      <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded border border-green-200 dark:border-green-800">Verificato</span>
+                    ) : (
+                      <span className="text-[10px] bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800">In Attesa</span>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteAliasMutation.mutate(alias.id)} disabled={deleteAliasMutation.isPending}>
+                    <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              {!aliases?.length && (
+                <p className="text-sm text-muted-foreground text-center py-2">Nessun alias registrato.</p>
+              )}
+            </div>
+          </Card>
+        </div>
 
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">

@@ -195,6 +195,8 @@ export default function TournamentDetail() {
     enabled: !!tournamentId,
   });
 
+
+
   // Compute total players: prefer Challengermode-provided count, fallback to counting lineup members
   const totalPlayers = (() => {
     const userCount = detailResp?.detail?.attendance?.signups?.userCount ?? null;
@@ -418,7 +420,9 @@ export default function TournamentDetail() {
               profilePicture: { url: null } // Avatar not always available
             },
             // Attach combos directly for local usage
-            _directCombos: combos
+            _directCombos: combos,
+            // Attach permission flag from backend
+            _isCurrentUser: p.isCurrentUser
           }]
         };
       });
@@ -430,6 +434,9 @@ export default function TournamentDetail() {
       const ap = parseInt(a?.placement?.displayPlacement ?? '999', 10);
       const bp = parseInt(b?.placement?.displayPlacement ?? '999', 10);
       return ap - bp;
+    }).filter(lu => {
+      const p = parseInt(lu?.placement?.displayPlacement ?? '999', 10);
+      return p <= 3;
     });
 
     if (sorted.length === 0) {
@@ -460,8 +467,8 @@ export default function TournamentDetail() {
                     // For Challonge, we might not have 'selfId' match seamlessly if not linked. 
                     // But if user matches, we allow edit.
                     const isSelf = (memberId && memberId === selfId); // Might fail if memberId is a name
-                    // Allow edit if admin for top 3
-                    const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 3);
+                    // Allow edit if admin for top 3 OR if backend says it's current user (via alias)
+                    const canEdit = isSelf || (!!m?._isCurrentUser) || (!!user?.isAdmin && parseInt(placement, 10) <= 3);
 
                     // COMBO RESOLUTION: 
                     // 1. Check direct attached (Challonge logic)
@@ -667,21 +674,26 @@ export default function TournamentDetail() {
               </div>
             )}
 
-            {/* Challonge Action Button */}
-            {user && detailResp?.detail?.platform === 'challonge' && (
-              <div className="mb-4 flex justify-end">
-                <Button onClick={() => {
-                  // Open Edit Dialog for SELF
-                  setSelectedPlayer({ id: user.id || '', username: user.displayName || 'Me' });
-                  setEditDialogOpen(true);
-                  // Determine if we need to load existing combos?
-                  // The `playerCombosResp` query will fetch them via /api/tournaments/:id/players/:id/combos
-                  // We need to ensure that endpoint supports fetching by internal UserID (which we set up).
-                }}>
-                  Registra / Modifica Deck
-                </Button>
+            {!user?.challongeId && detailResp?.detail?.platform === 'challonge' && (
+              <div className="mb-4 p-3 rounded-md border bg-muted/30">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Collega il tuo account Challonge per registrare le tue combo.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => { window.location.href = "/login"; }}
+                  >
+                    Accedi con Challonge
+                  </Button>
+                </div>
               </div>
             )}
+
+            {/* Challonge Action Button Removed - Individual edit only */}
             {detailLoading ? (
               <div className="flex items-center justify-center py-16" aria-label="Loading leaderboard">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
