@@ -58,9 +58,9 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
     `);
 
     await tx.execute(sql`
-      INSERT INTO assist_blade_stats (assist_blade, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-      VALUES (${result.assistBlade}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-      ON CONFLICT (assist_blade)
+      INSERT INTO assist_blade_stats (assist_blade, season, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+      VALUES (${result.assistBlade}, ${result.season}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+      ON CONFLICT (assist_blade, season)
       DO UPDATE SET
         primi_posti = assist_blade_stats.primi_posti + ${primiPosti},
         secondi_posti = assist_blade_stats.secondi_posti + ${secondiPosti},
@@ -91,9 +91,9 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
     `);
 
     await tx.execute(sql`
-      INSERT INTO lock_chip_stats (lock_chip, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
-      VALUES (${result.lockChip}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
-      ON CONFLICT (lock_chip)
+      INSERT INTO lock_chip_stats (lock_chip, season, primi_posti, secondi_posti, terzi_posti, punteggio_totale)
+      VALUES (${result.lockChip}, ${result.season}, ${primiPosti}, ${secondiPosti}, ${terziPosti}, ${points})
+      ON CONFLICT (lock_chip, season)
       DO UPDATE SET
         primi_posti = lock_chip_stats.primi_posti + ${primiPosti},
         secondi_posti = lock_chip_stats.secondi_posti + ${secondiPosti},
@@ -143,6 +143,7 @@ export const revertExternalCombo = async (result: ExternalComboResult) => {
           terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
           punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
       WHERE assist_blade = ${result.assistBlade}
+        AND season = ${result.season}
     `);
 
     await tx.execute(sql`
@@ -172,6 +173,7 @@ export const revertExternalCombo = async (result: ExternalComboResult) => {
           terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
           punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
       WHERE lock_chip = ${result.lockChip}
+        AND season = ${result.season}
     `);
   });
 };
@@ -215,6 +217,7 @@ export const revertExternalComboTx = async (tx: any, result: ExternalComboResult
         terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
         punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
     WHERE assist_blade = ${result.assistBlade}
+      AND season = ${result.season}
   `);
 
   await tx.execute(sql`
@@ -244,5 +247,6 @@ export const revertExternalComboTx = async (tx: any, result: ExternalComboResult
         terzi_posti = GREATEST(terzi_posti - ${terziPosti}, 0),
         punteggio_totale = GREATEST(punteggio_totale - ${points}, 0)
     WHERE lock_chip = ${result.lockChip}
+      AND season = ${result.season}
   `);
 };
