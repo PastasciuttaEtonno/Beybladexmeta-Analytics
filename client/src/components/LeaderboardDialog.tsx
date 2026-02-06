@@ -17,10 +17,12 @@ if (!PUBLIC_MINIO_URL) {
 
 export function LeaderboardDialog({
   type,
+  season,
   open,
   onOpenChange,
 }: {
   type: LeaderboardType | null;
+  season?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -29,9 +31,12 @@ export function LeaderboardDialog({
   const { data, isLoading } = useQuery<{ items: any[]; type: string; limit: number }>(
     {
       enabled: open && !!type,
-      queryKey: ["/api/stats/leaderboard", activeType],
+      queryKey: ["/api/stats/leaderboard", activeType, season],
       queryFn: async () => {
-        const resp = await fetch(`/api/stats/leaderboard/${activeType}?limit=10`);
+        const queryParams = new URLSearchParams();
+        queryParams.set("limit", "10");
+        if (season) queryParams.set("season", season);
+        const resp = await fetch(`/api/stats/leaderboard/${activeType}?${queryParams.toString()}`);
         if (!resp.ok) throw new Error("Failed to fetch leaderboard");
         return resp.json();
       },
