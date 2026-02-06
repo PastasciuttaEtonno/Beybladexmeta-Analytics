@@ -487,11 +487,23 @@ export const unifiedMetaView = pgView("unified_meta_view", {
   season: text("season"),
 }).existing();
 
+// Materialized view: Platform-separated player stats
+export const playerPlatformStats = pgView("player_platform_stats", {
+  nickname: text("nickname").notNull(),
+  platform: text("platform").notNull(),
+  avatar: text("avatar"),
+  totalPoints: doublePrecision("total_points").notNull(),
+  tournamentsPlayed: integer("tournaments_played").notNull(),
+  tournamentsWon: integer("tournaments_won").notNull(),
+}).existing();
+
+// Standard view: Aggregated player leaderboard (sums across platforms)
 export const playerLeaderboardView = pgView("player_leaderboard", {
-  playerId: varchar("player_id").primaryKey(),
   nickname: text("nickname").notNull(),
   avatar: text("avatar"),
   totalPoints: doublePrecision("total_points").notNull(),
+  tournamentsPlayed: integer("tournaments_played").notNull(),
+  tournamentsWon: integer("tournaments_won").notNull(),
 }).existing();
 
 export const topComponentSnapshot = pgView("top_component_snapshot", {
@@ -523,6 +535,7 @@ export const challongeReportedCombos = pgTable("challonge_reported_combos", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   tournamentId: text("tournament_id").notNull(),
+  tournamentName: text("tournament_name"), // Nome del torneo
   comboNumber: integer("combo_number").notNull(),
 
   // Struttura Full

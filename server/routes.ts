@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema, registerSchema, users, User } from "@shared/schema";
 import { db } from "./db";
-import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView, challongeReportedCombos, unifiedMetaView, challongeMatchResults, userAliases } from "@shared/schema";
+import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView, playerPlatformStats, challongeReportedCombos, challongePlayers, unifiedMetaView, challongeMatchResults, userAliases } from "@shared/schema";
 import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
@@ -885,9 +885,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (platform === 'challonge') {
         // --- CHALLONGE CLAIM LOGIC ---
         // Verify User is authenticated (done by requireAuth)
-        // Verify Tournament exists in Challonge table?
-        const tCheck = await db.execute(sql`SELECT 1 FROM challonge_match_results WHERE tournament_id = ${parsed.tournamentId}`);
+        // Verify Tournament exists in Challonge table and get tournament name
+        const tCheck = await db.execute(sql`SELECT data FROM challonge_match_results WHERE tournament_id = ${parsed.tournamentId}`);
         if (tCheck.rows.length === 0) return res.status(404).json({ error: 'Torneo Challonge non trovato' });
+
+        // Extract tournament name from JSONB data
+        const tournamentData = tCheck.rows[0]?.data as any;
+        const tournamentName = tournamentData?.name || tournamentData?.tournament?.name || null;
 
         // Transaction: Delete existing -> Insert New
         await db.transaction((async (tx: any) => {
@@ -898,6 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await tx.insert(challongeReportedCombos).values({
               userId: user.id,
               tournamentId: parsed.tournamentId,
+              tournamentName: tournamentName,
               comboNumber: i + 1,
               blade: c.blade,
               ratchet: c.ratchet,
@@ -1108,6 +1113,485 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ items: rows, type, limit });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch leaderboard' });
+    }
+  });
+
+  // Player Leaderboard - Aggregated or filtered by platform
+  app.get('/api/stats/leaderboard', async (req, res) => {
+    try {
+      const platform = req.query.platform as string | undefined;
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 50;
+
+      if (platform && platform !== 'challengermode' && platform !== 'challonge') {
+        return res.status(400).json({ error: 'Invalid platform. Use challengermode or challonge.' });
+      }
+
+      let players: any[] = [];
+
+      if (platform) {
+        // Filter by specific platform
+        players = await db.select()
+          .from(playerPlatformStats)
+          .where(eq(playerPlatformStats.platform, platform))
+          .orderBy(desc(playerPlatformStats.totalPoints))
+          .limit(limit);
+      } else {
+        // Aggregated view (all platforms combined)
+        players = await db.select()
+          .from(playerLeaderboardView)
+          .orderBy(desc(playerLeaderboardView.totalPoints))
+          .limit(limit);
+      }
+
+      res.json({ players });
+    } catch (error) {
+      console.error('Player leaderboard error:', error);
+      res.status(500).json({ error: 'Failed to fetch player leaderboard' });
+    }
+  });
+
+  // Player Profile - Platform breakdown
+  app.get('/api/stats/player/:nickname', async (req, res) => {
+    try {
+      const nickname = req.params.nickname;
+      if (!nickname) {
+        return res.status(400).json({ error: 'Nickname is required' });
+      }
+
+      const platformStats = await db.select()
+        .from(playerPlatformStats)
+        .where(eq(playerPlatformStats.nickname, nickname))
+        .orderBy(desc(playerPlatformStats.totalPoints));
+
+      if (platformStats.length === 0) {
+        return res.status(404).json({ error: 'Player not found' });
+      }
+
+      res.json(platformStats);
+    } catch (error) {
+      console.error('Player profile error:', error);
+      res.status(500).json({ error: 'Failed to fetch player profile' });
+    }
+  });
+
+  // Unified Player Profile - By Nickname (supports both CM and Challonge)
+  app.get('/api/players/by-nickname/:nickname', async (req, res) => {
+    try {
+      const nickname = String(req.params.nickname || '').trim();
+      if (!nickname) return res.status(400).json({ error: 'Missing nickname' });
+
+      const seasonRaw = String((req.query.season ?? 'Off Season 2025') as string).trim();
+      const season = seasonRaw || 'Off Season 2025';
+
+      // Try to find player in both CM and Challonge
+      const cmPlayerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.nickname, nickname)).limit(1);
+      const challongePlayerRows = await db.select().from(challongePlayers).where(eq(challongePlayers.nickname, nickname)).limit(1);
+
+      const cmPlayer = cmPlayerRows[0] || null;
+      const challongePlayer = challongePlayerRows[0] || null;
+
+      if (!cmPlayer && !challongePlayer) {
+        return res.status(404).json({ error: 'Player not found' });
+      }
+
+      // Get platform stats for this player (with top-3 calculation)
+      const platformStats = await db.select()
+        .from(playerPlatformStats)
+        .where(eq(playerPlatformStats.nickname, nickname))
+        .orderBy(desc(playerPlatformStats.totalPoints));
+
+      // Calculate top-3 finishes for each platform
+      const platformStatsWithTop3 = await Promise.all(platformStats.map(async (stat) => {
+        let top3Count = 0;
+
+        if (stat.platform === 'challengermode' && cmPlayer) {
+          const top3Query = await db.execute(sql`
+            SELECT COUNT(DISTINCT tournament_id) as top3_count
+            FROM cm_match_results
+            WHERE player_id = ${cmPlayer.id} AND piazzamento <= 3
+          `);
+          top3Count = Number(top3Query.rows[0]?.top3_count || 0);
+        } else if (stat.platform === 'challonge') {
+          // Get user for Challonge
+          const userRows = await db.select()
+            .from(users)
+            .where(eq(users.challongeUsername, nickname))
+            .limit(1);
+
+          if (userRows.length > 0) {
+            const user = userRows[0];
+            const top3Query = await db.execute(sql`
+              SELECT COUNT(DISTINCT tournament_id) as top3_count
+              FROM challonge_reported_combos
+              WHERE user_id = ${user.id} AND rank <= 3
+            `);
+            top3Count = Number(top3Query.rows[0]?.top3_count || 0);
+          }
+        }
+
+        return {
+          platform: stat.platform,
+          totalPoints: stat.totalPoints,
+          tournamentsPlayed: stat.tournamentsPlayed,
+          top3Finishes: top3Count,
+        };
+      }));
+
+      const totalPoints = platformStatsWithTop3.reduce((sum, stat) => sum + stat.totalPoints, 0);
+
+      // Get most used combo from CM if available
+      let mostUsedCombo = null;
+      if (cmPlayer) {
+        let comboQuery;
+        if (season) {
+          comboQuery = await db.execute(sql`
+            SELECT blade, assist_blade, ratchet, bit, lock_chip,
+                   COUNT(*) AS use_count,
+                   COALESCE(SUM(
+                     CASE placement
+                       WHEN 1 THEN 10
+                       WHEN 2 THEN 7
+                       WHEN 3 THEN 5
+                       ELSE 0
+                     END * total_participants
+                   ), 0) AS points
+            FROM external_player_combos
+            WHERE player_id = ${cmPlayer.id} AND season = ${season}
+            GROUP BY blade, assist_blade, ratchet, bit, lock_chip
+            ORDER BY use_count DESC, points DESC
+            LIMIT 1;
+          `);
+        } else {
+          comboQuery = await db.execute(sql`
+            SELECT blade, assist_blade, ratchet, bit, lock_chip,
+                   COUNT(*) AS use_count,
+                   COALESCE(SUM(
+                     CASE placement
+                       WHEN 1 THEN 10
+                       WHEN 2 THEN 7
+                       WHEN 3 THEN 5
+                       ELSE 0
+                     END * total_participants
+                   ), 0) AS points
+            FROM external_player_combos
+            WHERE player_id = ${cmPlayer.id}
+            GROUP BY blade, assist_blade, ratchet, bit, lock_chip
+            ORDER BY use_count DESC, points DESC
+            LIMIT 1;
+          `);
+        }
+        const muc = comboQuery.rows[0] || null;
+        if (muc) {
+          mostUsedCombo = {
+            blade: String(muc.blade || ''),
+            assistBlade: String(muc.assist_blade || ''),
+            ratchet: String(muc.ratchet || ''),
+            bit: String(muc.bit || ''),
+            lockChip: String(muc.lock_chip || ''),
+            count: Number(muc.use_count || 0),
+            points: Number(muc.points || 0),
+          };
+        }
+      }
+
+      // Get favorite blade from CM if available
+      let favoriteBlade = null;
+      if (cmPlayer) {
+        let bladeQuery;
+        if (season) {
+          bladeQuery = await db.execute(sql`
+            SELECT blade,
+                   COUNT(*) AS use_count,
+                   COALESCE(SUM(
+                     CASE placement
+                       WHEN 1 THEN 10
+                       WHEN 2 THEN 7
+                       WHEN 3 THEN 5
+                       ELSE 0
+                     END * total_participants
+                   ), 0) AS points
+            FROM external_player_combos
+            WHERE player_id = ${cmPlayer.id} AND season = ${season}
+            GROUP BY blade
+            ORDER BY use_count DESC, points DESC
+            LIMIT 1;
+          `);
+        } else {
+          bladeQuery = await db.execute(sql`
+            SELECT blade,
+                   COUNT(*) AS use_count,
+                   COALESCE(SUM(
+                     CASE placement
+                       WHEN 1 THEN 10
+                       WHEN 2 THEN 7
+                       WHEN 3 THEN 5
+                       ELSE 0
+                     END * total_participants
+                   ), 0) AS points
+            FROM external_player_combos
+            WHERE player_id = ${cmPlayer.id}
+            GROUP BY blade
+            ORDER BY use_count DESC, points DESC
+            LIMIT 1;
+          `);
+        }
+        const fb = bladeQuery.rows[0] || null;
+        if (fb) {
+          favoriteBlade = {
+            blade: String(fb.blade || ''),
+            count: Number(fb.use_count || 0),
+            points: Number(fb.points || 0),
+          };
+        }
+      }
+
+      // Get most used combo from Challonge if available
+      let challongeMostUsedCombo = null;
+      const userRows = await db.select()
+        .from(users)
+        .where(eq(users.challongeUsername, nickname))
+        .limit(1);
+
+      if (userRows.length > 0) {
+        const user = userRows[0];
+        const challongeComboQuery = await db.execute(sql`
+          SELECT blade, assist_blade, ratchet, bit, lock_chip,
+                 COUNT(*) AS use_count
+          FROM challonge_reported_combos
+          WHERE user_id = ${user.id}
+          GROUP BY blade, assist_blade, ratchet, bit, lock_chip
+          ORDER BY use_count DESC
+          LIMIT 1;
+        `);
+        const chc = challongeComboQuery.rows[0] || null;
+        if (chc) {
+          challongeMostUsedCombo = {
+            blade: String(chc.blade || ''),
+            assistBlade: String(chc.assist_blade || ''),
+            ratchet: String(chc.ratchet || ''),
+            bit: String(chc.bit || ''),
+            lockChip: String(chc.lock_chip || ''),
+            count: Number(chc.use_count || 0),
+            points: 0, // Challonge doesn't have points calculation yet
+          };
+        }
+      }
+
+      // Get favorite blade from Challonge if available
+      let challongeFavoriteBlade = null;
+      if (userRows.length > 0) {
+        const user = userRows[0];
+        let challongeBladeQuery;
+        if (season) {
+          challongeBladeQuery = await db.execute(sql`
+            SELECT blade, COUNT(*) AS use_count
+            FROM challonge_reported_combos c
+            JOIN challonge_match_results m ON c.tournament_id = m.tournament_id
+            WHERE c.user_id = ${user.id}
+              AND m.data->>'season' = ${season}
+            GROUP BY blade
+            ORDER BY use_count DESC
+            LIMIT 1;
+          `);
+        } else {
+          challongeBladeQuery = await db.execute(sql`
+            SELECT blade, COUNT(*) AS use_count
+            FROM challonge_reported_combos
+            WHERE user_id = ${user.id}
+            GROUP BY blade
+            ORDER BY use_count DESC
+            LIMIT 1;
+          `);
+        }
+        const chb = challongeBladeQuery.rows[0] || null;
+        if (chb) {
+          challongeFavoriteBlade = {
+            blade: String(chb.blade || ''),
+            count: Number(chb.use_count || 0),
+            points: 0, // Challonge doesn't have points calculation yet
+          };
+        }
+      }
+
+      // Use Challonge combo if CM combo is not available
+      if (!mostUsedCombo && challongeMostUsedCombo) {
+        mostUsedCombo = challongeMostUsedCombo;
+      }
+
+      // Use Challonge blade if CM blade is not available
+      if (!favoriteBlade && challongeFavoriteBlade) {
+        favoriteBlade = challongeFavoriteBlade;
+      }
+
+      // Return unified profile
+      res.json({
+        player: {
+          nickname,
+          avatar: cmPlayer?.avatar || challongePlayer?.avatar || null,
+          platforms: platformStatsWithTop3.map(s => s.platform),
+        },
+        stats: {
+          totalPoints,
+          mostUsedCombo,
+          favoriteBlade,
+        },
+        platformStats: platformStatsWithTop3,
+      });
+    } catch (error) {
+      console.error('Unified player profile error:', error);
+      res.status(500).json({ error: 'Failed to fetch player profile' });
+    }
+  });
+
+  // Unified Player Tournaments - By Nickname (supports both CM and Challonge)
+  app.get('/api/players/by-nickname/:nickname/tournaments', async (req, res) => {
+    try {
+      const nickname = String(req.params.nickname || '').trim();
+      if (!nickname) return res.status(400).json({ error: 'Missing nickname' });
+
+      const seasonRaw = String((req.query.season ?? '') as string).trim();
+      const season = seasonRaw || '';
+
+      // Try to find player in both CM and Challonge
+      const cmPlayerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.nickname, nickname)).limit(1);
+      const cmPlayer = cmPlayerRows[0] || null;
+
+      const tournaments: any[] = [];
+
+      // Get CM tournaments if player exists in CM
+      if (cmPlayer) {
+        let cmTournamentsQuery;
+        if (season) {
+          cmTournamentsQuery = await db.execute(sql`
+            SELECT
+              tournament_id AS tournament_id,
+              MAX(data_torneo) AS date,
+              MIN(piazzamento) AS best_placement,
+              SUM(punti_guadagnati) AS total_points,
+              COUNT(*) AS combo_count,
+              'challengermode' AS platform
+            FROM cm_match_results
+            WHERE player_id = ${cmPlayer.id} AND season = ${season}
+            GROUP BY tournament_id
+            ORDER BY date DESC
+            LIMIT 25;
+          `);
+        } else {
+          cmTournamentsQuery = await db.execute(sql`
+            SELECT
+              tournament_id AS tournament_id,
+              MAX(data_torneo) AS date,
+              MIN(piazzamento) AS best_placement,
+              SUM(punti_guadagnati) AS total_points,
+              COUNT(*) AS combo_count,
+              'challengermode' AS platform
+            FROM cm_match_results
+            WHERE player_id = ${cmPlayer.id}
+            GROUP BY tournament_id
+            ORDER BY date DESC
+            LIMIT 25;
+          `);
+        }
+
+        const cmTournaments = await Promise.all((cmTournamentsQuery.rows || []).map(async (r: any) => {
+          try {
+            const detail = await fetchTournamentDetail(String(r.tournament_id));
+            const name = detail?.name || null;
+            const startedAt = detail?.schedule?.startedAt as string | undefined;
+            const dateFromDetail = startedAt ? String(startedAt).slice(0, 10) : null;
+            return {
+              tournamentId: String(r.tournament_id),
+              date: r.date ? String(r.date) : dateFromDetail,
+              name: name || null,
+              bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
+              totalPoints: Number(r.total_points || 0),
+              comboCount: Number(r.combo_count || 0),
+              platform: 'challengermode',
+            };
+          } catch {
+            return {
+              tournamentId: String(r.tournament_id),
+              date: r.date ? String(r.date) : null,
+              name: null,
+              bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
+              totalPoints: Number(r.total_points || 0),
+              comboCount: Number(r.combo_count || 0),
+              platform: 'challengermode',
+            };
+          }
+        }));
+
+        tournaments.push(...cmTournaments);
+      }
+
+      // Get Challonge tournaments
+      // For now, we'll get tournaments from challonge_reported_combos
+      // This requires linking through users table
+      const userRows = await db.select()
+        .from(users)
+        .where(eq(users.challongeUsername, nickname))
+        .limit(1);
+
+      if (userRows.length > 0) {
+        const user = userRows[0];
+        let challongeTournamentsQuery;
+        if (season) {
+          challongeTournamentsQuery = await db.execute(sql`
+            SELECT
+              tournament_id,
+              MAX(tournament_name) AS tournament_name,
+              MIN(rank) AS best_placement,
+              COUNT(*) AS combo_count,
+              'challonge' AS platform,
+              MAX(created_at) AS date
+            FROM challonge_reported_combos
+            WHERE user_id = ${user.id} AND season = ${season}
+            GROUP BY tournament_id
+            ORDER BY date DESC
+            LIMIT 25;
+          `);
+        } else {
+          challongeTournamentsQuery = await db.execute(sql`
+            SELECT
+              tournament_id,
+              MAX(tournament_name) AS tournament_name,
+              MIN(rank) AS best_placement,
+              COUNT(*) AS combo_count,
+              'challonge' AS platform,
+              MAX(created_at) AS date
+            FROM challonge_reported_combos
+            WHERE user_id = ${user.id}
+            GROUP BY tournament_id
+            ORDER BY date DESC
+            LIMIT 25;
+          `);
+        }
+
+        const challongeTournaments = (challongeTournamentsQuery.rows || []).map((r: any) => ({
+          tournamentId: String(r.tournament_id),
+          date: r.date ? String(r.date).slice(0, 10) : null,
+          name: r.tournament_name ? String(r.tournament_name) : null,
+          bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
+          totalPoints: 0, // Points calculation for Challonge to be implemented
+          comboCount: Number(r.combo_count || 0),
+          platform: 'challonge',
+        }));
+
+        tournaments.push(...challongeTournaments);
+      }
+
+      // Sort all tournaments by date
+      tournaments.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      res.json({ tournaments: tournaments.slice(0, 50) });
+    } catch (error) {
+      console.error('Unified player tournaments error:', error);
+      res.status(500).json({ error: 'Failed to fetch player tournaments' });
     }
   });
 
@@ -2684,7 +3168,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const r of r6.rows as any[]) { const s = String((r as any).season || '').trim(); if (s) seasonsSet.add(s); }
         }
       } catch { }
-      const result = ['All Time', 'Off Season 2025'];
+      const result = ['Season 2026', 'All Time', 'Off Season 2025'];
+      for (const s of Array.from(seasonsSet)) {
+        if (!result.includes(s)) result.push(s);
+      }
       res.json({ seasons: result });
     } catch (error: any) {
       console.error('Error fetching seasons:', error?.message || error);

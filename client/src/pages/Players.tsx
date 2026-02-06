@@ -1,7 +1,7 @@
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState, useEffect } from "react";
@@ -22,41 +22,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Trophy, Medal, Award } from "lucide-react";
 
 type PlayerItem = {
   id: string;
   nickname: string;
   avatar: string | null;
   totalPoints: number;
+  tournamentsPlayed?: number;
+  top3Finishes?: number;
+  platform?: string;
 };
 
 export default function Players() {
   const [, setLocation] = useLocation();
 
-  const REGIONS = [
-    "Piemonte",
-    "Valle d'Aosta",
-    "Lombardia",
-    "Trentino-Alto Adige",
-    "Veneto",
-    "Friuli-Venezia Giulia",
-    "Liguria",
-    "Emilia-Romagna",
-    "Toscana",
-    "Umbria",
-    "Marche",
-    "Lazio",
-    "Abruzzo",
-    "Molise",
-    "Campania",
-    "Puglia",
-    "Basilicata",
-    "Calabria",
-    "Sicilia",
-    "Sardegna",
-  ];
-
-  const [selectedRegion, setSelectedRegion] = useState<string>("global");
   const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
 
@@ -76,25 +56,31 @@ export default function Players() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seasonsData?.seasons?.length]);
 
-  const { data, isLoading } = useQuery<{ leaderboard: any[] }>({
-    queryKey: ["/api/leaderboard/regional", selectedRegion, selectedSeason, selectedPlatform],
+  // Global Leaderboard Query (always global region)
+  const { data: globalData, isLoading } = useQuery<{ players: PlayerItem[] }>({
+    queryKey: ["/api/stats/leaderboard", selectedPlatform],
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.set("season", selectedSeason);
-      if (selectedRegion && selectedRegion !== "global") params.set("region", selectedRegion);
-      if (selectedPlatform && selectedPlatform !== "all") params.set("platform", selectedPlatform);
-      const resp = await fetch(`/api/leaderboard/regional?${params.toString()}`);
-      if (!resp.ok) throw new Error("Failed to fetch regional leaderboard");
-      return await resp.json();
+      if (selectedPlatform && selectedPlatform !== "all") {
+        params.set("platform", selectedPlatform);
+      }
+      const url = `/api/stats/leaderboard${params.toString() ? `?${params.toString()}` : ""}`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("Failed to fetch global leaderboard");
+      return resp.json();
     },
   });
 
-  const players = ((data?.leaderboard || []) as any[]).map((row) => ({
-    id: String(row.player_id || ""),
-    nickname: String(row.player_name || row.player_id || ""),
-    avatar: row.avatar ? String(row.avatar) : null,
-    totalPoints: Number(row.points || 0),
+  const players = (globalData?.players || []).map((p) => ({
+    id: p.nickname,
+    nickname: p.nickname,
+    avatar: p.avatar,
+    totalPoints: p.totalPoints,
+    tournamentsPlayed: p.tournamentsPlayed,
+    top3Finishes: p.top3Finishes,
+    platform: p.platform,
   })) as PlayerItem[];
+
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 20;
@@ -111,17 +97,23 @@ export default function Players() {
 
   useEffect(() => {
     setPage(1);
-  }, [players.length, query, selectedRegion, selectedSeason, selectedPlatform]);
+  }, [players.length, query, selectedPlatform]);
+
+  const getRankIcon = (index: number) => {
+    if (index === 0) return <Trophy className="w-4 h-4 text-yellow-500" />;
+    if (index === 1) return <Medal className="w-4 h-4 text-gray-400" />;
+    if (index === 2) return <Award className="w-4 h-4 text-amber-600" />;
+    return null;
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <PageHeader title="Classifica Giocatori" />
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-3">
         <Tabs
-          value={"players"}
+          value="players"
           onValueChange={(val) => {
             if (val === "components") setLocation("/");
-            else setLocation("/players");
           }}
           className="w-full"
         >
@@ -135,7 +127,7 @@ export default function Players() {
               <div className="flex-1 min-w-0 w-full sm:w-auto">
                 <Input
                   id="player-search"
-                  aria-label="Search players"
+                  aria-label="Cerca giocatori"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Cerca giocatori..."
@@ -154,31 +146,6 @@ export default function Players() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-full sm:w-[130px]">
-                <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Globale" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="global">Globale</SelectItem>
-                    {REGIONS.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-full sm:w-[140px]">
-                <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Stagione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {seasons.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             {isLoading ? (
               <div className="space-y-2">
@@ -189,37 +156,66 @@ export default function Players() {
             ) : filteredPlayers.length === 0 ? (
               <Card className="p-6 text-center">Nessun giocatore trovato</Card>
             ) : (
-              <div className="overflow-y-auto">
-                {pageItems.map((p, idx) => (
-                  <Link
-                    key={p.id}
-                    href={`/players/${encodeURIComponent(p.id)}`}
-                    className="block no-underline mb-2 last:mb-0"
-                  >
-                    <Card className="p-3 flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
-                      <div className="w-10 text-center">
-                        <Badge variant="secondary" className="text-xs">
-                          {(page - 1) * perPage + idx + 1}
-                        </Badge>
-                      </div>
-                      <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                        {p.avatar ? (
-                          <img src={p.avatar} alt={`Avatar di ${p.nickname}`} className="w-12 h-12 object-cover" />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">N/A</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{p.nickname}</p>
-                        <div className="mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            Punti: {Number(p.totalPoints).toLocaleString()}
-                          </Badge>
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
+              <div className="overflow-y-auto space-y-2">
+                {pageItems.map((p, idx) => {
+                  const globalRank = (page - 1) * perPage + idx;
+
+                  return (
+                    <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`}>
+                      <a className="block no-underline">
+                        <Card className="p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all duration-200 active:scale-[0.99]">
+                          <div className="w-10 text-center flex-shrink-0">
+                            {getRankIcon(globalRank) || (
+                              <Badge variant="secondary" className="text-xs">
+                                {globalRank + 1}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                            {p.avatar ? (
+                              <img src={p.avatar} alt={`Avatar di ${p.nickname}`} className="w-12 h-12 object-cover" />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">N/A</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">{p.nickname}</p>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              <Badge variant="default" className="text-xs">
+                                {Number(p.totalPoints).toFixed(0)} pt
+                              </Badge>
+                              {p.tournamentsPlayed !== undefined && (
+                                <Badge variant="outline" className="text-xs">
+                                  {p.tournamentsPlayed} tornei
+                                </Badge>
+                              )}
+                              {p.platform && (
+                                <Badge variant="outline" className="text-xs">
+                                  {p.platform === "challengermode" ? "CM" : "Challonge"}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 text-muted-foreground">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                          </div>
+                        </Card>
+                      </a>
+                    </Link>
+                  );
+                })}
                 {filteredPlayers.length > perPage && (
                   <Pagination className="mt-2">
                     <PaginationContent className="flex-wrap">

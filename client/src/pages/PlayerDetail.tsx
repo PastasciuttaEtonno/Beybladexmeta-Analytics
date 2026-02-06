@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 
 type PlayerProfileResp = {
-  player: { id: string; nickname: string; avatar: string | null };
+  player: { nickname: string; avatar: string | null; platforms: string[] };
   stats: {
     totalPoints: number;
     mostUsedCombo: {
@@ -32,6 +32,12 @@ type PlayerProfileResp = {
     } | null;
     favoriteBlade: { blade: string; count: number; points: number } | null;
   };
+  platformStats: Array<{
+    platform: string;
+    totalPoints: number;
+    tournamentsPlayed: number;
+    top3Finishes: number;
+  }>;
 };
 
 type PlayerTournamentsResp = {
@@ -42,15 +48,16 @@ type PlayerTournamentsResp = {
     bestPlacement: number | null;
     totalPoints: number;
     comboCount: number;
+    platform: string;
   }>;
 };
 
 export default function PlayerDetail() {
-  const [, params] = useRoute("/players/:id");
+  const [, params] = useRoute("/players/:nickname");
   const [, setLocation] = useLocation();
-  const playerId = params?.id || "";
+  const nickname = params?.nickname || "";
 
-  const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
+  const [selectedSeason, setSelectedSeason] = useState<string>("");
   const { data: seasonsData } = useQuery<{ seasons: string[] }>({
     queryKey: ["/api/seasons"],
     queryFn: async () => {
@@ -59,34 +66,34 @@ export default function PlayerDetail() {
       return await resp.json();
     },
   });
-  const seasons = (seasonsData?.seasons || ["Off Season 2025", "All Time"]) as string[];
+  const seasons = (seasonsData?.seasons || ["Season 2026", "All Time", "Off Season 2025"]) as string[];
   useEffect(() => {
-    if (seasons.length && !seasons.includes(selectedSeason)) {
+    if (seasons.length && selectedSeason === "") {
       setSelectedSeason(seasons[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seasonsData?.seasons?.length]);
 
   const { data, isLoading } = useQuery<PlayerProfileResp>({
-    queryKey: ["/api/players", playerId, selectedSeason],
+    queryKey: ["/api/players/by-nickname", nickname, selectedSeason],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set("season", selectedSeason);
-      const resp = await fetch(`/api/players/${encodeURIComponent(playerId)}?${params.toString()}`, { credentials: "include" });
+      const resp = await fetch(`/api/players/by-nickname/${encodeURIComponent(nickname)}?${params.toString()}`, { credentials: "include" });
       if (!resp.ok) throw new Error("Failed to fetch player profile");
       return await resp.json();
     },
-    enabled: !!playerId,
+    enabled: !!nickname,
   });
 
   const { data: tourData, isLoading: tourLoading } = useQuery<PlayerTournamentsResp>({
-    queryKey: ["/api/players", playerId, "tournaments"],
+    queryKey: ["/api/players/by-nickname", nickname, "tournaments"],
     queryFn: async () => {
-      const resp = await fetch(`/api/players/${encodeURIComponent(playerId)}/tournaments`, { credentials: "include" });
+      const resp = await fetch(`/api/players/by-nickname/${encodeURIComponent(nickname)}/tournaments`, { credentials: "include" });
       if (!resp.ok) throw new Error("Failed to fetch player tournaments");
       return await resp.json();
     },
-    enabled: !!playerId,
+    enabled: !!nickname,
   });
 
   const profile = data?.player || null;
@@ -157,140 +164,140 @@ export default function PlayerDetail() {
           </div>
 
           <TabsContent value="players" className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="w-[180px]">
-            <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Stagione" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasons.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <Card className="p-4 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-            {profile?.avatar ? (
-              <img src={profile.avatar} alt={profile.nickname} className="w-16 h-16 object-cover" />
-            ) : (
-              <span className="text-xs text-muted-foreground">N/A</span>
-            )}
-          </div>
-          <div className="flex-1">
-            <p className="text-lg font-semibold">{profile?.nickname || ""}</p>
-            {stats && (
-              <Badge variant="outline" className="text-xs mt-1">
-                Punti totali: {Number(stats.totalPoints).toLocaleString()}
-              </Badge>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-base">Statistiche</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {isLoading ? (
-              <div className="space-y-2">
-                <div className="h-6 bg-muted/30 animate-pulse" />
-                <div className="h-6 bg-muted/30 animate-pulse" />
-                <div className="h-6 bg-muted/30 animate-pulse" />
+            <div className="flex items-center gap-2">
+              <div className="w-[180px]">
+                <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Stagione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seasons.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-medium">Combo più usata</p>
-                  {stats?.mostUsedCombo ? (
-                    <div className="space-y-1">
-                      <div className="text-sm text-muted-foreground font-medium truncate" title={formatComboTitle(stats.mostUsedCombo)}>
-                        {formatComboTitle(stats.mostUsedCombo)}
-                        <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.mostUsedCombo.count}</Badge>
-                      </div>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        {stats.mostUsedCombo.lockChip && stats.mostUsedCombo.lockChip.toLowerCase() !== 'none' && (
-                          <ComponentImage folder="chips" name={stats.mostUsedCombo.lockChip} />
-                        )}
-                        <ComponentImage folder="blades" name={stats.mostUsedCombo.blade} />
-                        {stats.mostUsedCombo.assistBlade && stats.mostUsedCombo.assistBlade.toLowerCase() !== 'none' && (
-                          <ComponentImage folder="assist-blades" name={stats.mostUsedCombo.assistBlade} />
-                        )}
-                        {stats.mostUsedCombo.ratchet && stats.mostUsedCombo.ratchet.toLowerCase() !== 'none' && (
-                          <ComponentImage folder="ratchets" name={stats.mostUsedCombo.ratchet} />
-                        )}
-                        <ComponentImage folder="bits" name={stats.mostUsedCombo.bit} />
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium">Blade preferita</p>
-                  {stats?.favoriteBlade ? (
-                    <div className="flex items-center gap-3">
-                      <ComponentImage folder="blades" name={stats.favoriteBlade.blade} />
-                      <div className="text-sm text-muted-foreground">
-                        {stats.favoriteBlade.blade}
-                        <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.favoriteBlade.count}</Badge>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
-                  )}
-                </div>
+            </div>
+            <Card className="p-4 flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                {profile?.avatar ? (
+                  <img src={profile.avatar} alt={profile.nickname} className="w-16 h-16 object-cover" />
+                ) : (
+                  <span className="text-xs text-muted-foreground">N/A</span>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-base">Tornei partecipati</CardTitle>
-            <CardDescription className="text-xs">Clicca un torneo per vedere i dettagli</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {tourLoading ? (
-              <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-16 bg-muted/30 animate-pulse rounded" />
-                ))}
+              <div className="flex-1">
+                <p className="text-lg font-semibold">{profile?.nickname || ""}</p>
+                {stats && (
+                  <Badge variant="outline" className="text-xs mt-1">
+                    Punti totali: {Number(stats.totalPoints).toLocaleString()}
+                  </Badge>
+                )}
               </div>
-            ) : (tourData?.tournaments || []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nessun torneo trovato</p>
-            ) : (
-              <div className="space-y-2">
-                {(tourData?.tournaments || []).map((t) => (
-                  <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
-                    <a className="block no-underline">
-                      <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
-                            </p>
+            </Card>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-base">Statistiche</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <div className="h-6 bg-muted/30 animate-pulse" />
+                    <div className="h-6 bg-muted/30 animate-pulse" />
+                    <div className="h-6 bg-muted/30 animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium">Combo più usata</p>
+                      {stats?.mostUsedCombo ? (
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground font-medium truncate" title={formatComboTitle(stats.mostUsedCombo)}>
+                            {formatComboTitle(stats.mostUsedCombo)}
+                            <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.mostUsedCombo.count}</Badge>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {t.bestPlacement != null && (
-                              <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {stats.mostUsedCombo.lockChip && stats.mostUsedCombo.lockChip.toLowerCase() !== 'none' && (
+                              <ComponentImage folder="chips" name={stats.mostUsedCombo.lockChip} />
                             )}
-                            <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
-                            {/* <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge> */}
+                            <ComponentImage folder="blades" name={stats.mostUsedCombo.blade} />
+                            {stats.mostUsedCombo.assistBlade && stats.mostUsedCombo.assistBlade.toLowerCase() !== 'none' && (
+                              <ComponentImage folder="assist-blades" name={stats.mostUsedCombo.assistBlade} />
+                            )}
+                            {stats.mostUsedCombo.ratchet && stats.mostUsedCombo.ratchet.toLowerCase() !== 'none' && (
+                              <ComponentImage folder="ratchets" name={stats.mostUsedCombo.ratchet} />
+                            )}
+                            <ComponentImage folder="bits" name={stats.mostUsedCombo.bit} />
                           </div>
                         </div>
-                      </Card>
-                    </a>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium">Blade preferita</p>
+                      {stats?.favoriteBlade ? (
+                        <div className="flex items-center gap-3">
+                          <ComponentImage folder="blades" name={stats.favoriteBlade.blade} />
+                          <div className="text-sm text-muted-foreground">
+                            {stats.favoriteBlade.blade}
+                            <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.favoriteBlade.count}</Badge>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-base">Tornei partecipati</CardTitle>
+                <CardDescription className="text-xs">Clicca un torneo per vedere i dettagli</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {tourLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-16 bg-muted/30 animate-pulse rounded" />
+                    ))}
+                  </div>
+                ) : (tourData?.tournaments || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nessun torneo trovato</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(tourData?.tournaments || []).map((t) => (
+                      <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+                        <a className="block no-underline">
+                          <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {t.bestPlacement != null && (
+                                  <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
+                                {/* <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge> */}
+                              </div>
+                            </div>
+                          </Card>
+                        </a>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
