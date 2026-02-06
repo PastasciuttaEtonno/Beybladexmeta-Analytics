@@ -148,7 +148,7 @@ export default function Players() {
               </div>
             </div>
             {isLoading ? (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Card key={i} className="h-20 bg-muted/30 animate-pulse" />
                 ))}
@@ -161,7 +161,7 @@ export default function Players() {
                   const globalRank = (page - 1) * perPage + idx;
 
                   return (
-                    <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`}>
+                    <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`} className="block mb-0">
                       <a className="block no-underline">
                         <Card className="p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all duration-200 active:scale-[0.99]">
                           <div className="w-10 text-center flex-shrink-0">

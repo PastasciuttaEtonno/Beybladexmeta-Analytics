@@ -1089,29 +1089,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const type = String(req.params.type || '').toLowerCase();
       const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
       const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 50)) : 10;
+      const season = req.query.season as string | undefined;
+
+      // Determine if we need aggregation (All Time view)
+      const isAllTime = !season || season.toLowerCase() === 'all time' || season.toLowerCase() === 'all-time';
 
       let rows: any[] = [];
+
       if (type === 'blade') {
-        rows = await db.select()
-          .from(bladeStats)
-          .orderBy(desc(bladeStats.punteggioTotale))
-          .limit(limit);
+        if (isAllTime) {
+          // Aggregate all seasons
+          rows = await db.select({
+            blade: bladeStats.blade,
+            punteggioTotale: sql<number>`sum(${bladeStats.punteggioTotale})`.as('punteggioTotale'),
+            primiPosti: sql<number>`sum(${bladeStats.primiPosti})`.as('primiPosti'),
+            secondiPosti: sql<number>`sum(${bladeStats.secondiPosti})`.as('secondiPosti'),
+            terziPosti: sql<number>`sum(${bladeStats.terziPosti})`.as('terziPosti'),
+          })
+            .from(bladeStats)
+            .groupBy(bladeStats.blade)
+            .orderBy(desc(sql`sum(${bladeStats.punteggioTotale})`))
+            .limit(limit);
+        } else {
+          // Filter by specific season
+          rows = await db.select()
+            .from(bladeStats)
+            .where(eq(bladeStats.season, season))
+            .orderBy(desc(bladeStats.punteggioTotale))
+            .limit(limit);
+        }
       } else if (type === 'ratchet') {
-        rows = await db.select()
-          .from(ratchetStats)
-          .orderBy(desc(ratchetStats.punteggioTotale))
-          .limit(limit);
+        if (isAllTime) {
+          // Aggregate all seasons
+          rows = await db.select({
+            ratchet: ratchetStats.ratchet,
+            punteggioTotale: sql<number>`sum(${ratchetStats.punteggioTotale})`.as('punteggioTotale'),
+            primiPosti: sql<number>`sum(${ratchetStats.primiPosti})`.as('primiPosti'),
+            secondiPosti: sql<number>`sum(${ratchetStats.secondiPosti})`.as('secondiPosti'),
+            terziPosti: sql<number>`sum(${ratchetStats.terziPosti})`.as('terziPosti'),
+          })
+            .from(ratchetStats)
+            .groupBy(ratchetStats.ratchet)
+            .orderBy(desc(sql`sum(${ratchetStats.punteggioTotale})`))
+            .limit(limit);
+        } else {
+          // Filter by specific season
+          rows = await db.select()
+            .from(ratchetStats)
+            .where(eq(ratchetStats.season, season))
+            .orderBy(desc(ratchetStats.punteggioTotale))
+            .limit(limit);
+        }
       } else if (type === 'bit') {
-        rows = await db.select()
-          .from(bitStats)
-          .orderBy(desc(bitStats.punteggioTotale))
-          .limit(limit);
+        if (isAllTime) {
+          // Aggregate all seasons
+          rows = await db.select({
+            bit: bitStats.bit,
+            punteggioTotale: sql<number>`sum(${bitStats.punteggioTotale})`.as('punteggioTotale'),
+            primiPosti: sql<number>`sum(${bitStats.primiPosti})`.as('primiPosti'),
+            secondiPosti: sql<number>`sum(${bitStats.secondiPosti})`.as('secondiPosti'),
+            terziPosti: sql<number>`sum(${bitStats.terziPosti})`.as('terziPosti'),
+          })
+            .from(bitStats)
+            .groupBy(bitStats.bit)
+            .orderBy(desc(sql`sum(${bitStats.punteggioTotale})`))
+            .limit(limit);
+        } else {
+          // Filter by specific season
+          rows = await db.select()
+            .from(bitStats)
+            .where(eq(bitStats.season, season))
+            .orderBy(desc(bitStats.punteggioTotale))
+            .limit(limit);
+        }
       } else {
         return res.status(400).json({ error: 'Invalid type. Use blade, ratchet, or bit.' });
       }
 
-      res.json({ items: rows, type, limit });
+      res.json({ items: rows, type, limit, season: season || 'All Time' });
     } catch (error) {
+      console.error('Leaderboard error:', error);
       res.status(500).json({ error: 'Failed to fetch leaderboard' });
     }
   });
