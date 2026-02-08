@@ -162,16 +162,21 @@ export function registerChallongeAuth(app: express.Express) {
                     return res.redirect("/profile?error=" + encodeURIComponent("This Challonge account is already linked to another user."));
                 }
 
-                await db.update(users).set({ challongeId, challongeUsername: username }).where(eq(users.id, currentUserId));
+                await db.update(users).set({
+                    challongeId,
+                    challongeUsername: username,
+                    photoURL: avatarUrl || sql`photo_url` // Update photoURL if avatarUrl is provided
+                }).where(eq(users.id, currentUserId));
             } else {
                 // User not logged in
                 if (existingUserWithChallongeId) {
                     // Log them in
                     req.session.userId = existingUserWithChallongeId.id;
-                    // Ensure username is up to date
-                    if (existingUserWithChallongeId.challongeUsername !== username) {
-                        await db.update(users).set({ challongeUsername: username }).where(eq(users.id, existingUserWithChallongeId.id));
-                    }
+                    // Ensure username and photo are up to date
+                    await db.update(users).set({
+                        challongeUsername: username,
+                        photoURL: avatarUrl || sql`photo_url`
+                    }).where(eq(users.id, existingUserWithChallongeId.id));
                 } else {
                     // Create new user? 
                     // Similar to auth-challenger: create a new user or just fail?

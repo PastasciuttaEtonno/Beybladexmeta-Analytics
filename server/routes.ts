@@ -1598,8 +1598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get Challonge tournaments
-      // For now, we'll get tournaments from challonge_reported_combos
-      // This requires linking through users table
+      // Case 1: Linked via user account
       const userRows = await db.select()
         .from(users)
         .where(eq(users.challongeUsername, nickname))
@@ -1645,12 +1644,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date: r.date ? String(r.date).slice(0, 10) : null,
           name: r.tournament_name ? String(r.tournament_name) : null,
           bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
-          totalPoints: 0, // Points calculation for Challonge to be implemented
+          totalPoints: 0,
           comboCount: Number(r.combo_count || 0),
           platform: 'challonge',
         }));
 
         tournaments.push(...challongeTournaments);
+      } else {
+        // Case 2: Ghost Player (Not linked to a user, but present in challonge_match_results)
+        // We look into the 'data' blob of all Challonge tournaments
+        const ghostToursQuery = await db.execute(sql`
+          SELECT 
+            c.tournament_id,
+            c.data->>'tournament_name' as tournament_name,
+            c.data->>'start_date' as date,
+            (s->>'rank')::int as rank,
+            COALESCE(
+              (c.data->>'participants_count')::int, 
+              (c.data->>'total_players')::int, 
+              jsonb_array_length(c.data->'standings')
+            ) as total_participants
+          FROM challonge_match_results c,
+          jsonb_array_elements(c.data->'standings') as s
+          WHERE COALESCE(s->'participant'->>'name', s->>'name') = ${nickname}
+          ORDER BY c.data->>'start_date' DESC
+          LIMIT 50;
+        `);
+
+        if (ghostToursQuery.rows.length > 0) {
+          const ghostTournaments = ghostToursQuery.rows.map((r: any) => {
+            // Basic points calculation for display
+            let points = 10; // Default
+            const rank = r.rank;
+            const total = r.total_participants;
+
+            if (total >= 13) {
+              if (rank === 1) points = 200;
+              else if (rank === 2) points = 120;
+              else if (rank === 3) points = 80;
+              else if (rank === 4) points = 60;
+              else if (rank >= 5 && rank <= 8) points = 30;
+              else if (rank >= 9 && rank <= 12) points = 15;
+            } else if (total >= 8) {
+              if (rank === 1) points = 150;
+              else if (rank === 2) points = 80;
+              else if (rank === 3) points = 60;
+              else if (rank === 4) points = 40;
+              else if (rank >= 5 && rank <= 8) points = 20;
+            } else {
+              if (rank === 1) points = 100;
+              else if (rank === 2) points = 70;
+              else if (rank === 3) points = 50;
+              else if (rank === 4) points = 30;
+            }
+
+            return {
+              tournamentId: String(r.tournament_id),
+              date: r.date ? String(r.date).slice(0, 10) : null,
+              name: r.tournament_name || `Torneo ${r.tournament_id}`,
+              bestPlacement: rank,
+              totalPoints: points,
+              comboCount: 0,
+              platform: 'challonge',
+            };
+          });
+          tournaments.push(...ghostTournaments);
+        }
       }
 
       // Sort all tournaments by date

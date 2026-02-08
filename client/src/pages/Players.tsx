@@ -38,7 +38,7 @@ export default function Players() {
   const [, setLocation] = useLocation();
 
   const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
-  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("challengermode");
 
   const { data: seasonsData } = useQuery<{ seasons: string[] }>({
     queryKey: ["/api/seasons"],
@@ -140,7 +140,6 @@ export default function Players() {
                     <SelectValue placeholder="Piattaforma" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tutte le Piattaforme</SelectItem>
                     <SelectItem value="challengermode">Challengermode</SelectItem>
                     <SelectItem value="challonge">Challonge</SelectItem>
                   </SelectContent>
