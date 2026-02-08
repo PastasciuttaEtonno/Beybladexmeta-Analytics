@@ -1188,22 +1188,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid platform. Use challengermode or challonge.' });
       }
 
-      let players: any[] = [];
+      let rows: any[] = [];
 
       if (platform) {
         // Filter by specific platform
-        players = await db.select()
+        rows = await db.select()
           .from(playerPlatformStats)
           .where(eq(playerPlatformStats.platform, platform))
           .orderBy(desc(playerPlatformStats.totalPoints))
           .limit(limit);
       } else {
         // Aggregated view (all platforms combined)
-        players = await db.select()
+        rows = await db.select()
           .from(playerLeaderboardView)
           .orderBy(desc(playerLeaderboardView.totalPoints))
           .limit(limit);
       }
+
+      const players = rows.map((r: any) => ({
+        id: r.playerId || r.nickname,
+        nickname: r.nickname,
+        avatar: r.avatar,
+        totalPoints: Number(r.totalPoints || 0),
+        tournamentsPlayed: Number(r.tournamentsPlayed || 0),
+        wins: Number(r.wins || 0),
+        top3Finishes: Number(r.top3Finishes || 0),
+        platform: r.platform || 'mixed'
+      }));
 
       res.json({ players });
     } catch (error) {
@@ -4012,19 +4023,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Classifica giocatori basata su external_player_combos
+  // Classifica giocatori basata su player_leaderboard (L2)
   app.get('/api/player-rankings', async (req, res) => {
     try {
-      const rows = await db
-        .select()
-        .from(playerLeaderboardView)
-        .orderBy(desc(playerLeaderboardView.totalPoints))
-        .limit(100);
+      const rows = await db.select().from(playerLeaderboardView).orderBy(desc(playerLeaderboardView.totalPoints)).limit(100);
       const players = rows.map((r: any) => ({
-        id: r.playerId,
+        id: r.playerId || r.nickname,
         nickname: r.nickname,
         avatar: r.avatar,
         totalPoints: Number(r.totalPoints || 0),
+        tournamentsPlayed: Number(r.tournamentsPlayed || 0),
+        wins: Number(r.wins || 0),
+        top3Finishes: Number(r.top3Finishes || 0)
       }));
       res.json({ players });
     } catch (error) {
@@ -4032,6 +4042,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
+
+
 
   // Profilo singolo giocatore: avatar, nickname e statistiche
   app.get('/api/players/:id', async (req, res) => {
@@ -4211,6 +4223,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Refresh Leaderboard after CM update
+      try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_platform_stats`);
+      } catch {
+        try { await db.execute(sql`REFRESH MATERIALIZED VIEW player_platform_stats`); } catch { }
+      }
+
       res.json({ success: true, total: ids.length, refreshed: successCount, errors: errorCount });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || 'Failed to refresh tournaments' });
@@ -4222,6 +4241,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { syncChallongeTournaments } = await import('./lib/challonge');
       const result = await syncChallongeTournaments();
+
+      // Refresh Leaderboard
+      try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_platform_stats`);
+      } catch {
+        try { await db.execute(sql`REFRESH MATERIALIZED VIEW player_platform_stats`); } catch { }
+      }
+
       res.json({ success: true, ...result });
     } catch (error: any) {
       console.error('Challonge sync failed:', error);
@@ -4267,7 +4294,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sync "Ghost" Players from imported data
       await syncGhostPlayersFromData(body);
 
-      // Trigger Recalculation of Points for Leaderboard
+      // Trigger Refresh of Leaderboard (Level 1 Mat View)
+      try {
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_platform_stats`);
+      } catch (refreshError) {
+        console.warn('Concurrent refresh failed, falling back to regular refresh:', refreshError);
+        try {
+          await db.execute(sql`REFRESH MATERIALIZED VIEW player_platform_stats`);
+        } catch (e) {
+          console.error("Failed to refresh leaderboard view:", e);
+        }
+      }
+
+      // Trigger Recalculation of Points for Legacy Stats (Optional/Backup)
       try {
         const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
         await recalculateRegionalStatsForTournament('ALL');
@@ -4279,6 +4318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, id: body.id });
     } catch (error) {
       console.error("[Admin] Import failed:", error);
+      res.status(500).json({ error: 'Import failed' });
     }
   });
 
@@ -4341,16 +4381,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
 
-    // Trigger Recalculation of Points for Leaderboard
+    // Trigger Refresh of Leaderboard (Level 1 Mat View)
     try {
-      // We can use the dynamic import to avoid circular dependencies if needed, or just import at top.
-      // But assuming routes.ts already imports from regionalScoring or can.
-      // Let's use dynamic import to be safe as routes.ts is huge.
+      await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_platform_stats`);
+    } catch {
+      try { await db.execute(sql`REFRESH MATERIALIZED VIEW player_platform_stats`); } catch { }
+    }
+
+    // Trigger Recalculation of Points for Legacy Stats (Optional/Backup)
+    try {
       const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
-      // We pass the ID, but our new logic might just run full recalc or specific.
-      // The function signature takes an ID.
-      await recalculateRegionalStatsForTournament('ALL'); // Or pass dummy ID since we updated the logic to be full scan mostly?
-      // Actually, my updated logic scans EVERYTHING. So ID doesn't matter much unless I optimized it.
+      await recalculateRegionalStatsForTournament('ALL');
     } catch (e) {
       console.error("[Admin] Failed to recalculate regional stats:", e);
     }

@@ -347,7 +347,8 @@ export const userAliases = pgTable("user_aliases", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   userIdIdx: index("user_aliases_user_id_idx").on(table.userId),
-  aliasIdx: index("user_aliases_alias_idx").on(table.alias)
+  aliasIdx: index("user_aliases_alias_idx").on(table.alias),
+  lowerAliasIdx: index("idx_user_aliases_lower_alias").on(sql`LOWER(${table.alias})`),
 }));
 
 export const insertUserAliasSchema = createInsertSchema(userAliases);
@@ -496,20 +497,24 @@ export const unifiedMetaView = pgView("unified_meta_view", {
 // Materialized view: Platform-separated player stats
 export const playerPlatformStats = pgView("player_platform_stats", {
   nickname: text("nickname").notNull(),
+  playerId: text("player_id"),
   platform: text("platform").notNull(),
   avatar: text("avatar"),
   totalPoints: doublePrecision("total_points").notNull(),
   tournamentsPlayed: integer("tournaments_played").notNull(),
-  tournamentsWon: integer("tournaments_won").notNull(),
+  wins: integer("tournaments_won").notNull(),
+  top3Finishes: integer("top3_finishes").notNull(),
 }).existing();
 
 // Standard view: Aggregated player leaderboard (sums across platforms)
 export const playerLeaderboardView = pgView("player_leaderboard", {
   nickname: text("nickname").notNull(),
+  playerId: text("player_id"),
   avatar: text("avatar"),
   totalPoints: doublePrecision("total_points").notNull(),
   tournamentsPlayed: integer("tournaments_played").notNull(),
-  tournamentsWon: integer("tournaments_won").notNull(),
+  wins: integer("tournaments_won").notNull(),
+  top3Finishes: integer("top3_finishes").notNull(),
 }).existing();
 
 export const topComponentSnapshot = pgView("top_component_snapshot", {
