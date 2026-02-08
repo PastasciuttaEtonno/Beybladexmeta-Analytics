@@ -412,32 +412,10 @@ export default function TournamentDetail() {
 
       lineups = parts.map((p: any) => {
         // Match combos by rank
-        // Match combos by rank AND identifier
         const rank = parseInt(p.placement, 10);
 
-        const matches = fetched.filter((c: any) => {
-          // 1. Must match rank
-          if (c.rank !== rank) return false;
-
-          // 2. Identify ownership
-          // If combo has a valid userId, match it with p.id (which is p.userId or p.id from backend)
-          if (c.user_id) {
-            // p.id from backend is either name or ID. p.userId is clean ID.
-            const pUserId = String(p.id);
-            return String(c.user_id) === pUserId;
-          }
-
-          // If combo has player_identifier (Admin added for ghost), match that
-          if (c.player_identifier) {
-            const ident = String(c.player_identifier).toLowerCase();
-            const pName = String(p.username || '').toLowerCase();
-            const pId = String(p.id).toLowerCase();
-
-            return ident === pName || ident === pId;
-          }
-
-          return false;
-        }).sort((a: any, b: any) => a.combo_number - b.combo_number);
+        // Backend ensures admin combos have 'rank' aliased from 'placement'
+        const matches = fetched.filter((c: any) => c.rank === rank).sort((a: any, b: any) => a.combo_number - b.combo_number);
 
         let combos: ComboForm[] = [];
         if (matches.length > 0) {

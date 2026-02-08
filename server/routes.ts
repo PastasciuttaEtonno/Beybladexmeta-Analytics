@@ -2955,7 +2955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Fetch external combos (Admin-Reported)
         const externalCombosRes = await db.execute(sql`
-          SELECT e.*, 'admin' as source_type
+          SELECT e.*, e.placement as rank, 'admin' as source_type
           FROM external_player_combos e
           WHERE e.tournament_id = ${id} AND e.platform = 'challonge'
           ORDER BY e.combo_number ASC
