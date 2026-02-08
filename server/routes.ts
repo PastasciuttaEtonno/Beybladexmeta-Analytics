@@ -2947,6 +2947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           state: 'COMPLETED',
           participants: top3,
           fetchedCombos: fetchedCombos,
+          hasCombos: fetchedCombos.length > 0,
           // Add minimal attendance structure
           attendance: {
             signups: {
@@ -4263,11 +4264,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Sync "Ghost" Players from imported data
+      await syncGhostPlayersFromData(body);
+
+      // Trigger Recalculation of Points for Leaderboard
+      try {
+        const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
+        await recalculateRegionalStatsForTournament('ALL');
+      } catch (e) {
+        console.error("[Admin] Failed to recalculate regional stats:", e);
+      }
+
       console.log(`[Admin] Imported tournament: ${body.tournament_name} (${body.id})`);
       res.json({ success: true, id: body.id });
     } catch (error) {
       console.error("[Admin] Import failed:", error);
-      res.status(500).json({ error: 'Failed to import tournament' });
+    }
+  });
+
+  // Helper to sync ghost players from tournament data object
+  async function syncGhostPlayersFromData(data: any) {
+    // Structure of imported JSON usually has 'standings' or 'participants'
+    // We'll try to find player info in 'standings' (common format for this app imports)
+    let count = 0;
+    if (Array.isArray(data.standings)) {
+      console.log(`[Admin] Syncing ghost players from data: ${data.standings.length} standings found`);
+      for (const p of data.standings) {
+        const part = p.participant || p;
+        const pid = String(part.id);
+        const name = part.name || part.username || part.display_name || 'Unknown';
+        const avatar = part.avatar_url || part.icon || null;
+
+        if (pid && name) {
+          await db.insert(challongePlayers).values({
+            id: pid,
+            nickname: name,
+            avatar: avatar,
+            updatedAt: new Date(),
+          }).onConflictDoUpdate({
+            target: challongePlayers.id,
+            set: {
+              nickname: sql`excluded.nickname`, // Keep latest name
+              avatar: sql`COALESCE(excluded.avatar, challonge_players.avatar)`, // Don't wipe avatar if null
+              updatedAt: new Date(),
+            }
+          });
+          count++;
+        }
+      }
+    } else if (Array.isArray(data.participants)) {
+      // Fallback if 'participants' key is used
+      console.log(`[Admin] Syncing ghost players from data: ${data.participants.length} participants found`);
+      for (const p of data.participants) {
+        const part = p.participant || p;
+        const pid = String(part.id);
+        const name = part.name || part.username || part.display_name || 'Unknown';
+        const avatar = part.avatar_url || null;
+
+        if (pid && name) {
+          await db.insert(challongePlayers).values({
+            id: pid,
+            nickname: name,
+            avatar: avatar,
+            updatedAt: new Date(),
+          }).onConflictDoUpdate({
+            target: challongePlayers.id,
+            set: {
+              nickname: sql`excluded.nickname`,
+              avatar: sql`COALESCE(excluded.avatar, challonge_players.avatar)`,
+              updatedAt: new Date(),
+            }
+          });
+          count++;
+        }
+      }
+    }
+
+
+    // Trigger Recalculation of Points for Leaderboard
+    try {
+      // We can use the dynamic import to avoid circular dependencies if needed, or just import at top.
+      // But assuming routes.ts already imports from regionalScoring or can.
+      // Let's use dynamic import to be safe as routes.ts is huge.
+      const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
+      // We pass the ID, but our new logic might just run full recalc or specific.
+      // The function signature takes an ID.
+      await recalculateRegionalStatsForTournament('ALL'); // Or pass dummy ID since we updated the logic to be full scan mostly?
+      // Actually, my updated logic scans EVERYTHING. So ID doesn't matter much unless I optimized it.
+    } catch (e) {
+      console.error("[Admin] Failed to recalculate regional stats:", e);
+    }
+
+    return count;
+  }
+
+  // Admin: Sync ghost players for an existing tournament
+  app.post('/api/admin/tournaments/:id/sync-ghost-players', requireAdmin, async (req, res) => {
+    try {
+      const tournamentId = req.params.id;
+      // Fetch the existing data blob
+      const rows = await db.execute(sql`SELECT data FROM challonge_match_results WHERE tournament_id = ${tournamentId} LIMIT 1`);
+      if (rows.rows.length === 0) {
+        return res.status(404).json({ error: 'Tournament not found' });
+      }
+      const data = rows.rows[0].data;
+      const count = await syncGhostPlayersFromData(data);
+      res.json({ success: true, count });
+    } catch (error: any) {
+      console.error("[Admin] Sync ghost players failed:", error);
+      res.status(500).json({ error: error?.message || 'Failed to sync players' });
     }
   });
 

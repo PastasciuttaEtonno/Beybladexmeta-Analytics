@@ -615,6 +615,24 @@ export default function TournamentDetail() {
     }
   };
 
+  const handleSyncGhostPlayers = async () => {
+    if (!user?.isAdmin) return;
+    if (!tournamentId) return;
+    setResetting(true); // Reuse resetting state for loading UI
+    try {
+      const resp = await fetch(`/api/admin/tournaments/${tournamentId}/sync-ghost-players`, { method: "POST" });
+      if (!resp.ok) throw new Error("Sync fallito");
+      const data = await resp.json();
+      toast({ title: "Sync completato", description: `Sincronizzati ${data.count} giocatori fantasma` });
+      // Reload page to reflect changes in lineups if needed, or just let users see it next time
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (e: any) {
+      toast({ title: "Errore", description: e?.message || "Sync fallito", variant: "destructive" });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <Seo
@@ -667,11 +685,18 @@ export default function TournamentDetail() {
                 </a>
               </p>
             )}
-            {user?.isAdmin && detailResp?.detail?.hasCombos && (
-              <div className="pt-2">
-                <Button type="button" variant="destructive" onClick={handleResetTournamentCombos} disabled={resetting}>
-                  {resetting ? "Reset..." : "Azzera combo torneo"}
-                </Button>
+            {user?.isAdmin && (
+              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                {detailResp?.detail?.hasCombos && (
+                  <Button type="button" variant="destructive" onClick={handleResetTournamentCombos} disabled={resetting}>
+                    {resetting ? "Reset..." : "Azzera combo torneo"}
+                  </Button>
+                )}
+                {detailResp?.detail?.platform === 'challonge' && (
+                  <Button type="button" variant="outline" onClick={handleSyncGhostPlayers} disabled={resetting}>
+                    {resetting ? "Syncing..." : "Sync Giocatori Fantasma"}
+                  </Button>
+                )}
               </div>
             )}
             {/* self-edit button removed: editing only shown when user appears in lineup */}

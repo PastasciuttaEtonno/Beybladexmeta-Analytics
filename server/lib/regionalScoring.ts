@@ -18,8 +18,8 @@ function seasonForDate(dateStr: string | null | undefined): string {
   }
 }
 
-// New scoring table based on placement
-function calculatePoints(placement: number): number {
+// CM Scoring (Static)
+function calculateCmPoints(placement: number): number {
   if (placement === 1) return 100;
   if (placement === 2) return 80;
   if (placement === 3) return 65;
@@ -32,25 +32,81 @@ function calculatePoints(placement: number): number {
   return 0;
 }
 
+// Challonge Scoring (Tiered by Participant Count)
+function calculateChallongePoints(placement: number, count: number): number {
+  if (count >= 49) { // 49-64 (or more)
+    if (placement === 1) return 400;
+    if (placement === 2) return 280;
+    if (placement === 3) return 160;
+    if (placement === 4) return 120;
+    if (placement >= 5 && placement <= 8) return 90;
+    if (placement >= 9 && placement <= 12) return 65;
+    if (placement >= 13 && placement <= 16) return 50;
+    if (placement >= 17 && placement <= 24) return 40;
+    if (placement >= 25 && placement <= 32) return 30;
+    if (placement >= 33 && placement <= 48) return 15;
+    if (placement >= 49) return 10;
+  } else if (count >= 33) { // 33-48
+    if (placement === 1) return 350;
+    if (placement === 2) return 240;
+    if (placement === 3) return 140;
+    if (placement === 4) return 110;
+    if (placement >= 5 && placement <= 8) return 80;
+    if (placement >= 9 && placement <= 12) return 55;
+    if (placement >= 13 && placement <= 16) return 40;
+    if (placement >= 17 && placement <= 24) return 30;
+    if (placement >= 25 && placement <= 32) return 15;
+    if (placement >= 33) return 10;
+  } else if (count >= 25) { // 25-32
+    if (placement === 1) return 300;
+    if (placement === 2) return 200;
+    if (placement === 3) return 120;
+    if (placement === 4) return 90;
+    if (placement >= 5 && placement <= 8) return 70;
+    if (placement >= 9 && placement <= 12) return 45;
+    if (placement >= 13 && placement <= 16) return 30;
+    if (placement >= 17 && placement <= 24) return 15;
+    if (placement >= 25) return 10;
+  } else if (count >= 17) { // 17-24
+    if (placement === 1) return 250;
+    if (placement === 2) return 160;
+    if (placement === 3) return 100;
+    if (placement === 4) return 80;
+    if (placement >= 5 && placement <= 8) return 60;
+    if (placement >= 9 && placement <= 12) return 30;
+    if (placement >= 13 && placement <= 16) return 15;
+    if (placement >= 17) return 10;
+  } else if (count >= 13) { // 13-16
+    if (placement === 1) return 200;
+    if (placement === 2) return 120;
+    if (placement === 3) return 80;
+    if (placement === 4) return 60;
+    if (placement >= 5 && placement <= 8) return 30;
+    if (placement >= 9 && placement <= 12) return 15;
+    if (placement >= 13) return 10;
+  } else if (count >= 8) { // 8-12
+    if (placement === 1) return 150;
+    if (placement === 2) return 80;
+    if (placement === 3) return 60;
+    if (placement === 4) return 40;
+    if (placement >= 5 && placement <= 8) return 20;
+    if (placement >= 9) return 10;
+  } else { // 6-7 (or less fallback)
+    if (placement === 1) return 100;
+    if (placement === 2) return 70;
+    if (placement === 3) return 50;
+    if (placement === 4) return 30;
+    if (placement >= 5) return 10;
+  }
+  return 0;
+}
+
 export async function recalculateAllRegionalStats(): Promise<{ inserted: number }> {
-  // Clear existing stats for Challengermode. 
-  // Note: If we had other platforms, we should filter by platform = 'challengermode'
-  await db.execute(sql`DELETE FROM player_regional_stats WHERE platform = 'challengermode'`);
+  // Clear existing stats.
+  await db.execute(sql`DELETE FROM player_regional_stats`);
 
-  // Fetch all match results. 
-  // Note: match results table (cm_match_results) is populated from the external JSONs via the refresh mechanism.
-  // We rely on the refresh mechanism to populate cm_match_results correctly with ALL participants.
-  // Wait, the previous logic populated cm_match_results ONLY for top 4 during claim.
-  // The user requirement says: "Itera su tutti i partecipanti presenti nel JSON (row.data)".
-  // This implies we should be reading from `external_api_cache` where the tournament details are stored!
-  // BUT the instruction says: "Itera su tutti i partecipanti presenti nel JSON (row.data)".
-  // row.data refers to `external_api_cache` data probably?
-  // Let's look at how the data is structured. 
-  // Actually, the user says "Modifica server/lib/regionalScoring.ts".
-  // And "Itera su tutti i partecipanti presenti nel JSON (row.data)".
-
-  // Queries external_api_cache for tournament details
-  const rows = await db.execute(sql`
+  // --- 1. Challengermode (existing logic) ---
+  const cmRows = await db.execute(sql`
     SELECT c.data, tv.region
     FROM external_api_cache c
     JOIN tournaments_view tv ON tv.id = substring(c.cache_key from 'cm:tournamentDetail:(.*)')
@@ -70,30 +126,47 @@ export async function recalculateAllRegionalStats(): Promise<{ inserted: number 
     top4: number
   }>();
 
-  for (const row of rows.rows as any[]) {
-    const data = row.data as any; // ExternalTournamentDetail
+  // Helper to update agg map
+  const updateAgg = (playerId: string, username: string, region: string, season: string, platform: string, points: number, placement: number) => {
+    const key: AggregateKey = `${playerId}|${region}|${season}|${platform}`;
+    let stats = agg.get(key);
+    if (!stats) {
+      stats = {
+        playerId,
+        playerName: username,
+        region,
+        season,
+        platform,
+        points: 0,
+        tournamentsPlayed: 0,
+        wins: 0,
+        top4: 0
+      };
+      agg.set(key, stats);
+    }
+    stats.tournamentsPlayed += 1;
+    stats.points += points;
+    if (placement === 1) stats.wins += 1;
+    if (placement <= 4) stats.top4 += 1;
+  };
+
+  // Process CM
+  for (const row of cmRows.rows as any[]) {
+    const data = row.data as any;
     const region = String(row.region);
+    const season = seasonForDate(data.schedule?.startedAt);
 
-    // Determine season from startedAt
-    const startedAt = data.schedule?.startedAt;
-    const season = seasonForDate(startedAt);
-
-    // Parse lineups
-    const lineups = data.attendance?.signups?.lineups || [];
-
-    // Track unique players per tournament to avoid double counting if bad data
+    // Track unique players per tournament
     const playersInTournament = new Set<string>();
 
+    const lineups = data.attendance?.signups?.lineups || [];
     for (const lineup of lineups) {
       const displayPlacement = lineup.placement?.displayPlacement;
       let placement = 999999;
-
-      // Parse placement
       if (displayPlacement) {
         if (/^\d+$/.test(displayPlacement)) {
           placement = parseInt(displayPlacement, 10);
         } else {
-          // Handle "1st", "2nd" etc if necessary, though CM API usually gives integer-like
           const m = displayPlacement.match(/(\d+)/);
           if (m) placement = parseInt(m[1], 10);
         }
@@ -103,39 +176,54 @@ export async function recalculateAllRegionalStats(): Promise<{ inserted: number 
       for (const member of members) {
         const user = member.user;
         if (!user || !user.userId) continue;
-
         const playerId = user.userId;
         const username = user.username || "Unknown";
 
         if (playersInTournament.has(playerId)) continue;
         playersInTournament.add(playerId);
 
-        const key: AggregateKey = `${playerId}|${region}|${season}`;
-
-        let stats = agg.get(key);
-        if (!stats) {
-          stats = {
-            playerId,
-            playerName: username,
-            region,
-            season,
-            platform: 'challengermode',
-            points: 0,
-            tournamentsPlayed: 0,
-            wins: 0,
-            top4: 0
-          };
-          agg.set(key, stats);
-        }
-
-        // Update stats
-        stats.tournamentsPlayed += 1;
-        const pts = calculatePoints(placement);
-        stats.points += pts;
-
-        if (placement === 1) stats.wins += 1;
-        if (placement <= 4) stats.top4 += 1;
+        // CM uses static scoring
+        const pts = calculateCmPoints(placement);
+        updateAgg(playerId, username, region, season, 'challengermode', pts, placement);
       }
+    }
+  }
+
+  // --- 2. Challonge (NEW) ---
+  const challongeRows = await db.execute(sql`
+    SELECT c.data, c.fetched_at
+    FROM challonge_match_results c
+  `);
+
+  for (const row of challongeRows.rows as any[]) {
+    const data = row.data as any;
+    // Date
+    const startedAt = data.start_date || data.started_at || row.fetched_at;
+    const season = seasonForDate(startedAt);
+
+    // Region
+    const region = 'Global';
+
+    const standings = data.standings || [];
+    // Total Participants
+    const totalParticipants = data.participants_count || data.total_players || standings.length || 0;
+
+    // Track unique players
+    const playersInTournament = new Set<string>();
+
+    for (const p of standings) {
+      // p: { rank, name/username, id... }
+      const rank = parseInt(String(p.rank), 10) || 999999;
+      const part = p.participant || p;
+      const pid = String(part.id);
+      const name = part.name || part.username || part.display_name || 'Unknown';
+
+      if (!pid || playersInTournament.has(pid)) continue;
+      playersInTournament.add(pid);
+
+      // Challonge uses Tiered scoring logic
+      const pts = calculateChallongePoints(rank, totalParticipants);
+      updateAgg(pid, name, region, season, 'challonge', pts, rank);
     }
   }
 
@@ -153,9 +241,6 @@ export async function recalculateAllRegionalStats(): Promise<{ inserted: number 
   }));
 
   if (values.length > 0) {
-    // Batch insert/update
-    // We can use a loop for safety or huge insert
-    // For now, assuming manageable size
     await db.insert(playerRegionalStats).values(values).onConflictDoUpdate({
       target: [playerRegionalStats.playerId, playerRegionalStats.region, playerRegionalStats.season, playerRegionalStats.platform],
       set: {
@@ -164,7 +249,7 @@ export async function recalculateAllRegionalStats(): Promise<{ inserted: number 
         wins: sql`excluded.wins`,
         top4: sql`excluded.top4`,
         updatedAt: sql`now()`,
-        playerName: sql`excluded.player_name` // Update name if changed
+        playerName: sql`excluded.player_name`
       }
     });
   }
@@ -172,18 +257,6 @@ export async function recalculateAllRegionalStats(): Promise<{ inserted: number 
   return { inserted: values.length };
 }
 
-// We remove the per-tournament recalculation because it's complex to do partial updates with global points
-// Actually, the previous implementation did per-tournament calc. 
-// But now we are scanning ALL JSONs to rebuild the stats.
-// So we can keep this empty or aliasing to full recalc if needed, but for now let's just export the main one.
 export async function recalculateRegionalStatsForTournament(tournamentId: string): Promise<{ inserted: number }> {
-  // With the new architecture (reading from Cache JSONs directly), 
-  // it's safer to just run a full recalc or at least fetch that specific JSON and update.
-  // However, since the user asked for "recalculateAllRegionalStats", we will use that as the primary engine.
-  // For performance, we could implement a single-tournament updater, but let's stick to the request for now.
-  // We can just call the main function here if we want to support the hook, 
-  // OR just leave it as a no-op since the "Claim" flow might verify top 4 but we want the background job to handle stats.
-  // Better yet: just run the full recalc. It's safe.
   return recalculateAllRegionalStats();
 }
-
