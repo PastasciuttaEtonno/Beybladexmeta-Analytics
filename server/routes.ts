@@ -2943,15 +2943,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const row = challongeRes.rows[0] as any;
         const data = row.data || {};
 
-        // Fetch reported combos
+        // Fetch reported combos (User Self-Reported)
         const combosRes = await db.execute(sql`
-          SELECT c.*, u.display_name, u.photo_url 
+          SELECT c.*, u.display_name, u.photo_url, 'challonge' as source_type
           FROM challonge_reported_combos c
           JOIN users u ON u.id = c.user_id
           WHERE c.tournament_id = ${id}
           ORDER BY c.rank ASC, c.combo_number ASC
         `);
-        const fetchedCombos = combosRes.rows;
+        const userCombos = combosRes.rows;
+
+        // Fetch external combos (Admin-Reported)
+        const externalCombosRes = await db.execute(sql`
+          SELECT e.*, 'admin' as source_type
+          FROM external_player_combos e
+          WHERE e.tournament_id = ${id} AND e.platform = 'challonge'
+          ORDER BY e.combo_number ASC
+        `);
+        const adminCombos = externalCombosRes.rows;
+
+        // Merge logic: Admin combos override or add to User combos
+        // We need to map admin combos to the same structure as user combos for the frontend
+        // The frontend likely expects: { user_id, combo_number, blade, ... }
+        // For admin combos, we might not have a user_id if it's a ghost player.
+        // We need to match admin combos to the participant list by player_id (which might be a name or ID).
+
+        const combinedCombos = [...userCombos];
+
+        for (const adminCombo of adminCombos) {
+          // Check if we already have this combo from user report (anti-duplication is handled in PUT but for display let's be safe)
+          // Actually, the PUT deletes user reported combos if found. So we might just push.
+          // But wait, admin combos have 'player_id'. User combos have 'user_id'.
+          // We need to attach these admin combos to the correct participant object in the response.
+
+          // Let's adapt the admin combo to match the shape expected by frontend or separate them?
+          // The frontend iterates `participants` and looks for combos.
+          // See `TournamentDetail.tsx`. It likely doesn't receive `fetchedCombos` directly but uses them to populate `deck`.
+
+          // Current route logic (lines 3006): `deck: [] // filled by frontend`? 
+          // NO, the backend sends `fetchedCombos` in `detail`. 
+          // The frontend `TournamentDetail.tsx` (lines 200+) processes `detail.fetchedCombos`.
+
+          // adaptation:
+          combinedCombos.push({
+            ...adminCombo,
+            // Map fields if necessary. external_player_combos has: player_id, blade, ...
+            // challonge_reported_combos has: user_id, blade, ...
+            // Frontend checks: `c.userId === p.userId` (if mapped) OR `c.user?.username`?
+            // Let's look at `TournamentDetail.tsx` again to see how it matches combos to players.
+            // It seems it matches by `userId`.
+
+            // Issue: Admin combos for ghost players have `player_id` as the name/ID string.
+            // They don't have a numeric `user_id` from the `users` table.
+            // We need to ensure the frontend can match these.
+
+            // If the participant is a ghost, `p.id` is their name/ID.
+            // If the participant is a user, `p.id` is their Challonge ID (if available) or name.
+
+            // We'll pass `player_id` as `identifier` to help frontend match.
+            player_identifier: adminCombo.player_id
+          });
+        }
+
 
         // PERMISSION LOGIC: Determine valid names for the current user
         let validUserNames: string[] = [];
@@ -3015,9 +3068,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           schedule: { startedAt: data.start_date },
           platform: 'challonge',
           state: 'COMPLETED',
-          participants: top3,
-          fetchedCombos: fetchedCombos,
-          hasCombos: fetchedCombos.length > 0,
+          participants: (top3 as any[]).map(p => {
+            // Try to find combos for this participant
+            // 1. Check userCombos by matching p.username (normalized) to u.challonge_username or aliases? 
+            //    Actually, userCombos have `user_id`. We'd need to know the `user_id` of this participant `p`.
+            //    `p` comes from Challonge JSON, usually has `email_hash` or `username`.
+
+            // 2. Check adminCombos by matching `p.name` or `p.username` to `adminCombo.player_id`.
+
+            // Ideally, we return the raw list and let frontend handle it, OR we populate `deck` here.
+            // Line 3006 said `deck: [] // filled by frontend`.
+            // If we leave it empty, we rely on `fetchedCombos`.
+
+            // So we just need to ensure `fetchedCombos` contains data that the frontend can link to `p`.
+            return p;
+          }),
+          fetchedCombos: combinedCombos,
+          hasCombos: combinedCombos.length > 0,
           // Add minimal attendance structure
           attendance: {
             signups: {
@@ -3455,6 +3522,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return validUserNames.some(v => normalize(v) === pNameNorm);
       });
 
+      // 2.5 Find Ghost/Admin Combos for this Participant to clean up
+      // We need to know the name(s) used in external_player_combos.
+      // Usually it's the exact name from Challonge or the ID.
+      // Let's gather possible identifiers for this participant from Challonge data
+      const possiblePlayerIds = new Set<string>();
+      if (participant) {
+        if (participant.name) possiblePlayerIds.add(participant.name);
+        if (participant.username) possiblePlayerIds.add(participant.username);
+        if (participant.id) possiblePlayerIds.add(String(participant.id));
+        // Also add aliases and user's challonge username just in case admin used those
+        validUserNames.forEach(v => possiblePlayerIds.add(v));
+      }
+
       // 3. Check Permissions (User Match & Top 3)
       if (!participant) {
         return res.status(403).json({ error: 'Utente non trovato tra i partecipanti del torneo.' });
@@ -3502,11 +3582,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       //   userId: uuid("user_id").notNull().references(() => users.id), ...
 
       // REVERT LOGIC: Before deleting, revert old combos from stats to prevent duplicates
+      // 1. Revert User-Reported Combos (challonge_reported_combos)
       const existingCombosRes = await db.execute(sql`
         SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", rank, season
         FROM challonge_reported_combos
         WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}
       `);
+
+      // 2. Revert Admin-Reported Combos (external_player_combos)
+      // Check for any of the possible player IDs
+      // This is the CRITICAL STEP for anti-duplication
+      if (possiblePlayerIds.size > 0) {
+        const pIds = Array.from(possiblePlayerIds);
+        const adminCombosRes = await db.execute(sql`
+          SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", placement as "rank", season, player_id
+          FROM external_player_combos
+          WHERE tournament_id = ${tournamentId} 
+            AND platform = 'challonge'
+            AND player_id IN ${pIds}
+        `);
+
+        if (adminCombosRes.rows.length > 0) {
+          console.log(`[Anti-Duplication] Found ${adminCombosRes.rows.length} admin combos for user ${user.id} (participant ${participant?.name}). Removing them.`);
+
+          // Revert stats for admin combos
+          if (totalParticipants > 0) {
+            for (const ac of adminCombosRes.rows as any[]) {
+              if (ac.season) {
+                try {
+                  await revertExternalCombo({
+                    blade: ac.blade,
+                    assistBlade: ac.assistBlade || 'None',
+                    ratchet: ac.ratchet,
+                    bit: ac.bit,
+                    lockChip: ac.lockChip || 'None',
+                    season: ac.season,
+                    placement: ac.rank,
+                    totalParticipants: totalParticipants,
+                  });
+                } catch (err) { console.warn('Failed to revert admin combo:', err); }
+              }
+            }
+          }
+          // DELETE from external_player_combos
+          await db.execute(sql`
+             DELETE FROM external_player_combos 
+             WHERE tournament_id = ${tournamentId} 
+               AND platform = 'challonge'
+               AND player_id IN ${pIds}
+           `);
+        }
+      }
 
       // Revert each existing combo from stats
       if (existingCombosRes.rows.length > 0 && totalParticipants > 0) {
