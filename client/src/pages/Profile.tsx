@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-// import { Avatar } from "@/components/Avatar";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, Link } from "wouter";
 import { useTheme } from "@/contexts/ThemeProvider";
@@ -667,10 +667,10 @@ export default function Profile() {
 
 function ParticipationsList() {
   const { data, isLoading } = useQuery({
-    queryKey: ["cm-participations"],
+    queryKey: ["/api/me/tournaments"],
     queryFn: async () => {
-      const res = await fetch("/api/challenger/participations");
-      if (!res.ok) throw new Error("Failed to fetch participations");
+      const res = await fetch("/api/me/tournaments");
+      if (!res.ok) throw new Error("Failed to fetch tournaments");
       return res.json();
     },
   });
@@ -682,24 +682,55 @@ function ParticipationsList() {
       </div>
     );
   }
-  const items: any[] = data?.participations || [];
+
+  const items: any[] = data?.tournaments || [];
+
   if (!items.length) {
     return <p className="text-sm text-muted-foreground">Nessun torneo trovato.</p>;
   }
-  const scroll = items.length > 5;
+
+  const { format } = d3Format; // We need date-fns format, assume it is imported or available. 
+  // Actually Profile.tsx does not import 'format' from date-fns. I need to add it to imports or use basic date string.
+  // Let's use simple string manipulation if import is missing, OR add import.
+  // Looking at file content, 'format' was NOT imported.
+
+  const formatDate = (d: string | null) => {
+    if (!d) return 'Data sconosciuta';
+    try {
+      return new Date(d).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return d; }
+  };
+
   return (
-    <div className={`space-y-2 ${scroll ? 'max-h-64 overflow-y-auto pr-1' : ''}`}>
+    <div className="space-y-2">
       {items.map((t) => (
-        <div key={t.tournamentId} className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">{t.name || t.tournamentId}</p>
-            {/* date hidden to avoid sensitive details */}
-          </div>
-          {t.hasCombos ? (
-            <span className="text-xs text-green-600">Combo presenti</span>
-          ) : null}
-        </div>
+        <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+          <a className="block no-underline">
+            <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(t.date)} • {t.platform === 'challonge' ? 'Challonge' : 'Challengermode'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {t.bestPlacement != null && (
+                    <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
+                  )}
+                  {t.platform === 'challengermode' && (
+                    <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
+                  )}
+                  <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge>
+                </div>
+              </div>
+            </Card>
+          </a>
+        </Link>
       ))}
     </div>
   );
 }
+
+// Helper to avoid adding 'date-fns' import if not present
+const d3Format = { format: (d: any, f: any) => "" }; 

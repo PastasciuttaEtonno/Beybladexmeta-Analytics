@@ -2929,6 +2929,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unified "My Tournaments" endpoint (CM + Challonge)
+  app.get('/api/me/tournaments', requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      const tournaments: any[] = [];
+
+      // 1. Challengermode Tournaments
+      // We can fetch from DB if we have them linked via ID, OR fetch from CM API if we have token.
+      // Ideally we use DB data (cm_match_results) for consistency with stats.
+      // But CM API gives "participations" even if no results yet.
+      // Let's stick to DB results for now to show "History" with stats.
+
+      if (user?.challengerId) {
+        const cmTours = await db.execute(sql`
+            SELECT
+              tournament_id,
+              MAX(data_torneo) AS date,
+              MIN(piazzamento) AS best_placement,
+              SUM(punti_guadagnati) AS total_points,
+              COUNT(*) AS combo_count,
+              'challengermode' AS platform
+            FROM cm_match_results
+            WHERE player_id = ${user.challengerId}
+            GROUP BY tournament_id
+         `);
+
+        const enrichedCM = await Promise.all((cmTours.rows || []).map(async (r: any) => {
+          // enrichment
+          let name = null;
+          let date = r.date ? String(r.date) : null;
+          try {
+            const detail = await fetchTournamentDetail(String(r.tournament_id));
+            name = detail?.name || null;
+            if (!date && detail?.schedule?.startedAt) {
+              date = String(detail.schedule.startedAt).slice(0, 10);
+            }
+          } catch { }
+
+          return {
+            tournamentId: String(r.tournament_id),
+            date,
+            name,
+            bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
+            totalPoints: Number(r.total_points || 0),
+            comboCount: Number(r.combo_count || 0),
+            platform: 'challengermode'
+          };
+        }));
+        tournaments.push(...enrichedCM);
+      }
+
+      // 2. Challonge Tournaments
+      // Linked via user_id
+      const challongeTours = await db.execute(sql`
+        SELECT
+           tournament_id,
+           MAX(tournament_name) AS tournament_name,
+           MIN(rank) AS best_placement,
+           COUNT(*) AS combo_count,
+           'challonge' AS platform,
+           MAX(created_at) AS date
+        FROM challonge_reported_combos
+        WHERE user_id = ${user?.id}
+        GROUP BY tournament_id
+      `);
+
+      const enrichedChallonge = (challongeTours.rows || []).map((r: any) => ({
+        tournamentId: String(r.tournament_id),
+        date: r.date ? String(r.date).slice(0, 10) : null,
+        name: r.tournament_name ? String(r.tournament_name) : null,
+        bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
+        totalPoints: 0, // Challonge points TODO if we want
+        comboCount: Number(r.combo_count || 0),
+        platform: 'challonge'
+      }));
+      tournaments.push(...enrichedChallonge);
+
+      // Sort by date desc
+      tournaments.sort((a, b) => {
+        const dA = a.date ? new Date(a.date).getTime() : 0;
+        const dB = b.date ? new Date(b.date).getTime() : 0;
+        return dB - dA;
+      });
+
+      res.json({ tournaments });
+    } catch (error: any) {
+      console.error('Error fetching my tournaments:', error);
+      res.status(500).json({ error: error?.message || 'Failed to fetch tournaments' });
+    }
+  });
+
   // Universal Tournament Detail (CM or Challonge)
   app.get('/api/tournaments/:id', async (req, res) => {
     try {
