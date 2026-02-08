@@ -721,7 +721,6 @@ function ParticipationsList() {
                   {t.platform === 'challengermode' && (
                     <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
                   )}
-                  <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge>
                 </div>
               </div>
             </Card>
