@@ -3828,6 +3828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tournamentId: String(req.params.id || '').trim(),
         playerId: String(req.params.playerId || '').trim(),
         combos: Array.isArray(req.body?.combos) ? req.body.combos : [],
+        platform: req.body?.platform || 'challengermode',
       });
 
       // Validate component existence against stats tables (defensive mapping)
@@ -3869,6 +3870,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Replace existing combos for player + tournament
       await db.execute(sql`DELETE FROM external_player_combos WHERE tournament_id = ${parsed.tournamentId} AND player_id = ${parsed.playerId}`);
 
+      // Anti-duplication: If it's a Challonge tournament, an admin override should probably clear user-reported combos
+      if (parsed.platform === 'challonge') {
+        try {
+          // Find the internal user ID if the playerId matches a known username or alias
+          const userRows = await db.execute(sql`
+            SELECT u.id FROM users u
+            LEFT JOIN user_aliases ua ON ua.user_id = u.id
+            WHERE LOWER(TRIM(u.challonge_username)) = LOWER(TRIM(${parsed.playerId}))
+               OR LOWER(TRIM(ua.alias)) = LOWER(TRIM(${parsed.playerId}))
+            LIMIT 1
+          `);
+          if (userRows.rows.length > 0) {
+            const uid = (userRows.rows[0] as any).id;
+            await db.execute(sql`DELETE FROM challonge_reported_combos WHERE tournament_id = ${parsed.tournamentId} AND user_id = ${uid}`);
+          }
+        } catch (err) {
+          console.warn('Failed to clean up potential duplicate Challonge reported combos:', err);
+        }
+      }
+
       // Ensure player exists in cm_players (fallback nickname=playerId)
       await db.insert(cmPlayers).values({ id: parsed.playerId, nickname: parsed.playerId, avatar: null as any })
         .onConflictDoNothing();
@@ -3877,28 +3898,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let placement: number | null = null;
       let totalParticipants: number | null = null;
       let tournamentDate: Date | null = null; // normalized to YYYY-MM-DD
-      try {
-        const detail = await fetchTournamentDetail(parsed.tournamentId);
-        const startedAtStr = detail?.schedule?.startedAt as string | undefined;
-        if (startedAtStr) {
-          const dateOnly = String(startedAtStr).slice(0, 10);
-          if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
-            // Ensure a Date object so Drizzle binds correctly to DATE columns
-            tournamentDate = new Date(dateOnly);
+
+      if (parsed.platform === 'challonge') {
+        try {
+          const challongeRes = await db.execute(sql`SELECT * FROM challonge_match_results WHERE tournament_id = ${parsed.tournamentId} LIMIT 1`);
+          if (challongeRes.rows.length > 0) {
+            const row = challongeRes.rows[0] as any;
+            const data = row.data || {};
+            const dateStr = data.start_date || data.started_at || data.tournament?.started_at;
+            if (dateStr) {
+              tournamentDate = new Date(dateStr);
+            }
+            totalParticipants = Number(data.total_players || data.participants_count || data.tournament?.participants_count || 0);
+
+            const normalizeStr = (s: string) => String(s || '').trim().toLowerCase();
+            const pIdNorm = normalizeStr(parsed.playerId);
+            const standings = data.standings || [];
+            const found = standings.find((p: any) =>
+              normalizeStr(p.name || p.username || '') === pIdNorm ||
+              String(p.id) === pIdNorm
+            );
+            if (found && found.rank) {
+              placement = parseInt(String(found.rank), 10);
+            }
           }
+        } catch (e) {
+          console.warn('Failed to fetch Challonge tournament data for enrichment:', (e as any)?.message || e);
         }
-        const userCount = detail?.attendance?.signups?.userCount as number | undefined;
-        if (typeof userCount === 'number' && userCount > 0) totalParticipants = userCount;
-        const lineups: any[] = detail?.attendance?.signups?.lineups || [];
-        const found = lineups.find(l => Array.isArray(l.members) && l.members.some((m: any) => m?.user?.userId === parsed.playerId));
-        const disp = found?.placement?.displayPlacement as string | undefined;
-        if (disp) {
-          const p = parseInt(String(disp), 10);
-          if (!Number.isNaN(p)) placement = p;
+      } else {
+        try {
+          const detail = await fetchTournamentDetail(parsed.tournamentId);
+          const startedAtStr = detail?.schedule?.startedAt as string | undefined;
+          if (startedAtStr) {
+            const dateOnly = String(startedAtStr).slice(0, 10);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+              // Ensure a Date object so Drizzle binds correctly to DATE columns
+              tournamentDate = new Date(dateOnly);
+            }
+          }
+          const userCount = detail?.attendance?.signups?.userCount as number | undefined;
+          if (typeof userCount === 'number' && userCount > 0) totalParticipants = userCount;
+          const lineups: any[] = detail?.attendance?.signups?.lineups || [];
+          const found = lineups.find(l => Array.isArray(l.members) && l.members.some((m: any) => m?.user?.userId === parsed.playerId));
+          const disp = found?.placement?.displayPlacement as string | undefined;
+          if (disp) {
+            const p = parseInt(String(disp), 10);
+            if (!Number.isNaN(p)) placement = p;
+          }
+        } catch (e) {
+          // If external fetch fails, continue without enrichment
+          console.warn('Failed to fetch tournament detail for enrichment:', (e as any)?.message || e);
         }
-      } catch (e) {
-        // If external fetch fails, continue without enrichment
-        console.warn('Failed to fetch tournament detail for enrichment:', (e as any)?.message || e);
       }
 
       // Insert new combos with combo_number 1..N
@@ -3916,6 +3966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalParticipants: totalParticipants ?? null,
         tournamentDate: tournamentDate ?? null,
         season: seasonVal,
+        platform: parsed.platform,
       }));
       const inserted = await db.insert(externalPlayerCombos).values(values).returning();
       // Pre-fetch existing results for this player + tournament to avoid double-counting

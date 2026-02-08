@@ -376,14 +376,13 @@ export default function TournamentDetail() {
         // So for Challonge, ALL updates go through POST /claim.
 
         if (detailResp?.detail?.platform === 'challonge') {
+          if (user?.isAdmin) {
+            return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
+          }
           return apiRequest("POST", `/api/tournaments/${tournamentId}/claim`, payload);
         }
 
-        // For CM (editing single combo or whatever logic existed):
-        // Existing logic was: `apiRequest("PUT", ...)` per combo if selfId matches selectedPlayer.
-        // If we are NOT properly self (should match), we used "players/:id/combos".
-        // The original code uses PUT player combos.
-
+        // For CM (or fallback admin action)
         return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
       }
     },

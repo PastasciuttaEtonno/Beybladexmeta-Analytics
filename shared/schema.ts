@@ -400,6 +400,7 @@ export const externalPlayerCombos = pgTable("external_player_combos", {
   totalParticipants: integer("total_participants"),
   tournamentDate: date("tournament_date"),
   season: text("season"),
+  platform: text("platform").notNull().default('challengermode'),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
 }, (table) => ({
   pk: primaryKey({ columns: [table.tournamentId, table.playerId, table.comboNumber] }),
@@ -412,6 +413,7 @@ export const upsertTournamentPlayerCombosSchema = z.object({
   tournamentId: z.string().min(1).max(64).transform((s) => s.trim()),
   playerId: z.string().min(1).max(128).transform((s) => s.trim()),
   combos: z.array(tournamentComboSchema).min(1).max(3),
+  platform: z.string().optional().default('challengermode').transform((s) => s?.trim() || 'challengermode'),
 });
 
 export type CmPlayer = typeof cmPlayers.$inferSelect;
