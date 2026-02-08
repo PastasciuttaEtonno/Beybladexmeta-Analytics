@@ -3874,6 +3874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ratchet: r.ratchet,
           bit: r.bit,
           lockChip: r.lockChip,
+          season: seasonVal,
         }));
         if (baseCombos.length > 0) {
           await db.insert(comboStats).values(baseCombos as any).onConflictDoNothing();
