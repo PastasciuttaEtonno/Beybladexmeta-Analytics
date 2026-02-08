@@ -369,3 +369,16 @@ export async function fetchMeBasic(userAccessToken: string): Promise<MeBasic> {
   const profilePictureUrl = node?.profilePicture?.url ? String(node.profilePicture.url) : null;
   return { userId, username, profilePictureUrl };
 }
+
+// Helper to transform ExternalTournament nodes to frontend-friendly cards
+export function mapToTorneoCards(nodes: ExternalTournament[]): any[] {
+  return nodes.map((n) => ({
+    id: n.id,
+    name: n.name,
+    state: n.state,
+    contactUrl: n.contactUrl,
+    logo: n.hosts?.spaces?.[0]?.logo?.url || null,
+    organizer: n.hosts?.spaces?.[0]?.name || null,
+    // Add other fields as needed based on TorneoCard interface
+  }));
+}

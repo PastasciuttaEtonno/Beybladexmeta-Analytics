@@ -65,6 +65,7 @@ export const comboStats = pgTable("combo_stats", {
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
+  quartiPosti: integer("quarti_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
   dataCreazione: timestamp("data_creazione", { withTimezone: true }).notNull().default(sql`now()`),
 }, (table) => ({
@@ -77,6 +78,7 @@ export const bladeStats = pgTable("blade_stats", {
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
+  quartiPosti: integer("quarti_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
 }, (table) => ({
   pk: primaryKey({ columns: [table.blade, table.season] })
@@ -89,6 +91,7 @@ export const assistBladeStats = pgTable("assist_blade_stats", {
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
+  quartiPosti: integer("quarti_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
 }, (table) => ({
   pk: primaryKey({ columns: [table.assistBlade, table.season] }) // <--- PK Composta
@@ -100,6 +103,7 @@ export const ratchetStats = pgTable("ratchet_stats", {
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
+  quartiPosti: integer("quarti_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
 }, (table) => ({
   pk: primaryKey({ columns: [table.ratchet, table.season] })
@@ -112,6 +116,7 @@ export const bitStats = pgTable("bit_stats", {
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
+  quartiPosti: integer("quarti_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
 }, (table) => ({
   pk: primaryKey({ columns: [table.bit, table.season] })
@@ -124,6 +129,7 @@ export const lockChipStats = pgTable("lock_chip_stats", {
   primiPosti: integer("primi_posti").notNull().default(0),
   secondiPosti: integer("secondi_posti").notNull().default(0),
   terziPosti: integer("terzi_posti").notNull().default(0),
+  quartiPosti: integer("quarti_posti").notNull().default(0),
   punteggioTotale: doublePrecision("punteggio_totale").notNull().default(0),
 }, (table) => ({
   pk: primaryKey({ columns: [table.lockChip, table.season] }) // <--- PK Composta

@@ -162,6 +162,8 @@ type ExternalTournamentDetail = {
     confirmedLineupCount?: number | null;
     signups?: {
       userCount?: number | null;
+      uCount?: number | null; // Challonge specific
+      count?: number | null; // Fallback
       lineupCount?: number | null;
       lineups?: Array<{
         placement?: { displayPlacement?: string | null } | null;
@@ -350,8 +352,8 @@ export default function TournamentDetail() {
           platform: detailResp?.detail?.platform || 'challengermode'
         };
 
-        if (payload.rank && (payload.rank < 1 || payload.rank > 3)) {
-          throw new Error("Rank must be between 1 and 3");
+        if (payload.rank && (payload.rank < 1 || payload.rank > 4)) {
+          throw new Error("Rank must be between 1 and 4");
         }
         // Use the new generic claim endpoint for Deck Submission (Challonge or CM)
         // Note: For CM user, we used to use generic claim? No, CM editing was implicit via PUT combos/:num.
@@ -445,7 +447,7 @@ export default function TournamentDetail() {
       return ap - bp;
     }).filter(lu => {
       const p = parseInt(lu?.placement?.displayPlacement ?? '999', 10);
-      return p <= 3;
+      return p <= 4;
     });
 
     if (sorted.length === 0) {
@@ -477,7 +479,7 @@ export default function TournamentDetail() {
                     // But if user matches, we allow edit.
                     const isSelf = (memberId && memberId === selfId); // Might fail if memberId is a name
                     // Allow edit if admin for top 3 OR if backend says it's current user (via alias)
-                    const canEdit = isSelf || (!!m?._isCurrentUser) || (!!user?.isAdmin && parseInt(placement, 10) <= 3);
+                    const canEdit = isSelf || (!!m?._isCurrentUser) || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
 
                     // COMBO RESOLUTION: 
                     // 1. Check direct attached (Challonge logic)

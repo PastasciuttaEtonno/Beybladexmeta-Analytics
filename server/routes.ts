@@ -35,6 +35,7 @@ function getClientIp(req: Request): string {
 // Middleware to check if user is authenticated
 function requireAuth(req: Request, res: Response, next: Function) {
   if (!req.session.userId) {
+    console.log(`[Auth] Unauthorized access to ${req.method} ${req.path} - No Session/UserId. Cookie present: ${!!req.headers.cookie}`);
     return res.status(401).json({ error: 'Not authenticated' });
   }
   next();
@@ -43,12 +44,14 @@ function requireAuth(req: Request, res: Response, next: Function) {
 // Middleware to check if user is authenticated and is an admin
 async function requireAdmin(req: Request, res: Response, next: Function) {
   if (!req.session.userId) {
+    console.log(`[Admin] Unauthorized access to ${req.method} ${req.path} - No Session/UserId`);
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
   try {
     const user = await storage.getUser(req.session.userId);
     if (!user || !user.isAdmin) {
+      console.log(`[Admin] Forbidden access to ${req.method} ${req.path} - User ${req.session.userId} is not admin`);
       return res.status(403).json({ error: 'Admin access required' });
     }
     next();
@@ -408,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If needed, verify against Challonge API here (optional per requirements)
 
-      const updated = await storage.updateUser(user.id, { challongeUsername: username } as any);
+      const updated = await storage.updateUserProfile(user.id, { challongeUsername: username } as any);
       const { password_hash: _, password: __, ...userWithoutPassword } = updated as any;
       res.json({ user: userWithoutPassword, message: 'Account Challonge collegato con successo' });
     } catch (e: any) {
@@ -427,7 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ error: 'Questo account Challengermode è già collegato a un altro utente' });
       }
 
-      const updated = await storage.updateUser(req.session.userId!, {
+      const updated = await storage.updateUserProfile(req.session.userId!, {
         challengerId: cmId,
         challengermodeUsername: cmUsername
       } as any);
@@ -721,7 +724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const row of rows) {
         // FILTER: Strict Top 3
         const rank = row.rank as number;
-        if (!rank || rank > 3) continue;
+        if (!rank || rank > 4) continue;
 
         // Season Filter (in memory if needed)
         if (seasonRaw && seasonRaw.toLowerCase() !== 'all') {
@@ -734,6 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (rank === 1) baseScore = 10;
         else if (rank === 2) baseScore = 7;
         else if (rank === 3) baseScore = 5;
+        else if (rank === 4) baseScore = 3;
 
         // Multiplier
         let multiplier = (row.participantCount as number) || 0;
@@ -1857,22 +1861,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch from individual component stats tables instead of combo_stats
       const blades = await db.select({ name: bladeStats.blade })
         .from(bladeStats)
+        .groupBy(bladeStats.blade)
         .orderBy(asc(bladeStats.blade));
 
       const assistBlades = await db.select({ name: assistBladeStats.assistBlade })
         .from(assistBladeStats)
+        .groupBy(assistBladeStats.assistBlade)
         .orderBy(asc(assistBladeStats.assistBlade));
 
       const ratchets = await db.select({ name: ratchetStats.ratchet })
         .from(ratchetStats)
+        .groupBy(ratchetStats.ratchet)
         .orderBy(asc(ratchetStats.ratchet));
 
       const bits = await db.select({ name: bitStats.bit, isRatchetLess: bitStats.isRatchetLess })
         .from(bitStats)
+        .groupBy(bitStats.bit, bitStats.isRatchetLess)
         .orderBy(asc(bitStats.bit));
 
       const lockChips = await db.select({ name: lockChipStats.lockChip })
         .from(lockChipStats)
+        .groupBy(lockChipStats.lockChip)
         .orderBy(asc(lockChipStats.lockChip));
 
       // Filter out None/empty values and sort alphabetically
@@ -2195,7 +2204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fetchTournamentsForGame, mapToTorneoCards } = await import('./challengermode');
       const after = (req.query.after as string) || '2025-10-11T00:00:00Z';
-      const nodes = await fetchTournamentsForGame('beybladex', after);
+      const nodes = await fetchTournamentsForGame(after);
       const tournaments = mapToTorneoCards(nodes);
       res.json({ tournaments });
     } catch (error: any) {
@@ -2897,7 +2906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Extract Top 3 from standings
         const standings = data.standings || [];
         const top3 = standings
-          .filter((p: any) => p.rank <= 3)
+          .filter((p: any) => p.rank <= 4)
           .sort((a: any, b: any) => a.rank - b.rank)
           .map((p: any) => {
             const pName = p.name || p.username || '';
