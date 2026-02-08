@@ -4331,11 +4331,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[Admin] Syncing ghost players from data: ${data.standings.length} standings found`);
       for (const p of data.standings) {
         const part = p.participant || p;
-        const pid = String(part.id);
         const name = part.name || part.username || part.display_name || 'Unknown';
+        const pid = part.id ? String(part.id) : name; // Fallback to name as ID for ghost players
         const avatar = part.avatar_url || part.icon || null;
 
-        if (pid && name) {
+        if (pid && name && pid !== 'undefined') {
           await db.insert(challongePlayers).values({
             id: pid,
             nickname: name,
@@ -4344,8 +4344,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }).onConflictDoUpdate({
             target: challongePlayers.id,
             set: {
-              nickname: sql`excluded.nickname`, // Keep latest name
-              avatar: sql`COALESCE(excluded.avatar, challonge_players.avatar)`, // Don't wipe avatar if null
+              nickname: sql`excluded.nickname`,
+              avatar: sql`COALESCE(excluded.avatar, challonge_players.avatar)`,
               updatedAt: new Date(),
             }
           });
@@ -4357,11 +4357,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[Admin] Syncing ghost players from data: ${data.participants.length} participants found`);
       for (const p of data.participants) {
         const part = p.participant || p;
-        const pid = String(part.id);
         const name = part.name || part.username || part.display_name || 'Unknown';
+        const pid = part.id ? String(part.id) : name;
         const avatar = part.avatar_url || null;
 
-        if (pid && name) {
+        if (pid && name && pid !== 'undefined') {
           await db.insert(challongePlayers).values({
             id: pid,
             nickname: name,
