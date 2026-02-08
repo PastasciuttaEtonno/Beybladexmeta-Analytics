@@ -285,8 +285,19 @@ export default function TournamentDetail() {
 
   // Prefetch combos for top-4 lineup members to avoid placeholders where possible
   useEffect(() => {
-    const lineups = detailResp?.detail?.attendance?.signups?.lineups ?? [];
-    const top = (lineups || []).slice(0, 4);
+    const rawLineups = detailResp?.detail?.attendance?.signups?.lineups ?? [];
+
+    // Sort logic matching renderLineups to identify true top 4
+    const sorted = rawLineups.slice().sort((a, b) => {
+      const ap = parseInt(a?.placement?.displayPlacement ?? '999', 10);
+      const bp = parseInt(b?.placement?.displayPlacement ?? '999', 10);
+      return ap - bp;
+    }).filter(lu => {
+      const p = parseInt(lu?.placement?.displayPlacement ?? '999', 10);
+      return p <= 4;
+    });
+
+    const top = sorted.slice(0, 4);
     top.forEach((l) => {
       (l.members || []).forEach(async (m) => {
         const id = m.user?.userId || null;
