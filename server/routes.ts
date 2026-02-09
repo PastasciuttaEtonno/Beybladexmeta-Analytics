@@ -493,6 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             primiPosti: sumFirst,
             secondiPosti: sumSecond,
             terziPosti: sumThird,
+            quartiPosti: sql<number>`sum(${comboStats.quartiPosti})`.mapWith(Number),
           })
           .from(comboStats);
 
@@ -515,6 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           first: sql`sum(${comboStats.primiPosti})`,
           second: sql`sum(${comboStats.secondiPosti})`,
           third: sql`sum(${comboStats.terziPosti})`,
+          fourth: sql`sum(${comboStats.quartiPosti})`,
         }[sortBy]!;
 
         const [topCombos, countResult] = await Promise.all([
@@ -601,12 +603,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db.execute(sql`
         WITH ranked AS (
           SELECT blade, assist_blade, ratchet, bit, lock_chip,
-                 primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione,
+                 primi_posti, secondi_posti, terzi_posti, quarti_posti, punteggio_totale, data_creazione,
                  ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
           FROM combo_stats
         )
         SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
-               primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti",
+               primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
                punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
         FROM ranked
         WHERE blade = ${blade}
@@ -629,6 +631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           primiPosti: row.primiPosti,
           secondiPosti: row.secondiPosti,
           terziPosti: row.terziPosti,
+          quartiPosti: row.quartiPosti,
           punteggioTotale: row.punteggioTotale,
           dataCreazione: row.dataCreazione,
         }, rank: Number(row.rank)
@@ -644,12 +647,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db.execute(sql`
         WITH ranked AS (
           SELECT blade, assist_blade, ratchet, bit, lock_chip,
-                 primi_posti, secondi_posti, terzi_posti, punteggio_totale, data_creazione,
+                 primi_posti, secondi_posti, terzi_posti, quarti_posti, punteggio_totale, data_creazione,
                  ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
           FROM combo_stats
         )
         SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
-               primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti",
+               primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
                punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
         FROM ranked
         WHERE concat_ws('-',
@@ -673,6 +676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           primiPosti: row.primiPosti,
           secondiPosti: row.secondiPosti,
           terziPosti: row.terziPosti,
+          quartiPosti: row.quartiPosti,
           punteggioTotale: row.punteggioTotale,
           dataCreazione: row.dataCreazione,
         }, rank: Number(row.rank)
@@ -681,6 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch combo by slug' });
     }
   });
+
 
   // Analytics Meta Endpoint (Proportional Scoring)
   app.get('/api/analytics/meta', async (req, res) => {
@@ -877,8 +882,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const parsed = BodySchema.parse(req.body);
 
-      if (parsed.rank && parsed.rank > 3) {
-        return res.status(400).json({ error: "Only Top 3 ranks are allowed" });
+      if (parsed.rank && parsed.rank > 4) {
+        return res.status(400).json({ error: "Only Top 4 ranks are allowed" });
       }
 
       const user = await storage.getUser(req.session.userId!);
@@ -999,7 +1004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             piazzamento: placement ?? 0,
             numeroPartecipanti: totalParticipants ?? 0,
             dataTorneo: tournamentDate,
-            puntiGuadagnati: (placement && totalParticipants && placement >= 1 && placement <= 3 && totalParticipants > 0)
+            puntiGuadagnati: (placement && totalParticipants && placement >= 1 && placement <= 4 && totalParticipants > 0)
               ? calcExternalPoints(placement, totalParticipants)
               : 0,
           }));
@@ -1020,7 +1025,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        if (placement && totalParticipants && placement >= 1 && placement <= 3 && totalParticipants > 0) {
+        if (placement && totalParticipants && placement >= 1 && placement <= 4 && totalParticipants > 0) {
           for (const r of inserted) {
             await processExternalCombo({
               blade: r.blade,
@@ -1109,6 +1114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             primiPosti: sql<number>`sum(${bladeStats.primiPosti})`.as('primiPosti'),
             secondiPosti: sql<number>`sum(${bladeStats.secondiPosti})`.as('secondiPosti'),
             terziPosti: sql<number>`sum(${bladeStats.terziPosti})`.as('terziPosti'),
+            quartiPosti: sql<number>`sum(${bladeStats.quartiPosti})`.as('quartiPosti'),
           })
             .from(bladeStats)
             .groupBy(bladeStats.blade)
@@ -1131,6 +1137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             primiPosti: sql<number>`sum(${ratchetStats.primiPosti})`.as('primiPosti'),
             secondiPosti: sql<number>`sum(${ratchetStats.secondiPosti})`.as('secondiPosti'),
             terziPosti: sql<number>`sum(${ratchetStats.terziPosti})`.as('terziPosti'),
+            quartiPosti: sql<number>`sum(${ratchetStats.quartiPosti})`.as('quartiPosti'),
           })
             .from(ratchetStats)
             .groupBy(ratchetStats.ratchet)
@@ -1153,6 +1160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             primiPosti: sql<number>`sum(${bitStats.primiPosti})`.as('primiPosti'),
             secondiPosti: sql<number>`sum(${bitStats.secondiPosti})`.as('secondiPosti'),
             terziPosti: sql<number>`sum(${bitStats.terziPosti})`.as('terziPosti'),
+            quartiPosti: sql<number>`sum(${bitStats.quartiPosti})`.as('quartiPosti'),
           })
             .from(bitStats)
             .groupBy(bitStats.bit)
@@ -3798,8 +3806,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!participant) {
         return res.status(403).json({ error: 'Utente non trovato tra i partecipanti del torneo.' });
       }
-      if (participant.rank > 3) {
-        return res.status(403).json({ error: 'Solo i primi 3 classificati possono registrare le combo.' });
+      if (participant.rank > 4) {
+        return res.status(403).json({ error: 'Solo i primi 4 classificati possono registrare le combo.' });
       }
 
       // 3.5. Calculate Season from Tournament Date

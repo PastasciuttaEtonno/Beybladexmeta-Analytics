@@ -711,6 +711,14 @@ export default function Analytics() {
                                     {combo.terziPosti}
                                   </p>
                                 </div>
+                                <div className="text-center">
+                                  <p className="text-xs text-muted-foreground">
+                                    4th
+                                  </p>
+                                  <p className="text-sm font-semibold text-slate-500">
+                                    {combo.quartiPosti}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </div>

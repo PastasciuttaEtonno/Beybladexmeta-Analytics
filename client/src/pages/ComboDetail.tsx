@@ -22,6 +22,7 @@ type ComboStats = {
   primiPosti: number;
   secondiPosti: number;
   terziPosti: number;
+  quartiPosti: number;
   punteggioTotale: number;
   dataCreazione: string; // Assuming it's a string in ISO format
 };
@@ -213,16 +214,16 @@ export default function ComboDetail() {
           "url": canonical,
         }}
       />
-        <div className="max-w-2xl mx-auto space-y-6">
-          <Link href="/analytics">
-            <a
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Indietro
-            </a>
-          </Link>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Link href="/analytics">
+          <a
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Indietro
+          </a>
+        </Link>
 
         <Card>
           <CardHeader>
@@ -292,6 +293,15 @@ export default function ComboDetail() {
                       data-testid="text-third-place"
                     >
                       {combo.terziPosti}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">4th Place</p>
+                    <p
+                      className="text-2xl font-bold"
+                      data-testid="text-fourth-place"
+                    >
+                      {combo.quartiPosti}
                     </p>
                   </div>
                   <div className="space-y-1">
