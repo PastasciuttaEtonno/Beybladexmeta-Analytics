@@ -68,8 +68,14 @@ if (!PUBLIC_MINIO_URL) {
   );
 }
 
+const imageCache = new Map<string, string>();
+
 function ComponentImage({ folder, name }: { folder: string; name: string }) {
+  const cacheKey = `${folder}/${name}`;
   const [attemptIndex, setAttemptIndex] = useState(0);
+  const [currentSrc, setCurrentSrc] = useState<string | null>(() => {
+    return imageCache.get(cacheKey) || null;
+  });
 
   const getImageVariations = (name: string, format: "png" | "webp") => {
     const variations = [
@@ -85,30 +91,45 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
     );
   };
 
-  const allAttempts = [
+  const allAttempts = useMemo(() => [
     ...getImageVariations(name, "webp"),
     ...getImageVariations(name, "png"),
-  ];
+  ], [name, folder]);
+
+  useEffect(() => {
+    if (!currentSrc && attemptIndex < allAttempts.length) {
+      setCurrentSrc(allAttempts[attemptIndex]);
+    }
+  }, [attemptIndex, allAttempts, currentSrc]);
 
   const handleImageError = () => {
     if (attemptIndex < allAttempts.length - 1) {
-      setAttemptIndex(attemptIndex + 1);
+      setAttemptIndex((prev) => prev + 1);
+      setCurrentSrc(null); // Trigger effect to set next src
+    }
+  };
+
+  const handleImageLoad = () => {
+    if (currentSrc) {
+      imageCache.set(cacheKey, currentSrc);
     }
   };
 
   return (
     <div className="aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
-      {attemptIndex >= allAttempts.length ? (
+      {attemptIndex >= allAttempts.length && !currentSrc ? (
         <div className="text-center p-1">
           <p className="text-xs text-muted-foreground">N/A</p>
         </div>
       ) : (
         <img
-          key={attemptIndex}
-          src={allAttempts[attemptIndex]}
+          key={currentSrc || "loading"}
+          src={currentSrc || ""}
           alt={name}
           className="w-full h-full object-contain"
           onError={handleImageError}
+          onLoad={handleImageLoad}
+          style={{ display: currentSrc ? 'block' : 'none' }}
         />
       )}
     </div>
@@ -117,16 +138,47 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
 
 export default function Analytics() {
   const [location, setLocation] = useLocation();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("score");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const ssQ = sessionStorage.getItem("analytics_q");
+    return (q ?? ssQ ?? "");
+  });
+
+  const [sortBy, setSortBy] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sort = params.get("sort");
+    const ssSort = sessionStorage.getItem("analytics_sort");
+    return (sort ?? ssSort ?? "score");
+  });
+
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => {
+    const params = new URLSearchParams(window.location.search);
+    const order = params.get("order");
+    const ssOrder = sessionStorage.getItem("analytics_order");
+    return ((order ?? ssOrder ?? "desc") as "asc" | "desc");
+  });
   const [filterModalOpen, setFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pStr = params.get("page");
+    let p = pStr ? parseInt(pStr, 10) : NaN;
+    if (Number.isNaN(p) || p <= 0) {
+      const ss = sessionStorage.getItem("analytics_page");
+      p = ss ? parseInt(ss, 10) : 1;
+    }
+    return (!Number.isNaN(p) && p > 0) ? p : 1;
+  });
 
   const [tempSearchTerm, setTempSearchTerm] = useState("");
   const [tempSortBy, setTempSortBy] = useState("score");
   const [tempSortOrder, setTempSortOrder] = useState<"asc" | "desc">("desc");
-  const [selectedSeason, setSelectedSeason] = useState<string>('All Time');
+  const [selectedSeason, setSelectedSeason] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const season = params.get("season");
+    const ssSeason = sessionStorage.getItem("analytics_season");
+    return (season ?? ssSeason ?? "All Time");
+  });
   const [tempSelectedSeason, setTempSelectedSeason] = useState<string>('All Time');
 
   const [activeView, setActiveView] = useState<"leaderboard" | "trends">(
@@ -137,26 +189,7 @@ export default function Analytics() {
     setCurrentPage(1);
   }, [searchTerm, sortBy, sortOrder]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search || "");
-    const pStr = params.get("page");
-    let p = pStr ? parseInt(pStr, 10) : NaN;
-    if (Number.isNaN(p) || p <= 0) {
-      const ss = sessionStorage.getItem("analytics_page");
-      p = ss ? parseInt(ss, 10) : 1;
-    }
-    if (!Number.isNaN(p) && p > 0) setCurrentPage(p);
 
-    const q = params.get("q");
-    const sort = params.get("sort");
-    const order = params.get("order");
-    const ssQ = sessionStorage.getItem("analytics_q");
-    const ssSort = sessionStorage.getItem("analytics_sort");
-    const ssOrder = sessionStorage.getItem("analytics_order");
-    if (q !== null || ssQ !== null) setSearchTerm((q ?? ssQ ?? "") as string);
-    if (sort !== null || ssSort !== null) setSortBy((sort ?? ssSort ?? "score") as string);
-    if (order !== null || ssOrder !== null) setSortOrder(((order ?? ssOrder ?? "desc") as "asc" | "desc"));
-  }, []);
 
   useEffect(() => {
     const base = "/analytics";
@@ -373,387 +406,387 @@ export default function Analytics() {
 
           <TabsContent value="leaderboard">
             <Card className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-6 h-6 text-primary" />
-                <div>
-                  {/* <h2 className="text-lg font-semibold">Top Combo</h2> */}
-                  <p className="text-sm text-muted-foreground">
-                    Classifica combo tornei
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-6 h-6 text-primary" />
+                  <div>
+                    {/* <h2 className="text-lg font-semibold">Top Combo</h2> */}
+                    <p className="text-sm text-muted-foreground">
+                      Classifica combo tornei
+                    </p>
+                  </div>
+                </div>
+
+                <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="relative"
+                      onClick={handleOpenFilterModal}
+                      data-testid="button-filter"
+                    >
+                      <Filter className="w-4 h-4" />
+                      {hasActiveFilters && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                      )}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Filtra combo</DialogTitle>
+                      <DialogDescription>
+                        Cerca e filtra combo in base al posizionamento e ai
+                        componenti.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="search">Cerca</Label>
+                        <Input
+                          id="search"
+                          placeholder="Search by blade, assist blade, ratchet, bit, or chip..."
+                          value={tempSearchTerm}
+                          onChange={(e) => setTempSearchTerm(e.target.value)}
+                          data-testid="input-modal-search"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Filtra tra tutti i nomi dei componenti
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sort">Filtra in base a</Label>
+                        <Select value={tempSortBy} onValueChange={setTempSortBy}>
+                          <SelectTrigger
+                            id="sort"
+                            data-testid="select-modal-sort"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="score">Total Score</SelectItem>
+                            <SelectItem value="first">1st Place</SelectItem>
+                            <SelectItem value="second">2nd Place</SelectItem>
+                            <SelectItem value="third">3rd Place</SelectItem>
+                            <SelectItem value="date">Date</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="order">Ordine visualizzazione</Label>
+                        <Select
+                          value={tempSortOrder}
+                          onValueChange={(value) =>
+                            setTempSortOrder(value as "asc" | "desc")
+                          }
+                        >
+                          <SelectTrigger
+                            id="order"
+                            data-testid="select-modal-order"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="desc">Decrescente</SelectItem>
+                            <SelectItem value="asc">Crescente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="season">Stagione</Label>
+                        <Select value={tempSelectedSeason} onValueChange={setTempSelectedSeason}>
+                          <SelectTrigger id="season" data-testid="select-modal-season">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="All Time">All Time</SelectItem>
+                            <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
+                            <SelectItem value="Season 2026">Season 2026</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Seleziona la stagione per filtrare la classifica
+                        </p>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="flex-row gap-2 sm:gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleClearFilters}
+                        className="flex-1"
+                        data-testid="button-clear-filters"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear
+                      </Button>
+                      <Button
+                        onClick={handleApplyFilters}
+                        className="flex-1"
+                        data-testid="button-apply-filters"
+                      >
+                        <Filter className="w-4 h-4 mr-2" />
+                        Apply
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {hasActiveFilters && (
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground">
+                    Filtri attivi:
+                  </span>
+                  {searchTerm && (
+                    <Badge variant="secondary" className="text-xs">
+                      Search: {searchTerm}
+                    </Badge>
+                  )}
+                  {sortBy !== "score" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Sort:{" "}
+                      {sortBy === "first"
+                        ? "1st Place"
+                        : sortBy === "second"
+                          ? "2nd Place"
+                          : sortBy === "third"
+                            ? "3rd Place"
+                            : "Date"}
+                    </Badge>
+                  )}
+                  {sortOrder !== "desc" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Order:{" "}
+                      {sortOrder === "asc"
+                        ? "Lowest to Highest"
+                        : "Highest to Lowest"}
+                    </Badge>
+                  )}
+                  {selectedSeason !== "All Time" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Stagione: {selectedSeason}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="h-24 bg-muted/30 rounded-lg animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : data?.combos && data.combos.length > 0 ? (
+                <div className="space-y-3">
+                  {data.combos.map((combo, index) => (
+                    <Link
+                      key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
+                      href={`/combo/${getComboId(combo)}`}
+                    >
+                      <a className="block no-underline" data-testid={`card-combo-${index}`}>
+                        <Card className="p-4 hover-elevate active-elevate-2 cursor-pointer transition-colors">
+                          <div className="flex items-start gap-3">
+                            <div className="flex flex-col items-center gap-1 min-w-[3rem]">
+                              {getRankIcon(index)}
+                              {getRankBadge(index)}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-16 h-16 shrink-0">
+                                  <ComponentImage
+                                    folder="blades"
+                                    name={combo.blade}
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-muted-foreground">
+                                    Blade
+                                  </p>
+                                  <p
+                                    className="text-sm font-medium truncate"
+                                    data-testid={`text-blade-${index}`}
+                                  >
+                                    {combo.blade}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                {combo.assistBlade !== "None" && (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-10 h-10 shrink-0">
+                                      <ComponentImage folder={folderMap['assist-blade']} name={combo.assistBlade} />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs text-muted-foreground">
+                                        <span className="sm:hidden">As. Blade</span>
+                                        <span className="hidden sm:inline">Assist Blade</span>
+                                      </p>
+                                      <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                {combo.ratchet !== 'None' && (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-10 h-10 shrink-0">
+                                      <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs text-muted-foreground">Ratchet</p>
+                                      <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <div className="w-10 h-10 shrink-0">
+                                    <ComponentImage folder={folderMap['bit']} name={combo.bit} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs text-muted-foreground">Bit</p>
+                                    <p className="text-sm font-medium truncate">{combo.bit}</p>
+                                  </div>
+                                </div>
+                                {combo.lockChip !== "None" && (
+                                  <div className="col-span-2 flex items-center gap-2">
+                                    <div className="w-10 h-10 shrink-0">
+                                      <ComponentImage folder={folderMap['lock-chip']} name={combo.lockChip} />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs text-muted-foreground">Lock Chip</p>
+                                      <p className="text-sm font-medium truncate">{combo.lockChip}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-4 pt-3 border-t border-border">
+                                <div className="text-center">
+                                  <p className="text-xs text-muted-foreground">
+                                    Score
+                                  </p>
+                                  <p
+                                    className="text-lg font-bold text-primary"
+                                    data-testid={`text-score-${index}`}
+                                  >
+                                    {combo.punteggioTotale.toLocaleString()}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-xs text-muted-foreground">
+                                    1st
+                                  </p>
+                                  <p className="text-sm font-semibold text-yellow-500">
+                                    {combo.primiPosti}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-xs text-muted-foreground">
+                                    2nd
+                                  </p>
+                                  <p className="text-sm font-semibold text-gray-400">
+                                    {combo.secondiPosti}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-xs text-muted-foreground">
+                                    3rd
+                                  </p>
+                                  <p className="text-sm font-semibold text-amber-600">
+                                    {combo.terziPosti}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      </a>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">Dati assenti</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    I dati apparirano una volta che i tornei verranno registrati
                   </p>
                 </div>
-              </div>
+              )}
 
-              <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="relative"
-                    onClick={handleOpenFilterModal}
-                    data-testid="button-filter"
+              {data?.combos && data.combos.length > 0 && data.pagination && (
+                <div className="mt-6 space-y-3">
+                  <div
+                    className="text-center text-sm text-muted-foreground"
+                    data-testid="text-pagination-info"
                   >
-                    <Filter className="w-4 h-4" />
-                    {hasActiveFilters && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-                    )}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Filtra combo</DialogTitle>
-                    <DialogDescription>
-                      Cerca e filtra combo in base al posizionamento e ai
-                      componenti.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="search">Cerca</Label>
-                      <Input
-                        id="search"
-                        placeholder="Search by blade, assist blade, ratchet, bit, or chip..."
-                        value={tempSearchTerm}
-                        onChange={(e) => setTempSearchTerm(e.target.value)}
-                        data-testid="input-modal-search"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Filtra tra tutti i nomi dei componenti
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="sort">Filtra in base a</Label>
-                      <Select value={tempSortBy} onValueChange={setTempSortBy}>
-                        <SelectTrigger
-                          id="sort"
-                          data-testid="select-modal-sort"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="score">Total Score</SelectItem>
-                          <SelectItem value="first">1st Place</SelectItem>
-                          <SelectItem value="second">2nd Place</SelectItem>
-                          <SelectItem value="third">3rd Place</SelectItem>
-                          <SelectItem value="date">Date</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="order">Ordine visualizzazione</Label>
-                      <Select
-                        value={tempSortOrder}
-                        onValueChange={(value) =>
-                          setTempSortOrder(value as "asc" | "desc")
-                        }
-                      >
-                        <SelectTrigger
-                          id="order"
-                          data-testid="select-modal-order"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="desc">Decrescente</SelectItem>
-                          <SelectItem value="asc">Crescente</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="season">Stagione</Label>
-                      <Select value={tempSelectedSeason} onValueChange={setTempSelectedSeason}>
-                        <SelectTrigger id="season" data-testid="select-modal-season">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="All Time">All Time</SelectItem>
-                          <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
-                          <SelectItem value="Season 2026">Season 2026</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Seleziona la stagione per filtrare la classifica
-                      </p>
-                    </div>
+                    Page {data.pagination.page} of {data.pagination.totalPages} (
+                    {data.pagination.total.toLocaleString()} total combos)
                   </div>
 
-                  <DialogFooter className="flex-row gap-2 sm:gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <Button
+                      size="icon"
                       variant="outline"
-                      onClick={handleClearFilters}
-                      className="flex-1"
-                      data-testid="button-clear-filters"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      data-testid="button-first-page"
                     >
-                      <X className="w-4 h-4 mr-2" />
-                      Clear
+                      <ChevronsLeft className="w-4 h-4" />
                     </Button>
+
                     <Button
-                      onClick={handleApplyFilters}
-                      className="flex-1"
-                      data-testid="button-apply-filters"
+                      size="icon"
+                      variant="outline"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={currentPage === 1}
+                      data-testid="button-previous-page"
                     >
-                      <Filter className="w-4 h-4 mr-2" />
-                      Apply
+                      <ChevronLeft className="w-4 h-4" />
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
 
-            {hasActiveFilters && (
-              <div className="mb-4 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-muted-foreground">
-                  Filtri attivi:
-                </span>
-                {searchTerm && (
-                  <Badge variant="secondary" className="text-xs">
-                    Search: {searchTerm}
-                  </Badge>
-                )}
-                {sortBy !== "score" && (
-                  <Badge variant="secondary" className="text-xs">
-                    Sort:{" "}
-                    {sortBy === "first"
-                      ? "1st Place"
-                      : sortBy === "second"
-                        ? "2nd Place"
-                        : sortBy === "third"
-                          ? "3rd Place"
-                          : "Date"}
-                  </Badge>
-                )}
-                {sortOrder !== "desc" && (
-                  <Badge variant="secondary" className="text-xs">
-                    Order:{" "}
-                    {sortOrder === "asc"
-                      ? "Lowest to Highest"
-                      : "Highest to Lowest"}
-                  </Badge>
-                )}
-                {selectedSeason !== "All Time" && (
-                  <Badge variant="secondary" className="text-xs">
-                    Stagione: {selectedSeason}
-                  </Badge>
-                )}
-              </div>
-            )}
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() =>
+                        setCurrentPage((prev) =>
+                          Math.min(data.pagination.totalPages, prev + 1)
+                        )
+                      }
+                      disabled={currentPage === data.pagination.totalPages}
+                      data-testid="button-next-page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
 
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div
-                    key={i}
-                    className="h-24 bg-muted/30 rounded-lg animate-pulse"
-                  />
-                ))}
-              </div>
-            ) : data?.combos && data.combos.length > 0 ? (
-              <div className="space-y-3">
-                {data.combos.map((combo, index) => (
-                  <Link
-                    key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
-                    href={`/combo/${getComboId(combo)}`}
-                  >
-                    <a className="block no-underline" data-testid={`card-combo-${index}`}>
-                      <Card className="p-4 hover-elevate active-elevate-2 cursor-pointer transition-colors">
-                    <div className="flex items-start gap-3">
-                      <div className="flex flex-col items-center gap-1 min-w-[3rem]">
-                        {getRankIcon(index)}
-                        {getRankBadge(index)}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-16 h-16 shrink-0">
-                            <ComponentImage
-                              folder="blades"
-                              name={combo.blade}
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground">
-                              Blade
-                            </p>
-                            <p
-                              className="text-sm font-medium truncate"
-                              data-testid={`text-blade-${index}`}
-                            >
-                              {combo.blade}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          {combo.assistBlade !== "None" && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder={folderMap['assist-blade']} name={combo.assistBlade} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs text-muted-foreground">
-                                  <span className="sm:hidden">As. Blade</span>
-                                  <span className="hidden sm:inline">Assist Blade</span>
-                                </p>
-                                <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
-                              </div>
-                            </div>
-                          )}
-                          {combo.ratchet !== 'None' && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs text-muted-foreground">Ratchet</p>
-                                <p className="text-sm font-medium truncate">{combo.ratchet}</p>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 shrink-0">
-                              <ComponentImage folder={folderMap['bit']} name={combo.bit} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs text-muted-foreground">Bit</p>
-                              <p className="text-sm font-medium truncate">{combo.bit}</p>
-                            </div>
-                          </div>
-                          {combo.lockChip !== "None" && (
-                            <div className="col-span-2 flex items-center gap-2">
-                              <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder={folderMap['lock-chip']} name={combo.lockChip} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs text-muted-foreground">Lock Chip</p>
-                                <p className="text-sm font-medium truncate">{combo.lockChip}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-4 pt-3 border-t border-border">
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">
-                              Score
-                            </p>
-                            <p
-                              className="text-lg font-bold text-primary"
-                              data-testid={`text-score-${index}`}
-                            >
-                              {combo.punteggioTotale.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">
-                              1st
-                            </p>
-                            <p className="text-sm font-semibold text-yellow-500">
-                              {combo.primiPosti}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">
-                              2nd
-                            </p>
-                            <p className="text-sm font-semibold text-gray-400">
-                              {combo.secondiPosti}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">
-                              3rd
-                            </p>
-                            <p className="text-sm font-semibold text-amber-600">
-                              {combo.terziPosti}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                      </Card>
-                    </a>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="py-12 text-center">
-                <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Dati assenti</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  I dati apparirano una volta che i tornei verranno registrati
-                </p>
-              </div>
-            )}
-
-            {data?.combos && data.combos.length > 0 && data.pagination && (
-              <div className="mt-6 space-y-3">
-                <div
-                  className="text-center text-sm text-muted-foreground"
-                  data-testid="text-pagination-info"
-                >
-                  Page {data.pagination.page} of {data.pagination.totalPages} (
-                  {data.pagination.total.toLocaleString()} total combos)
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() =>
+                        setCurrentPage(data.pagination.totalPages)
+                      }
+                      disabled={currentPage === data.pagination.totalPages}
+                      data-testid="button-last-page"
+                    >
+                      <ChevronsRight className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="flex items-center justify-center gap-2">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    data-testid="button-first-page"
-                  >
-                    <ChevronsLeft className="w-4 h-4" />
-                  </Button>
-
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(1, prev - 1))
-                    }
-                    disabled={currentPage === 1}
-                    data-testid="button-previous-page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() =>
-                      setCurrentPage((prev) =>
-                        Math.min(data.pagination.totalPages, prev + 1)
-                      )
-                    }
-                    disabled={currentPage === data.pagination.totalPages}
-                    data-testid="button-next-page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() =>
-                      setCurrentPage(data.pagination.totalPages)
-                    }
-                    disabled={currentPage === data.pagination.totalPages}
-                    data-testid="button-last-page"
-                  >
-                    <ChevronsRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card>
+              )}
+            </Card>
           </TabsContent>
 
           <TabsContent value="trends">
-          <div className="bg-card p-6 rounded-lg shadow-md">
+            <div className="bg-card p-6 rounded-lg shadow-md">
               <div className="flex flex-col mb-4 gap-3">
                 <div>
                   <p className="text-muted-foreground">
@@ -806,159 +839,159 @@ export default function Analytics() {
                   </Popover>
                 </div>
               </div>
-            {trendsLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            ) : !selectedName ? (
-              <div className="h-64 flex items-center justify-center text-sm text-muted-foreground">
-                Seleziona un componente per vederne il trend.
-              </div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={transformedData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip
-                      wrapperStyle={{ outline: 'none' }}
-                      contentStyle={{ backgroundColor: 'var(--popover)', borderColor: 'var(--border)', color: 'var(--popover-foreground)' }}
-                      labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
-                      itemStyle={{ color: 'var(--popover-foreground)' }}
-                    />
-                    <Legend content={() => null} />
-                    {transformedData.length > 0 &&
-                      Object.keys(transformedData[0])
-                        .filter((key) => key !== "month")
-                        .map((key, index) => (
-                          <Line
-                            key={key}
-                            type="monotone"
-                            dataKey={key}
-                            stroke={colors[index % colors.length]}
-                          />
-                        ))}
-                  </LineChart>
-                </ResponsiveContainer>
-                                {selectedName && (
-                  <div className="mt-4 flex items-center justify-center gap-3">
-                    <div className="w-14 h-12">
-                      <ComponentImage folder={folderMap[selectedComponent]} name={selectedName} />
-                    </div>
-                    <span className="text-sm text-muted-foreground truncate max-w-[200px]">{selectedName}</span>
-                  </div>
-                )}
-
-                {selectedPieceName && (
-                  <div className="mt-6">
-                    <h3 className="text-muted-foreground mb-3">Componenti spesso usati assieme</h3>
-                    {synergyLoading ? (
-                      <div className="text-muted-foreground text-sm">Caricamento suggerimenti...</div>
-                    ) : synergyData ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {synergyData.topBlades && synergyData.topBlades.length > 0 && (
-                          <Card className="p-4">
-                            <div className="font-semibold mb-2">Blade</div>
-                            <div className="space-y-3">
-                              {synergyData.topBlades.slice(0, 5).map((it: any) => (
-                                <div key={it.name} className="flex items-center justify-between gap-4 py-2">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-8 shrink-0">
-                                      <ComponentImage folder={folderMap['blade']} name={it.name} />
-                                    </div>
-                                    <span className="text-sm truncate">{it.name}</span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
-                        )}
-
-                        {synergyData.topAssistBlades && synergyData.topAssistBlades.length > 0 && (
-                          <Card className="p-4">
-                            <div className="font-semibold mb-2">Assist Blade</div>
-                            <div className="space-y-3">
-                              {synergyData.topAssistBlades.slice(0, 5).map((it: any) => (
-                                <div key={it.name} className="flex items-center justify-between gap-4 py-2">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-8 shrink-0">
-                                      <ComponentImage folder={folderMap['assist-blade']} name={it.name} />
-                                    </div>
-                                    <span className="text-sm truncate">{it.name}</span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
-                        )}
-
-                        {synergyData.topRatchets && synergyData.topRatchets.length > 0 && (
-                          <Card className="p-4">
-                            <div className="font-semibold mb-2">Ratchet</div>
-                            <div className="space-y-3">
-                              {synergyData.topRatchets.slice(0, 5).map((it: any) => (
-                                <div key={it.name} className="flex items-center justify-between gap-4 py-2">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-8 shrink-0">
-                                      <ComponentImage folder={folderMap['ratchet']} name={it.name} />
-                                    </div>
-                                    <span className="text-sm truncate">{it.name}</span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
-                        )}
-
-                        {synergyData.topBits && synergyData.topBits.length > 0 && (
-                          <Card className="p-4">
-                            <div className="font-semibold mb-2">Bit</div>
-                            <div className="space-y-3">
-                              {synergyData.topBits.slice(0, 5).map((it: any) => (
-                                <div key={it.name} className="flex items-center justify-between gap-4 py-2">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-8 shrink-0">
-                                      <ComponentImage folder={folderMap['bit']} name={it.name} />
-                                    </div>
-                                    <span className="text-sm truncate">{it.name}</span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
-                        )}
-
-                        {synergyData.topLockChips && synergyData.topLockChips.length > 0 && (
-                          <Card className="p-4">
-                            <div className="font-semibold mb-2">Lock Chip</div>
-                            <div className="space-y-3">
-                              {synergyData.topLockChips.slice(0, 5).map((it: any) => (
-                                <div key={it.name} className="flex items-center justify-between gap-4 py-2">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-8 shrink-0">
-                                      <ComponentImage folder={folderMap['lock-chip']} name={it.name} />
-                                    </div>
-                                    <span className="text-sm truncate">{it.name}</span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
-                        )}
+              {trendsLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : !selectedName ? (
+                <div className="h-64 flex items-center justify-center text-sm text-muted-foreground">
+                  Seleziona un componente per vederne il trend.
+                </div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={transformedData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip
+                        wrapperStyle={{ outline: 'none' }}
+                        contentStyle={{ backgroundColor: 'var(--popover)', borderColor: 'var(--border)', color: 'var(--popover-foreground)' }}
+                        labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+                        itemStyle={{ color: 'var(--popover-foreground)' }}
+                      />
+                      <Legend content={() => null} />
+                      {transformedData.length > 0 &&
+                        Object.keys(transformedData[0])
+                          .filter((key) => key !== "month")
+                          .map((key, index) => (
+                            <Line
+                              key={key}
+                              type="monotone"
+                              dataKey={key}
+                              stroke={colors[index % colors.length]}
+                            />
+                          ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  {selectedName && (
+                    <div className="mt-4 flex items-center justify-center gap-3">
+                      <div className="w-14 h-12">
+                        <ComponentImage folder={folderMap[selectedComponent]} name={selectedName} />
                       </div>
-                    ) : null}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </TabsContent>
+                      <span className="text-sm text-muted-foreground truncate max-w-[200px]">{selectedName}</span>
+                    </div>
+                  )}
+
+                  {selectedPieceName && (
+                    <div className="mt-6">
+                      <h3 className="text-muted-foreground mb-3">Componenti spesso usati assieme</h3>
+                      {synergyLoading ? (
+                        <div className="text-muted-foreground text-sm">Caricamento suggerimenti...</div>
+                      ) : synergyData ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {synergyData.topBlades && synergyData.topBlades.length > 0 && (
+                            <Card className="p-4">
+                              <div className="font-semibold mb-2">Blade</div>
+                              <div className="space-y-3">
+                                {synergyData.topBlades.slice(0, 5).map((it: any) => (
+                                  <div key={it.name} className="flex items-center justify-between gap-4 py-2">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-10 h-8 shrink-0">
+                                        <ComponentImage folder={folderMap['blade']} name={it.name} />
+                                      </div>
+                                      <span className="text-sm truncate">{it.name}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          )}
+
+                          {synergyData.topAssistBlades && synergyData.topAssistBlades.length > 0 && (
+                            <Card className="p-4">
+                              <div className="font-semibold mb-2">Assist Blade</div>
+                              <div className="space-y-3">
+                                {synergyData.topAssistBlades.slice(0, 5).map((it: any) => (
+                                  <div key={it.name} className="flex items-center justify-between gap-4 py-2">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-10 h-8 shrink-0">
+                                        <ComponentImage folder={folderMap['assist-blade']} name={it.name} />
+                                      </div>
+                                      <span className="text-sm truncate">{it.name}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          )}
+
+                          {synergyData.topRatchets && synergyData.topRatchets.length > 0 && (
+                            <Card className="p-4">
+                              <div className="font-semibold mb-2">Ratchet</div>
+                              <div className="space-y-3">
+                                {synergyData.topRatchets.slice(0, 5).map((it: any) => (
+                                  <div key={it.name} className="flex items-center justify-between gap-4 py-2">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-10 h-8 shrink-0">
+                                        <ComponentImage folder={folderMap['ratchet']} name={it.name} />
+                                      </div>
+                                      <span className="text-sm truncate">{it.name}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          )}
+
+                          {synergyData.topBits && synergyData.topBits.length > 0 && (
+                            <Card className="p-4">
+                              <div className="font-semibold mb-2">Bit</div>
+                              <div className="space-y-3">
+                                {synergyData.topBits.slice(0, 5).map((it: any) => (
+                                  <div key={it.name} className="flex items-center justify-between gap-4 py-2">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-10 h-8 shrink-0">
+                                        <ComponentImage folder={folderMap['bit']} name={it.name} />
+                                      </div>
+                                      <span className="text-sm truncate">{it.name}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          )}
+
+                          {synergyData.topLockChips && synergyData.topLockChips.length > 0 && (
+                            <Card className="p-4">
+                              <div className="font-semibold mb-2">Lock Chip</div>
+                              <div className="space-y-3">
+                                {synergyData.topLockChips.slice(0, 5).map((it: any) => (
+                                  <div key={it.name} className="flex items-center justify-between gap-4 py-2">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-10 h-8 shrink-0">
+                                        <ComponentImage folder={folderMap['lock-chip']} name={it.name} />
+                                      </div>
+                                      <span className="text-sm truncate">{it.name}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{Math.round(it.points)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
     </div>

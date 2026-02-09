@@ -39,6 +39,59 @@ export default function Players() {
 
   const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("challengermode");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const season = params.get("season");
+    const platform = params.get("platform");
+
+    const ssQ = sessionStorage.getItem("players_q");
+    const ssSeason = sessionStorage.getItem("players_season");
+    const ssPlatform = sessionStorage.getItem("players_platform");
+
+    if (q !== null || ssQ !== null) setQuery((q ?? ssQ ?? "") as string);
+    if (season !== null || ssSeason !== null) setSelectedSeason((season ?? ssSeason ?? "Off Season 2025") as string);
+
+    // Validate Platform
+    const rawPlatform = platform ?? ssPlatform;
+    if (rawPlatform === "challengermode" || rawPlatform === "challonge") {
+      setSelectedPlatform(rawPlatform);
+    } else {
+      setSelectedPlatform("challengermode"); // Default fallback
+    }
+
+    setIsInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (query) params.set("q", query); else params.delete("q");
+    // selectedSeason is unused in API currently but let's persist it
+    if (selectedSeason) params.set("season", selectedSeason);
+    if (selectedPlatform) params.set("platform", selectedPlatform);
+
+    sessionStorage.setItem("players_q", query);
+    sessionStorage.setItem("players_season", selectedSeason);
+
+    // Only persist valid platforms
+    if (selectedPlatform === "challengermode" || selectedPlatform === "challonge") {
+      sessionStorage.setItem("players_platform", selectedPlatform);
+    } else {
+      sessionStorage.removeItem("players_platform");
+    }
+
+    const newSearch = params.toString();
+    const currentSearch = window.location.search.replace(/^\?/, "");
+    if (newSearch !== currentSearch) {
+      setLocation(`${location}?${newSearch}`, { replace: true });
+    }
+  }, [query, selectedSeason, selectedPlatform, location, setLocation, isInitialized]);
 
   const { data: seasonsData } = useQuery<{ seasons: string[] }>({
     queryKey: ["/api/seasons"],
@@ -50,11 +103,11 @@ export default function Players() {
   });
   const seasons = (seasonsData?.seasons || ["Off Season 2025", "All Time"]) as string[];
   useEffect(() => {
-    if (seasons.length && !seasons.includes(selectedSeason)) {
+    if (seasonsData?.seasons && !seasons.includes(selectedSeason)) {
       setSelectedSeason(seasons[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seasonsData?.seasons?.length]);
+  }, [seasonsData, selectedSeason]);
 
   // Global Leaderboard Query (always global region)
   const { data: globalData, isLoading } = useQuery<{ players: PlayerItem[] }>({
@@ -81,8 +134,7 @@ export default function Players() {
     platform: p.platform,
   })) as PlayerItem[];
 
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+
   const perPage = 20;
   const filteredPlayers = useMemo(() => {
     const q = query.trim().toLowerCase();
