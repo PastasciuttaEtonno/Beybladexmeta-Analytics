@@ -1525,6 +1525,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const seasonRaw = String((req.query.season ?? '') as string).trim();
       const season = seasonRaw || '';
 
+      // Helper function for Challonge Scoring (Tiering Dinamico) based on ANTIGRAVITY_WORKFLOW.md
+      const calculateChallongePoints = (rank: number | null, total: number | null): number => {
+        if (!rank || !total) return 0;
+
+        // 49-64+ Players
+        if (total >= 49) {
+          if (rank === 1) return 400;
+          if (rank === 2) return 280;
+          if (rank === 3) return 160;
+          if (rank === 4) return 120;
+          if (rank >= 5 && rank <= 8) return 90;
+          if (rank >= 9 && rank <= 12) return 65;
+          if (rank >= 13 && rank <= 16) return 50;
+          if (rank >= 17 && rank <= 24) return 40;
+          if (rank >= 25 && rank <= 32) return 30;
+          if (rank >= 33 && rank <= 48) return 15;
+          if (rank >= 49) return 10;
+        }
+        // 33-48 Players
+        else if (total >= 33) {
+          if (rank === 1) return 350;
+          if (rank === 2) return 240;
+          if (rank === 3) return 140;
+          if (rank === 4) return 110;
+          if (rank >= 5 && rank <= 8) return 80;
+          if (rank >= 9 && rank <= 12) return 55;
+          if (rank >= 13 && rank <= 16) return 40;
+          if (rank >= 17 && rank <= 24) return 30;
+          if (rank >= 25 && rank <= 32) return 15;
+          if (rank >= 33) return 10;
+        }
+        // 25-32 Players
+        else if (total >= 25) {
+          if (rank === 1) return 300;
+          if (rank === 2) return 200;
+          if (rank === 3) return 120;
+          if (rank === 4) return 90;
+          if (rank >= 5 && rank <= 8) return 70;
+          if (rank >= 9 && rank <= 12) return 45;
+          if (rank >= 13 && rank <= 16) return 30;
+          if (rank >= 17 && rank <= 24) return 15;
+          if (rank >= 25) return 10;
+        }
+        // 17-24 Players
+        else if (total >= 17) {
+          if (rank === 1) return 250;
+          if (rank === 2) return 160;
+          if (rank === 3) return 100;
+          if (rank === 4) return 80;
+          if (rank >= 5 && rank <= 8) return 60;
+          if (rank >= 9 && rank <= 12) return 30;
+          if (rank >= 13 && rank <= 16) return 15;
+          if (rank >= 17) return 10;
+        }
+        // 13-16 Players
+        else if (total >= 13) {
+          if (rank === 1) return 200;
+          if (rank === 2) return 120;
+          if (rank === 3) return 80;
+          if (rank === 4) return 60;
+          if (rank >= 5 && rank <= 8) return 30;
+          if (rank >= 9 && rank <= 12) return 15;
+          if (rank >= 13) return 10;
+        }
+        // 8-12 Players
+        else if (total >= 8) {
+          if (rank === 1) return 150;
+          if (rank === 2) return 80;
+          if (rank === 3) return 60;
+          if (rank === 4) return 40;
+          if (rank >= 5 && rank <= 8) return 20;
+          if (rank >= 9) return 10;
+        }
+        // 6-7 Players
+        else if (total >= 6) {
+          if (rank === 1) return 100;
+          if (rank === 2) return 70;
+          if (rank === 3) return 50;
+          if (rank === 4) return 30;
+          if (rank >= 5) return 10;
+        }
+
+        return 0;
+      };
+
       // Try to find player in both CM and Challonge
       const cmPlayerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.nickname, nickname)).limit(1);
       const cmPlayer = cmPlayerRows[0] || null;
@@ -1607,36 +1692,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (userRows.length > 0) {
         const user = userRows[0];
         let challongeTournamentsQuery;
+
+        // We JOIN with challonge_match_results to get participants count
+        const baseQueryText = `
+            SELECT
+              c.tournament_id,
+              MAX(c.tournament_name) AS tournament_name,
+              MIN(c.rank) AS best_placement,
+              COUNT(DISTINCT c.id) AS combo_count, -- count combo entries
+              'challonge' AS platform,
+              MAX(c.created_at) AS date,
+              COALESCE(
+                  NULLIF((m.data->>'participants_count')::int, 0),
+                  NULLIF((m.data->>'total_players')::int, 0),
+                  jsonb_array_length(m.data->'standings')
+              ) as total_participants
+            FROM challonge_reported_combos c
+            LEFT JOIN challonge_match_results m ON c.tournament_id = m.tournament_id
+            WHERE c.user_id = $1
+            ${season ? 'AND c.season = $2' : ''}
+            GROUP BY c.tournament_id, m.data
+            ORDER BY date DESC
+            LIMIT 25;
+        `;
+
         if (season) {
           challongeTournamentsQuery = await db.execute(sql`
-            SELECT
-              tournament_id,
-              MAX(tournament_name) AS tournament_name,
-              MIN(rank) AS best_placement,
-              COUNT(*) AS combo_count,
-              'challonge' AS platform,
-              MAX(created_at) AS date
-            FROM challonge_reported_combos
-            WHERE user_id = ${user.id} AND season = ${season}
-            GROUP BY tournament_id
-            ORDER BY date DESC
-            LIMIT 25;
-          `);
+                SELECT
+                c.tournament_id,
+                MAX(c.tournament_name) AS tournament_name,
+                MIN(c.rank) AS best_placement,
+                COUNT(DISTINCT c.id) AS combo_count,
+                'challonge' AS platform,
+                MAX(c.created_at) AS date,
+                COALESCE(
+                    NULLIF((m.data->>'participants_count')::int, 0),
+                    NULLIF((m.data->>'total_players')::int, 0),
+                    jsonb_array_length(m.data->'standings')
+                ) as total_participants
+                FROM challonge_reported_combos c
+                LEFT JOIN challonge_match_results m ON c.tournament_id = m.tournament_id
+                WHERE c.user_id = ${user.id} AND c.season = ${season}
+                GROUP BY c.tournament_id, m.data
+                ORDER BY date DESC
+                LIMIT 25;
+            `);
         } else {
           challongeTournamentsQuery = await db.execute(sql`
-            SELECT
-              tournament_id,
-              MAX(tournament_name) AS tournament_name,
-              MIN(rank) AS best_placement,
-              COUNT(*) AS combo_count,
-              'challonge' AS platform,
-              MAX(created_at) AS date
-            FROM challonge_reported_combos
-            WHERE user_id = ${user.id}
-            GROUP BY tournament_id
-            ORDER BY date DESC
-            LIMIT 25;
-          `);
+                SELECT
+                c.tournament_id,
+                MAX(c.tournament_name) AS tournament_name,
+                MIN(c.rank) AS best_placement,
+                COUNT(DISTINCT c.id) AS combo_count,
+                'challonge' AS platform,
+                MAX(c.created_at) AS date,
+                COALESCE(
+                    NULLIF((m.data->>'participants_count')::int, 0),
+                    NULLIF((m.data->>'total_players')::int, 0),
+                    jsonb_array_length(m.data->'standings')
+                ) as total_participants
+                FROM challonge_reported_combos c
+                LEFT JOIN challonge_match_results m ON c.tournament_id = m.tournament_id
+                WHERE c.user_id = ${user.id}
+                GROUP BY c.tournament_id, m.data
+                ORDER BY date DESC
+                LIMIT 25;
+            `);
         }
 
         const challongeTournaments = (challongeTournamentsQuery.rows || []).map((r: any) => ({
@@ -1644,7 +1765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date: r.date ? String(r.date).slice(0, 10) : null,
           name: r.tournament_name ? String(r.tournament_name) : null,
           bestPlacement: r.best_placement != null ? Number(r.best_placement) : null,
-          totalPoints: 0,
+          totalPoints: calculateChallongePoints(Number(r.best_placement), Number(r.total_participants)),
           comboCount: Number(r.combo_count || 0),
           platform: 'challonge',
         }));
@@ -1660,43 +1781,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             c.data->>'start_date' as date,
             (s->>'rank')::int as rank,
             COALESCE(
-              (c.data->>'participants_count')::int, 
-              (c.data->>'total_players')::int, 
+              NULLIF((c.data->>'participants_count')::int, 0), 
+              NULLIF((c.data->>'total_players')::int, 0), 
               jsonb_array_length(c.data->'standings')
             ) as total_participants
           FROM challonge_match_results c,
           jsonb_array_elements(c.data->'standings') as s
-          WHERE COALESCE(s->'participant'->>'name', s->>'name') = ${nickname}
+          WHERE COALESCE(s->'participant'->>'name', s->>'name', s->'participant'->>'display_name') = ${nickname}
           ORDER BY c.data->>'start_date' DESC
           LIMIT 50;
         `);
 
         if (ghostToursQuery.rows.length > 0) {
           const ghostTournaments = ghostToursQuery.rows.map((r: any) => {
-            // Basic points calculation for display
-            let points = 10; // Default
             const rank = r.rank;
             const total = r.total_participants;
-
-            if (total >= 13) {
-              if (rank === 1) points = 200;
-              else if (rank === 2) points = 120;
-              else if (rank === 3) points = 80;
-              else if (rank === 4) points = 60;
-              else if (rank >= 5 && rank <= 8) points = 30;
-              else if (rank >= 9 && rank <= 12) points = 15;
-            } else if (total >= 8) {
-              if (rank === 1) points = 150;
-              else if (rank === 2) points = 80;
-              else if (rank === 3) points = 60;
-              else if (rank === 4) points = 40;
-              else if (rank >= 5 && rank <= 8) points = 20;
-            } else {
-              if (rank === 1) points = 100;
-              else if (rank === 2) points = 70;
-              else if (rank === 3) points = 50;
-              else if (rank === 4) points = 30;
-            }
+            const points = calculateChallongePoints(rank, total);
 
             return {
               tournamentId: String(r.tournament_id),
