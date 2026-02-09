@@ -422,14 +422,43 @@ export default function Analytics() {
           <TabsContent value="leaderboard">
             <Card className="p-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-6 h-6 text-primary" />
-                  <div>
-                    {/* <h2 className="text-lg font-semibold">Top Combo</h2> */}
-                    <p className="text-sm text-muted-foreground">
-                      Classifica combo tornei
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2 flex-wrap flex-1 mr-2 min-h-[40px]">
+                  <span className="text-xs text-muted-foreground mr-1">
+                    Filtri attivi:
+                  </span>
+                  {!hasActiveFilters && (
+                    <span className="text-xs text-muted-foreground">nessuno</span>
+                  )}
+                  {searchTerm && (
+                    <Badge variant="secondary" className="text-xs">
+                      Search: {searchTerm}
+                    </Badge>
+                  )}
+                  {sortBy !== "score" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Sort:{" "}
+                      {sortBy === "first"
+                        ? "1st Place"
+                        : sortBy === "second"
+                          ? "2nd Place"
+                          : sortBy === "third"
+                            ? "3rd Place"
+                            : "Date"}
+                    </Badge>
+                  )}
+                  {sortOrder !== "desc" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Ordine:{" "}
+                      {sortOrder === "asc"
+                        ? "Crescente"
+                        : "Decrescente"}
+                    </Badge>
+                  )}
+                  {selectedSeason !== "All Time" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Stagione: {selectedSeason}
+                    </Badge>
+                  )}
                 </div>
 
                 <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
@@ -551,43 +580,7 @@ export default function Analytics() {
                 </Dialog>
               </div>
 
-              {hasActiveFilters && (
-                <div className="mb-4 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground">
-                    Filtri attivi:
-                  </span>
-                  {searchTerm && (
-                    <Badge variant="secondary" className="text-xs">
-                      Search: {searchTerm}
-                    </Badge>
-                  )}
-                  {sortBy !== "score" && (
-                    <Badge variant="secondary" className="text-xs">
-                      Sort:{" "}
-                      {sortBy === "first"
-                        ? "1st Place"
-                        : sortBy === "second"
-                          ? "2nd Place"
-                          : sortBy === "third"
-                            ? "3rd Place"
-                            : "Date"}
-                    </Badge>
-                  )}
-                  {sortOrder !== "desc" && (
-                    <Badge variant="secondary" className="text-xs">
-                      Order:{" "}
-                      {sortOrder === "asc"
-                        ? "Lowest to Highest"
-                        : "Highest to Lowest"}
-                    </Badge>
-                  )}
-                  {selectedSeason !== "All Time" && (
-                    <Badge variant="secondary" className="text-xs">
-                      Stagione: {selectedSeason}
-                    </Badge>
-                  )}
-                </div>
-              )}
+
 
               {isLoading ? (
                 <div className="space-y-3">
