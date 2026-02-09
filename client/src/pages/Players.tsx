@@ -151,11 +151,18 @@ export default function Players() {
     setPage(1);
   }, [players.length, query, selectedPlatform]);
 
-  const getRankIcon = (index: number) => {
-    if (index === 0) return <Trophy className="w-4 h-4 text-yellow-500" />;
-    if (index === 1) return <Medal className="w-4 h-4 text-gray-400" />;
-    if (index === 2) return <Award className="w-4 h-4 text-amber-600" />;
-    return null;
+  const getRankBadge = (index: number) => {
+    if (index === 0)
+      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white w-8 h-6 flex items-center justify-center p-0">1</Badge>;
+    if (index === 1)
+      return <Badge className="bg-gray-400 hover:bg-gray-500 text-white w-8 h-6 flex items-center justify-center p-0">2</Badge>;
+    if (index === 2)
+      return <Badge className="bg-amber-600 hover:bg-amber-700 text-white w-8 h-6 flex items-center justify-center p-0">3</Badge>;
+    return (
+      <Badge variant="secondary" className="text-xs w-8 h-6 flex items-center justify-center p-0">
+        {index + 1}
+      </Badge>
+    );
   };
 
   return (
@@ -215,12 +222,8 @@ export default function Players() {
                     <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`} className="block mb-0">
                       <a className="block no-underline">
                         <Card className="p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all duration-200 active:scale-[0.99]">
-                          <div className="w-10 text-center flex-shrink-0">
-                            {getRankIcon(globalRank) || (
-                              <Badge variant="secondary" className="text-xs">
-                                {globalRank + 1}
-                              </Badge>
-                            )}
+                          <div className="w-10 text-center flex-shrink-0 flex justify-center">
+                            {getRankBadge(globalRank)}
                           </div>
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
                             {p.avatar ? (
