@@ -235,14 +235,29 @@ export default function Analytics() {
   });
 
   const { data: trendsData, isLoading: trendsLoading } = useQuery({
-    queryKey: ["/api/trends", "count", "week"],
+    queryKey: ["/api/trends", "count", "week", selectedSeason],
     queryFn: async () => {
-      const res = await fetch("/api/trends?metric=count&granularity=week");
+      const params = new URLSearchParams();
+      params.append("metric", "count");
+      params.append("granularity", "week");
+      if (selectedSeason) {
+        params.append("season", selectedSeason);
+      }
+      const res = await fetch(`/api/trends?${params.toString()}`);
       return res.json();
     },
   });
 
   // Fallback names source from backend components lists
+  const { data: seasonsData } = useQuery<{ seasons: string[] }>({
+    queryKey: ["/api/seasons"],
+    queryFn: async () => {
+      const resp = await fetch("/api/seasons");
+      if (!resp.ok) throw new Error("Failed to fetch seasons");
+      return resp.json();
+    },
+  });
+
   const { data: componentsData } = useQuery({
     queryKey: ["components"],
     queryFn: async () => {
@@ -809,6 +824,22 @@ export default function Analytics() {
                     </SelectContent>
                   </Select>
 
+                  <Select
+                    value={selectedSeason}
+                    onValueChange={setSelectedSeason}
+                  >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Select Season" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(seasonsData?.seasons || ["Season 2026", "All Time", "Off Season 2025"]).map((season) => (
+                        <SelectItem key={season} value={season}>
+                          {season}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full sm:w-[200px] min-w-0 justify-start truncate">
@@ -877,7 +908,7 @@ export default function Analytics() {
                   {selectedName && (
                     <div className="mt-4 flex items-center justify-center gap-3">
                       <div className="w-14 h-12">
-                        <ComponentImage folder={folderMap[selectedComponent]} name={selectedName} />
+                        <ComponentImage key={`${selectedComponent}-${selectedName}`} folder={folderMap[selectedComponent]} name={selectedName} />
                       </div>
                       <span className="text-sm text-muted-foreground truncate max-w-[200px]">{selectedName}</span>
                     </div>

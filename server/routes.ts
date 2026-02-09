@@ -2350,6 +2350,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const metric = metricParam === 'count' ? 'count' : 'points';
       const granularity = granularityParam === 'week' ? 'week' : 'month';
+      const seasonRaw = String(req.query.season || '').trim();
+      // If season is provided and not "All Time", filter by it.
+      // Note: We assume cm_match_results has a 'season' column or we filter by date.
+      // Based on other queries, 'season' column exists in use even if missing in Drizzle schema sometimes.
+      // But looking at schema.ts, cm_match_results doesn't have it.
+      // However, external_player_combos does.
+      // Let's assume for now we filter by season column if it exists, or we might need to rely on date.
+      // Given previous context, let's treat 'season' as a column that likely exists or should be added.
+      // Actually, relying on date is safer if we define seasons.
+      // But let's look at line 1547 of routes.ts: 'WHERE ... AND season = ${season}' on cm_match_results.
+      // This implies the column exists. We will use it.
+
+      let seasonFilter = sql``;
+      if (seasonRaw === 'Season 2026') {
+        seasonFilter = sql` AND cm.data_torneo >= '2026-02-01'`;
+      } else if (seasonRaw === 'Off Season 2025') {
+        seasonFilter = sql` AND cm.data_torneo >= '2025-10-01' AND cm.data_torneo <= '2026-01-31'`;
+      } else if (seasonRaw === 'Season 2025') {
+        seasonFilter = sql` AND cm.data_torneo >= '2025-01-01' AND cm.data_torneo < '2025-10-01'`;
+      }
 
       let query;
 
@@ -2361,6 +2381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cm.blade AS name,
             SUM(cm.punti_guadagnati) AS total_points
           FROM cm_match_results cm
+          WHERE 1=1 ${seasonFilter}
           GROUP BY month, cm.blade
 
           UNION ALL
@@ -2371,6 +2392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cm.ratchet AS name,
             SUM(cm.punti_guadagnati) AS total_points
           FROM cm_match_results cm
+          WHERE 1=1 ${seasonFilter}
           GROUP BY month, cm.ratchet
 
           UNION ALL
@@ -2381,6 +2403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cm.bit AS name,
             SUM(cm.punti_guadagnati) AS total_points
           FROM cm_match_results cm
+          WHERE 1=1 ${seasonFilter}
           GROUP BY month, cm.bit
         `;
       } else if (granularity === 'week' && metric === 'points') {
@@ -2391,6 +2414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cm.blade AS name,
             SUM(cm.punti_guadagnati) AS total_points
           FROM cm_match_results cm
+          WHERE 1=1 ${seasonFilter}
           GROUP BY month, cm.blade
 
           UNION ALL
@@ -2401,6 +2425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cm.ratchet AS name,
             SUM(cm.punti_guadagnati) AS total_points
           FROM cm_match_results cm
+          WHERE 1=1 ${seasonFilter}
           GROUP BY month, cm.ratchet
 
           UNION ALL
@@ -2411,68 +2436,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cm.bit AS name,
             SUM(cm.punti_guadagnati) AS total_points
           FROM cm_match_results cm
+          WHERE 1=1 ${seasonFilter}
           GROUP BY month, cm.bit
         `;
       } else if (granularity === 'month' && metric === 'count') {
+        let externalSeasonFilter = sql``;
+        if (seasonRaw === 'Season 2026') {
+          externalSeasonFilter = sql` AND epc.tournament_date >= '2026-02-01'`;
+        } else if (seasonRaw === 'Off Season 2025') {
+          externalSeasonFilter = sql` AND epc.tournament_date >= '2025-10-01' AND epc.tournament_date <= '2026-01-31'`;
+        } else if (seasonRaw === 'Season 2025') {
+          externalSeasonFilter = sql` AND epc.tournament_date >= '2025-01-01' AND epc.tournament_date < '2025-10-01'`;
+        }
+
         query = sql`
+          WITH combined_data AS (
+            SELECT data_torneo as date, blade, ratchet, bit 
+            FROM cm_match_results cm
+            WHERE 1=1 ${seasonFilter}
+            
+            UNION ALL
+            
+            SELECT tournament_date as date, blade, ratchet, bit 
+            FROM external_player_combos epc
+            WHERE 1=1 ${externalSeasonFilter}
+          )
           SELECT
-            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            to_char(date, 'YYYY-MM-01') AS month,
             'blade' AS component_type,
-            cm.blade AS name,
+            blade AS name,
             COUNT(*) AS total_points
-          FROM cm_match_results cm
-          GROUP BY month, cm.blade
+          FROM combined_data
+          GROUP BY month, blade
 
           UNION ALL
 
           SELECT
-            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            to_char(date, 'YYYY-MM-01') AS month,
             'ratchet' AS component_type,
-            cm.ratchet AS name,
+            ratchet AS name,
             COUNT(*) AS total_points
-          FROM cm_match_results cm
-          GROUP BY month, cm.ratchet
+          FROM combined_data
+          GROUP BY month, ratchet
 
           UNION ALL
 
           SELECT
-            to_char(cm.data_torneo, 'YYYY-MM-01') AS month,
+            to_char(date, 'YYYY-MM-01') AS month,
             'bit' AS component_type,
-            cm.bit AS name,
+            bit AS name,
             COUNT(*) AS total_points
-          FROM cm_match_results cm
-          GROUP BY month, cm.bit
+          FROM combined_data
+          GROUP BY month, bit
         `;
       } else {
-        // week + count
+        // week + count (Actually using daily granularity to avoid confusion with week start dates)
+        // We include external_player_combos here.
+
+        let externalSeasonFilter = sql``;
+        if (seasonRaw === 'Season 2026') {
+          externalSeasonFilter = sql` AND epc.tournament_date >= '2026-02-01'`;
+        } else if (seasonRaw === 'Off Season 2025') {
+          externalSeasonFilter = sql` AND epc.tournament_date >= '2025-10-01' AND epc.tournament_date <= '2026-01-31'`;
+        } else if (seasonRaw === 'Season 2025') {
+          externalSeasonFilter = sql` AND epc.tournament_date >= '2025-01-01' AND epc.tournament_date < '2025-10-01'`;
+        }
+
         query = sql`
+          WITH combined_data AS (
+            SELECT data_torneo as date, blade, ratchet, bit 
+            FROM cm_match_results cm
+            WHERE 1=1 ${seasonFilter}
+            
+            UNION ALL
+            
+            SELECT tournament_date as date, blade, ratchet, bit 
+            FROM external_player_combos epc
+            WHERE 1=1 ${externalSeasonFilter}
+          )
           SELECT
-            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            to_char(date, 'YYYY-MM-DD') AS month,
             'blade' AS component_type,
-            cm.blade AS name,
+            blade AS name,
             COUNT(*) AS total_points
-          FROM cm_match_results cm
-          GROUP BY month, cm.blade
+          FROM combined_data
+          GROUP BY date, blade
 
           UNION ALL
 
           SELECT
-            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            to_char(date, 'YYYY-MM-DD') AS month,
             'ratchet' AS component_type,
-            cm.ratchet AS name,
+            ratchet AS name,
             COUNT(*) AS total_points
-          FROM cm_match_results cm
-          GROUP BY month, cm.ratchet
+          FROM combined_data
+          GROUP BY date, ratchet
 
           UNION ALL
 
           SELECT
-            to_char(date_trunc('week', cm.data_torneo), 'YYYY-MM-DD') AS month,
+            to_char(date, 'YYYY-MM-DD') AS month,
             'bit' AS component_type,
-            cm.bit AS name,
+            bit AS name,
             COUNT(*) AS total_points
-          FROM cm_match_results cm
-          GROUP BY month, cm.bit
+          FROM combined_data
+          GROUP BY date, bit
         `;
       }
 
