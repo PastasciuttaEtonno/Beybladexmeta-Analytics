@@ -487,9 +487,11 @@ export default function TournamentDetail() {
 
                     // For Challonge, we might not have 'selfId' match seamlessly if not linked. 
                     // But if user matches, we allow edit.
-                    const isSelf = (memberId && memberId === selfId); // Might fail if memberId is a name
+                    // const isSelf = (memberId && memberId === selfId); // Might fail if memberId is a name
                     // Allow edit if admin for top 3 OR if backend says it's current user (via alias)
-                    const canEdit = isSelf || (!!m?._isCurrentUser) || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
+
+                    const isSelf = ((memberId && memberId === selfId) || (!!m?._isCurrentUser));
+                    const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
 
                     // COMBO RESOLUTION: 
                     // 1. Check direct attached (Challonge logic)
@@ -500,7 +502,7 @@ export default function TournamentDetail() {
                     }
 
                     return (
-                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2' : ''}`}
+                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2 bg-primary/10' : ''}`}
                         onClick={() => {
                           if (!canEdit) return;
                           if (!memberId) return;
