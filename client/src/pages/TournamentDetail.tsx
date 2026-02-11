@@ -469,8 +469,15 @@ export default function TournamentDetail() {
           const placement = lu?.placement?.displayPlacement ?? `${idx + 1}`;
           const members: any[] = lu?.members || [];
 
+          // Check if ANY member is self (for highlighting the whole card)
+          const isLineupSelf = members.some(m => {
+            const memberId = String(m?.user?.userId || '').trim();
+            const selfId = String(user?.challengerId || '').trim();
+            return (memberId && memberId === selfId) || (!!m?._isCurrentUser);
+          });
+
           return (
-            <Card key={idx} className="border">
+            <Card key={idx} className={`border ${isLineupSelf ? 'bg-primary/10' : ''}`}>
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Posizione {placement}</CardTitle>
               </CardHeader>
@@ -502,7 +509,7 @@ export default function TournamentDetail() {
                     }
 
                     return (
-                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2 bg-primary/10' : ''}`}
+                      <div key={i} className={`flex flex-col items-start justify-start gap-3 ${canEdit ? 'cursor-pointer' : ''} ${isSelf ? 'rounded-md p-2' : ''}`}
                         onClick={() => {
                           if (!canEdit) return;
                           if (!memberId) return;
