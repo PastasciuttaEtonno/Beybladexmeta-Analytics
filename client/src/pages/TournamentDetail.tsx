@@ -477,7 +477,7 @@ export default function TournamentDetail() {
           });
 
           return (
-            <Card key={idx} className={`border ${isLineupSelf ? 'bg-primary/10' : ''}`}>
+            <Card key={idx} className={`border ${isLineupSelf ? 'bg-primary/20 border-primary/40 shadow-sm' : ''}`}>
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Posizione {placement}</CardTitle>
               </CardHeader>
