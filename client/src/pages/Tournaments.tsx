@@ -33,7 +33,7 @@ import {
   PaginationNext,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
-// Region filter UI removed
+import { Filter, X } from "lucide-react";
 
 type ComboForm = {
   blade: string;
@@ -433,6 +433,48 @@ export default function Tournaments() {
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
 
+  // Dialog Filter states
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState<string>("");
+  const [tempEndDate, setTempEndDate] = useState<string>(DEFAULT_END_DATE);
+  const [tempRegion, setTempRegion] = useState<string>("");
+  const [tempPlatform, setTempPlatform] = useState<string>("all");
+
+  const handleOpenFilterDialog = () => {
+    setTempStartDate(startDateFilter);
+    setTempEndDate(endDateFilter);
+    setTempRegion(selectedRegion);
+    setTempPlatform(selectedPlatform);
+    setIsFilterDialogOpen(true);
+  };
+
+  const handleApplyFilters = () => {
+    setStartDateFilter(tempStartDate);
+    setEndDateFilter(tempEndDate);
+    setSelectedRegion(tempRegion);
+    setSelectedPlatform(tempPlatform);
+    setIsFilterDialogOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempStartDate("");
+    setTempEndDate(DEFAULT_END_DATE);
+    setTempRegion("");
+    setTempPlatform("all");
+
+    setStartDateFilter("");
+    setEndDateFilter(DEFAULT_END_DATE);
+    setSelectedRegion("");
+    setSelectedPlatform("all");
+    setIsFilterDialogOpen(false);
+  };
+
+  const hasActiveFilters =
+    startDateFilter !== "" ||
+    endDateFilter !== DEFAULT_END_DATE ||
+    selectedRegion !== "" ||
+    selectedPlatform !== "all";
+
   const { data: tournamentsData, refetch: refetchTournaments, isLoading: tournamentsLoading } = useQuery<{ tournaments: TorneoCard[] }>({
     queryKey: ["/api/tournaments", startDateFilter || "", endDateFilter || "", selectedRegion || "", selectedPlatform || "all"],
     queryFn: async () => {
@@ -609,8 +651,11 @@ export default function Tournaments() {
     const pageItems = filtered.slice(startIdx, endIdx);
     return (
       <div className="space-y-4">
-        {/* Compact filter bar */}
-        <div className="flex flex-wrap items-end gap-2">
+        {/* Compact filter bar with description */}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-muted-foreground w-full mb-2">
+            Esplora i tornei, analizza le combo utilizzate dai migliori giocatori e registra i tuoi risultati per scalare le classifiche.
+          </p>
           <div className="flex-1 min-w-[180px]">
             <Label htmlFor="filter-name" className="sr-only">Tournament name</Label>
             <Input
@@ -618,75 +663,95 @@ export default function Tournaments() {
               aria-label="Tournament name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cerca..."
+              placeholder="Cerca torneo..."
               className="h-9 text-sm"
             />
           </div>
-          <div className="w-[160px] space-y-1">
-            <Input
-              id="filter-start"
-              aria-label="Dal"
-              type="date"
-              value={startDateFilter}
-              onChange={(e) => setStartDateFilter(e.target.value)}
-              className="h-9 text-sm"
-            />
-          </div>
-          <div className="w-[160px] space-y-1">
-            <Input
-              id="filter-end"
-              aria-label="Al"
-              type="date"
-              value={endDateFilter}
-              onChange={(e) => setEndDateFilter(e.target.value)}
-              className="h-9 text-sm"
-            />
-          </div>
-          <div className="w-[200px] space-y-1">
-            <Select value={selectedRegion} onValueChange={(val) => setSelectedRegion(val === 'ALL' ? '' : val)}>
-              <SelectTrigger className="h-9 text-sm" aria-label="Regione">
-                <SelectValue placeholder="Tutte le regioni" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Tutte le Regioni</SelectItem>
-                {ITALIAN_REGIONS.map((r) => (
-                  <SelectItem key={r} value={r}>{r}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-[180px] space-y-1">
-            <Select value={selectedPlatform} onValueChange={(val) => setSelectedPlatform(val)}>
-              <SelectTrigger className="h-9 text-sm" aria-label="Piattaforma">
-                <SelectValue placeholder="Piattaforma" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutte le piattaforme</SelectItem>
-                <SelectItem value="challengermode">Challengermode</SelectItem>
-                <SelectItem value="challonge">Challonge</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
+          <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Filtri Tornei</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="filter-start">Dal</Label>
+                    <Input
+                      id="filter-start"
+                      type="date"
+                      value={tempStartDate}
+                      onChange={(e) => setTempStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filter-end">Al</Label>
+                    <Input
+                      id="filter-end"
+                      type="date"
+                      value={tempEndDate}
+                      onChange={(e) => setTempEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filter-region">Regione</Label>
+                  <Select value={tempRegion} onValueChange={(val) => setTempRegion(val === 'ALL' ? '' : val)}>
+                    <SelectTrigger id="filter-region">
+                      <SelectValue placeholder="Tutte le regioni" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Tutte le Regioni</SelectItem>
+                      {ITALIAN_REGIONS.map((r) => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filter-platform">Piattaforma</Label>
+                  <Select value={tempPlatform} onValueChange={(val) => setTempPlatform(val)}>
+                    <SelectTrigger id="filter-platform">
+                      <SelectValue placeholder="Tutte le piattaforme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutte le piattaforme</SelectItem>
+                      <SelectItem value="challengermode">Challengermode</SelectItem>
+                      <SelectItem value="challonge">Challonge</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-between gap-2">
+                <Button variant="outline" onClick={handleClearFilters} className="flex-1">
+                  <Eraser className="w-4 h-4 mr-2" />
+                  Pulisci
+                </Button>
+                <Button onClick={handleApplyFilters} className="flex-1">
+                  Applica Filtri
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button
-            type="button"
             variant="outline"
-            className="h-9 px-3 text-sm"
-            onClick={() => {
-              setSearchTerm("");
-              setStartDateFilter("");
-              setEndDateFilter(DEFAULT_END_DATE);
-              setSelectedRegion("");
-              setSelectedPlatform("all");
-            }}
+            size="icon"
+            className="h-9 w-9 relative"
+            onClick={handleOpenFilterDialog}
+            aria-label="Filtri"
           >
-            <Eraser className="w-4 h-4" aria-label="Clear filters" />
-            <span className="sr-only">Pulisci filtri</span>
+            <Filter className="w-4 h-4" />
+            {hasActiveFilters && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+            )}
           </Button>
+
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="h-9"
+            className="h-9 w-9"
             aria-label="Informazioni tornei"
             onClick={() => setInfoOpen(true)}
             data-testid="button-tournaments-info"
