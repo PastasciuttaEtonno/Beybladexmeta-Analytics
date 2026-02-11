@@ -554,6 +554,7 @@ export default function Profile() {
                 <li>Email Provider for essential communications.</li>
                 <li>Google reCAPTCHA for anti-bot protection (may set functional cookies).</li>
                 <li>Hosting and Storage Services for infrastructure and database.</li>
+                <li>Cloudflare Web Analytics for privacy-friendly statistical analysis.</li>
                 <li>External Data Sources (Challengermode, Challonge) for public tournament and profile data.</li>
                 <li>BeybladeWiki for images.</li>
               </ul>
@@ -607,7 +608,7 @@ export default function Profile() {
             <div>
               <p className="font-medium">9. Cookies</p>
               <p>
-                We only use technical session cookies essential for the Service. We do not use profiling or marketing cookies. Google reCAPTCHA may set functional cookies for its anti-bot protection service.
+                We only use technical session cookies essential for the Service. We do not use profiling or marketing cookies. We use Cloudflare Web Analytics, which is a privacy-first analytics service that does not use cookies or track personal data. Google reCAPTCHA may set functional cookies for its anti-bot protection service.
               </p>
             </div>
           </div>
