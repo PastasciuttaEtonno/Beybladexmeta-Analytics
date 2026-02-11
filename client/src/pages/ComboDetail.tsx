@@ -238,27 +238,29 @@ export default function ComboDetail() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 py-4">
               {components.map((component) => (
-                <Card key={component.label} className="overflow-hidden">
-                  <CardHeader className="space-y-0.5 pb-2">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">
-                      {component.label}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 pb-3">
+                <div key={component.label} className="flex flex-col items-center gap-2 group">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-muted/50 to-muted rounded-xl border shadow-sm flex items-center justify-center p-2 transition-transform group-hover:scale-105">
                     <ComponentImage
                       folder={component.folder}
                       name={component.value}
                     />
+                  </div>
+                  <div className="text-center space-y-0.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      {component.label}
+                    </p>
                     <p
-                      className="text-center text-sm font-medium truncate"
+                      className="text-sm font-medium leading-tight max-w-[100px] truncate"
                       data-testid={`text-${component.label.toLowerCase().replace(/\s+/g, "-")}`}
+                      title={component.value}
                     >
                       {component.value}
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
 

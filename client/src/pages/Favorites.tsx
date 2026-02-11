@@ -440,7 +440,7 @@ export default function Favorites() {
   const updateDeckCombo = (index: number, field: string, value: string) => {
     const newCombos = [...deckCombos];
     newCombos[index] = { ...newCombos[index], [field]: value };
-    
+
     if (field === "blade" && !isSingleWordBlade(value)) {
       newCombos[index].assistBlade = "None";
       newCombos[index].lockChip = "None";
@@ -503,8 +503,8 @@ export default function Favorites() {
               </div>
               <Dialog open={comboModalOpen} onOpenChange={setComboModalOpen}>
                 <DialogTrigger asChild>
-                  <Button 
-                    size="icon" 
+                  <Button
+                    size="icon"
                     data-testid="button-add-combo"
                     disabled={totalCombos >= MAX_COMBOS}
                     title={totalCombos >= MAX_COMBOS ? `Limite di ${MAX_COMBOS} combo raggiunto` : "Aggiungi combo"}
@@ -678,136 +678,136 @@ export default function Favorites() {
                       data-testid={`card-combo-${startIdx + index}`}
                       onClick={() => handleViewCombo(combo)}
                     >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-16 h-16 shrink-0">
-                            <ComponentImage folder="blades" name={combo.blade} />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-16 h-16 shrink-0">
+                              <ComponentImage folder="blades" name={combo.blade} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground">Blade</p>
+                              <p className="text-sm font-medium truncate">{combo.blade}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground">Blade</p>
-                            <p className="text-sm font-medium truncate">{combo.blade}</p>
-                          </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          {combo.assistBlade !== "None" && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {combo.assistBlade !== "None" && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 shrink-0">
+                                  <ComponentImage folder="assist-blades" name={combo.assistBlade} />
+                                </div>
+                                <div className="min-w-0 flex flex-col justify-center">
+                                  <p className="text-xs text-muted-foreground">Assist Blade</p>
+                                  <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
+                                </div>
+                              </div>
+                            )}
+                            {combo.ratchet !== "None" && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 shrink-0">
+                                  <ComponentImage folder="ratchets" name={combo.ratchet} />
+                                </div>
+                                <div className="min-w-0 flex flex-col justify-center">
+                                  <p className="text-xs text-muted-foreground">Ratchet</p>
+                                  <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                                </div>
+                              </div>
+                            )}
                             <div className="flex items-center gap-2">
                               <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder="assist-blades" name={combo.assistBlade} />
+                                <ComponentImage folder="bits" name={combo.bit} />
                               </div>
                               <div className="min-w-0 flex flex-col justify-center">
-                                <p className="text-xs text-muted-foreground">Assist Blade</p>
-                                <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
+                                <p className="text-xs text-muted-foreground">Bit</p>
+                                <p className="text-sm font-medium truncate">{combo.bit}</p>
                               </div>
                             </div>
-                          )}
-                          {combo.ratchet !== "None" && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder="ratchets" name={combo.ratchet} />
+                            {combo.lockChip !== "None" && (
+                              <div className="col-span-2 flex items-center gap-2">
+                                <div className="w-10 h-10 shrink-0">
+                                  <ComponentImage folder="chips" name={combo.lockChip} />
+                                </div>
+                                <div className="min-w-0 flex flex-col justify-center">
+                                  <p className="text-xs text-muted-foreground">Lock Chip</p>
+                                  <p className="text-sm font-medium truncate">{combo.lockChip}</p>
+                                </div>
                               </div>
-                              <div className="min-w-0 flex flex-col justify-center">
-                                <p className="text-xs text-muted-foreground">Ratchet</p>
-                                <p className="text-sm font-medium truncate">{combo.ratchet}</p>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 shrink-0">
-                              <ComponentImage folder="bits" name={combo.bit} />
-                            </div>
-                            <div className="min-w-0 flex flex-col justify-center">
-                              <p className="text-xs text-muted-foreground">Bit</p>
-                              <p className="text-sm font-medium truncate">{combo.bit}</p>
-                            </div>
+                            )}
                           </div>
-                          {combo.lockChip !== "None" && (
-                            <div className="col-span-2 flex items-center gap-2">
-                              <div className="w-10 h-10 shrink-0">
-                                <ComponentImage folder="chips" name={combo.lockChip} />
-                              </div>
-                              <div className="min-w-0 flex flex-col justify-center">
-                                <p className="text-xs text-muted-foreground">Lock Chip</p>
-                                <p className="text-sm font-medium truncate">{combo.lockChip}</p>
-                              </div>
-                            </div>
-                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewCombo(combo);
+                            }}
+                            data-testid={`button-view-combo-${startIdx + index}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteComboMutation.mutate(combo.id);
+                            }}
+                            data-testid={`button-delete-combo-${startIdx + index}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewCombo(combo);
-                          }}
-                          data-testid={`button-view-combo-${startIdx + index}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteComboMutation.mutate(combo.id);
-                          }}
-                          data-testid={`button-delete-combo-${startIdx + index}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
+                    </Card>
                   ))}
 
-                {totalPages > 1 && (
-                  <Pagination className="mt-4">
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => { e.preventDefault(); setCurrentPage(Math.max(1, page - 1)); }}
-                        />
-                      </PaginationItem>
-                      {page > 2 && (
+                  {totalPages > 1 && (
+                    <Pagination className="mt-4">
+                      <PaginationContent>
                         <PaginationItem>
-                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>1</PaginationLink>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); setCurrentPage(Math.max(1, page - 1)); }}
+                          />
                         </PaginationItem>
-                      )}
-                      {page > 3 && (
-                        <PaginationItem>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )}
-                      {Array.from({ length: 3 }, (_, i) => page - 1 + i)
-                        .filter((p) => p >= 1 && p <= totalPages)
-                        .map((p) => (
-                          <PaginationItem key={p}>
-                            <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setCurrentPage(p); }}>{p}</PaginationLink>
+                        {page > 2 && (
+                          <PaginationItem>
+                            <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>1</PaginationLink>
                           </PaginationItem>
-                        ))}
-                      {page < totalPages - 2 && (
+                        )}
+                        {page > 3 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        {Array.from({ length: 3 }, (_, i) => page - 1 + i)
+                          .filter((p) => p >= 1 && p <= totalPages)
+                          .map((p) => (
+                            <PaginationItem key={p}>
+                              <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setCurrentPage(p); }}>{p}</PaginationLink>
+                            </PaginationItem>
+                          ))}
+                        {page < totalPages - 2 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        {page < totalPages - 1 && (
+                          <PaginationItem>
+                            <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>{totalPages}</PaginationLink>
+                          </PaginationItem>
+                        )}
                         <PaginationItem>
-                          <PaginationEllipsis />
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); setCurrentPage(Math.min(totalPages, page + 1)); }}
+                          />
                         </PaginationItem>
-                      )}
-                      {page < totalPages - 1 && (
-                        <PaginationItem>
-                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>{totalPages}</PaginationLink>
-                        </PaginationItem>
-                      )}
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => { e.preventDefault(); setCurrentPage(Math.min(totalPages, page + 1)); }}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                )}
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </div>
               </>
             ) : (
@@ -833,8 +833,8 @@ export default function Favorites() {
               </div>
               <Dialog open={deckModalOpen} onOpenChange={setDeckModalOpen}>
                 <DialogTrigger asChild>
-                  <Button 
-                    size="icon" 
+                  <Button
+                    size="icon"
                     data-testid="button-add-deck"
                     disabled={totalDecks >= MAX_DECKS}
                     title={totalDecks >= MAX_DECKS ? `Limite di ${MAX_DECKS} deck raggiunto` : "Aggiungi deck"}
@@ -1036,132 +1036,132 @@ export default function Favorites() {
                       className="p-4"
                       data-testid={`card-deck-${deckStartIdx + deckIndex}`}
                     >
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="font-semibold">{deck.name}</h3>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => deleteDeckMutation.mutate(deck.id)}
-                        data-testid={`button-delete-deck-${deckIndex}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="space-y-3">
-                      {deck.combos.map((combo, comboIndex) => (
-                        <div
-                          key={combo.id}
-                          className="p-3 bg-muted/50 rounded-lg"
+                      <div className="flex items-start justify-between mb-4">
+                        <h3 className="font-semibold">{deck.name}</h3>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteDeckMutation.mutate(deck.id)}
+                          data-testid={`button-delete-deck-${deckIndex}`}
                         >
-                          <p className="text-xs font-semibold text-muted-foreground mb-2">
-                            Combo {comboIndex + 1}
-                          </p>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-12 h-12 shrink-0">
-                              <ComponentImage folder="blades" name={combo.blade} />
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {deck.combos.map((combo, comboIndex) => (
+                          <div
+                            key={combo.id}
+                            className="p-3 bg-muted/50 rounded-lg"
+                          >
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">
+                              Combo {comboIndex + 1}
+                            </p>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-12 h-12 shrink-0">
+                                <ComponentImage folder="blades" name={combo.blade} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs text-muted-foreground">
+                                  Blade:
+                                </span>{" "}
+                                <span className="text-xs font-medium">{combo.blade}</span>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs text-muted-foreground">
-                                Blade:
-                              </span>{" "}
-                              <span className="text-xs font-medium">{combo.blade}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {combo.assistBlade !== "None" && (
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {combo.assistBlade !== "None" && (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 shrink-0">
+                                    <ComponentImage folder="assist-blades" name={combo.assistBlade} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="text-muted-foreground">Assist:</span>{" "}
+                                    <span className="font-medium truncate  max-w-[140px]">{combo.assistBlade}</span>
+                                  </div>
+                                </div>
+                              )}
+                              {combo.ratchet !== "None" && (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 shrink-0">
+                                    <ComponentImage folder="ratchets" name={combo.ratchet} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="text-muted-foreground">Ratchet:</span>{" "}
+                                    <span className="font-medium truncate  max-w-[140px]">{combo.ratchet}</span>
+                                  </div>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 shrink-0">
-                                  <ComponentImage folder="assist-blades" name={combo.assistBlade} />
+                                  <ComponentImage folder="bits" name={combo.bit} />
                                 </div>
                                 <div className="min-w-0">
-                                  <span className="text-muted-foreground">Assist:</span>{" "}
-                                <span className="font-medium truncate  max-w-[140px]">{combo.assistBlade}</span>
+                                  <span className="text-muted-foreground">Bit:</span>{" "}
+                                  <span className="font-medium truncate  max-w-[140px]">{combo.bit}</span>
                                 </div>
                               </div>
-                            )}
-                            {combo.ratchet !== "None" && (
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 shrink-0">
-                                  <ComponentImage folder="ratchets" name={combo.ratchet} />
+                              {combo.lockChip !== "None" && (
+                                <div className="col-span-2 flex items-center gap-2">
+                                  <div className="w-8 h-8 shrink-0">
+                                    <ComponentImage folder="chips" name={combo.lockChip} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="text-muted-foreground">Chip:</span>{" "}
+                                    <span className="font-medium truncate  max-w-[180px]">{combo.lockChip}</span>
+                                  </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <span className="text-muted-foreground">Ratchet:</span>{" "}
-                                  <span className="font-medium truncate  max-w-[140px]">{combo.ratchet}</span>
-                                </div>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 shrink-0">
-                                <ComponentImage folder="bits" name={combo.bit} />
-                              </div>
-                              <div className="min-w-0">
-                                <span className="text-muted-foreground">Bit:</span>{" "}
-                                <span className="font-medium truncate  max-w-[140px]">{combo.bit}</span>
-                              </div>
+                              )}
                             </div>
-                            {combo.lockChip !== "None" && (
-                              <div className="col-span-2 flex items-center gap-2">
-                                <div className="w-8 h-8 shrink-0">
-                                  <ComponentImage folder="chips" name={combo.lockChip} />
-                                </div>
-                                <div className="min-w-0">
-                                  <span className="text-muted-foreground">Chip:</span>{" "}
-                                  <span className="font-medium truncate  max-w-[180px]">{combo.lockChip}</span>
-                                </div>
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
+                        ))}
+                      </div>
+                    </Card>
                   ))}
 
-                {totalDeckPages > 1 && (
-                  <Pagination className="mt-4">
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => { e.preventDefault(); setCurrentDeckPage(Math.max(1, deckPage - 1)); }}
-                        />
-                      </PaginationItem>
-                      {deckPage > 2 && (
+                  {totalDeckPages > 1 && (
+                    <Pagination className="mt-4">
+                      <PaginationContent>
                         <PaginationItem>
-                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(1); }}>1</PaginationLink>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); setCurrentDeckPage(Math.max(1, deckPage - 1)); }}
+                          />
                         </PaginationItem>
-                      )}
-                      {deckPage > 3 && (
-                        <PaginationItem>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )}
-                      {Array.from({ length: 3 }, (_, i) => deckPage - 1 + i)
-                        .filter((p) => p >= 1 && p <= totalDeckPages)
-                        .map((p) => (
-                          <PaginationItem key={p}>
-                            <PaginationLink href="#" isActive={p === deckPage} onClick={(e) => { e.preventDefault(); setCurrentDeckPage(p); }}>{p}</PaginationLink>
+                        {deckPage > 2 && (
+                          <PaginationItem>
+                            <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(1); }}>1</PaginationLink>
                           </PaginationItem>
-                        ))}
-                      {deckPage < totalDeckPages - 2 && (
+                        )}
+                        {deckPage > 3 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        {Array.from({ length: 3 }, (_, i) => deckPage - 1 + i)
+                          .filter((p) => p >= 1 && p <= totalDeckPages)
+                          .map((p) => (
+                            <PaginationItem key={p}>
+                              <PaginationLink href="#" isActive={p === deckPage} onClick={(e) => { e.preventDefault(); setCurrentDeckPage(p); }}>{p}</PaginationLink>
+                            </PaginationItem>
+                          ))}
+                        {deckPage < totalDeckPages - 2 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        {deckPage < totalDeckPages - 1 && (
+                          <PaginationItem>
+                            <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(totalDeckPages); }}>{totalDeckPages}</PaginationLink>
+                          </PaginationItem>
+                        )}
                         <PaginationItem>
-                          <PaginationEllipsis />
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); setCurrentDeckPage(Math.min(totalDeckPages, deckPage + 1)); }}
+                          />
                         </PaginationItem>
-                      )}
-                      {deckPage < totalDeckPages - 1 && (
-                        <PaginationItem>
-                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(totalDeckPages); }}>{totalDeckPages}</PaginationLink>
-                        </PaginationItem>
-                      )}
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => { e.preventDefault(); setCurrentDeckPage(Math.min(totalDeckPages, deckPage + 1)); }}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                )}
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </div>
               </>
             ) : (
@@ -1188,7 +1188,7 @@ export default function Favorites() {
 
           {selectedCombo && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 py-4">
                 {[
                   { label: "Blade", value: selectedCombo.blade, folder: "blades" },
                   {
@@ -1211,25 +1211,26 @@ export default function Favorites() {
                     );
                   })
                   .map((component) => (
-                    <Card key={component.label} className="overflow-hidden">
-                      <CardHeader className="space-y-0.5 pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">
-                          {component.label}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 pb-3">
+                    <div key={component.label} className="flex flex-col items-center gap-2 group">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-muted/50 to-muted rounded-xl border shadow-sm flex items-center justify-center p-2 transition-transform group-hover:scale-105">
                         <ComponentImage
                           folder={component.folder}
                           name={component.value}
                         />
+                      </div>
+                      <div className="text-center space-y-0.5">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          {component.label}
+                        </p>
                         <p
-                          className="text-center text-xs sm:text-sm font-medium truncate break-words"
+                          className="text-sm font-medium leading-tight max-w-[100px] truncate"
                           data-testid={`text-detail-${component.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          title={component.value}
                         >
                           {component.value}
                         </p>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
               </div>
               <div className="space-y-2">
