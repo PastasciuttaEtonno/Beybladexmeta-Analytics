@@ -654,7 +654,7 @@ export default function Tournaments() {
         {/* Compact filter bar with description */}
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm text-muted-foreground w-full mb-2">
-            Esplora i tornei, analizza le combo utilizzate dai migliori giocatori e registra i tuoi risultati per scalare le classifiche.
+            Esplora i tornei, analizza le combo utilizzate e registra i tuoi risultati per scalare le classifiche.
           </p>
           <div className="flex-1 min-w-[180px]">
             <Label htmlFor="filter-name" className="sr-only">Tournament name</Label>
