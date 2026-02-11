@@ -151,8 +151,21 @@ export default function Home() {
               </div>
             </div>
             {bladeLoading ? (
-              <Card className="p-6">
-                <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+              <Card className="p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 bg-muted/30 rounded animate-pulse" />
+                  <div className="h-7 w-32 bg-muted/30 rounded animate-pulse" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 bg-muted/30 rounded-lg animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-8 w-40 bg-muted/30 rounded animate-pulse" />
+                    <div className="flex gap-2">
+                      <div className="h-6 w-20 bg-muted/30 rounded animate-pulse" />
+                      <div className="h-6 w-24 bg-muted/30 rounded animate-pulse" />
+                    </div>
+                  </div>
+                </div>
               </Card>
             ) : !topBlade ? (
               <Card className="p-6 cursor-pointer" data-testid="card-top-blade-empty" onClick={() => setLeaderboardType('blade')}>
@@ -200,8 +213,21 @@ export default function Home() {
             )}
 
             {ratchetLoading ? (
-              <Card className="p-6">
-                <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+              <Card className="p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 bg-muted/30 rounded animate-pulse" />
+                  <div className="h-7 w-32 bg-muted/30 rounded animate-pulse" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 bg-muted/30 rounded-lg animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-8 w-40 bg-muted/30 rounded animate-pulse" />
+                    <div className="flex gap-2">
+                      <div className="h-6 w-20 bg-muted/30 rounded animate-pulse" />
+                      <div className="h-6 w-24 bg-muted/30 rounded animate-pulse" />
+                    </div>
+                  </div>
+                </div>
               </Card>
             ) : !topRatchet ? (
               <Card className="p-6 cursor-pointer" data-testid="card-top-ratchet-empty" onClick={() => setLeaderboardType('ratchet')}>
@@ -249,8 +275,21 @@ export default function Home() {
             )}
 
             {bitLoading ? (
-              <Card className="p-6">
-                <div className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+              <Card className="p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 bg-muted/30 rounded animate-pulse" />
+                  <div className="h-7 w-32 bg-muted/30 rounded animate-pulse" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 bg-muted/30 rounded-lg animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-8 w-40 bg-muted/30 rounded animate-pulse" />
+                    <div className="flex gap-2">
+                      <div className="h-6 w-20 bg-muted/30 rounded animate-pulse" />
+                      <div className="h-6 w-24 bg-muted/30 rounded animate-pulse" />
+                    </div>
+                  </div>
+                </div>
               </Card>
             ) : !topBit ? (
               <Card className="p-6 cursor-pointer" data-testid="card-top-bit-empty" onClick={() => setLeaderboardType('bit')}>
