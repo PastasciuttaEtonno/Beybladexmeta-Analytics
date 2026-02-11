@@ -72,12 +72,13 @@ app.use((req, res, next) => {
     [
       "default-src 'self'",
       // reCAPTCHA v3/Enterprise uses google.com and gstatic.com
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com",
+      // Google Analytics & Cloudflare
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://www.googletagmanager.com https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
       (() => {
-        let origins = ["'self'", "https://www.google.com", "https://www.gstatic.com"];
+        let origins = ["'self'", "https://www.google.com", "https://www.gstatic.com", "https://www.google-analytics.com", "https://analytics.google.com", "https://www.googletagmanager.com"];
         const candidate = process.env.PUBLIC_MINIO_URL || process.env.VITE_PUBLIC_MINIO_URL || '';
         try {
           if (candidate) origins.push(new URL(candidate).origin);
