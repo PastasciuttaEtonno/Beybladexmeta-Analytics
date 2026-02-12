@@ -109,6 +109,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// ads.txt redirect for Ezoic manager
+app.get('/ads.txt', (_req, res) => {
+  res.redirect(301, 'https://srv.adstxtmanager.com/19390/beybladexmeta.com');
+});
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
