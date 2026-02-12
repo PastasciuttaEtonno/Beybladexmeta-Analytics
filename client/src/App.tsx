@@ -22,11 +22,17 @@ import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
 import Players from "@/pages/Players";
 import PlayerDetail from "@/pages/PlayerDetail";
 import ImportTournament from "@/pages/admin/ImportTournament";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 
 function AppRoutes() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+
+      <Route path="/privacy-policy">
+        <PrivacyPolicy />
+        <BottomNav />
+      </Route>
 
       <Route path="/">
         <Home />
@@ -96,6 +102,10 @@ function AdsLayout({ children }: { children: React.ReactNode }) {
       if (window.ezstandalone) {
         // @ts-ignore
         ezstandalone.cmd.push(function () {
+          // @ts-ignore
+          ezstandalone.define(103);
+          // @ts-ignore
+          ezstandalone.enable();
           // @ts-ignore
           ezstandalone.showAds(103);
         });
