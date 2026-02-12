@@ -242,7 +242,7 @@ app.use((req, res, next) => {
       secure: isProduction, // Enforce HTTPS in production
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      sameSite: 'lax',
+      sameSite: 'strict', // CSRF protection: prevents cookies from being sent in cross-site requests
     }
   }));
 
