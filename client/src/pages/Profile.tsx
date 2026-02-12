@@ -48,7 +48,8 @@ export default function Profile() {
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/user/aliases");
       return await res.json();
-    }
+    },
+    enabled: !!user, // Only fetch when user is authenticated
   });
 
   const [newAlias, setNewAlias] = useState("");
@@ -506,6 +507,7 @@ function ParticipationsList() {
       if (!res.ok) throw new Error("Failed to fetch tournaments");
       return res.json();
     },
+    retry: false, // Don't retry on failures
   });
 
   if (isLoading) {
