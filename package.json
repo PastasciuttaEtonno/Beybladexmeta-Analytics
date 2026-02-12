@@ -20,7 +20,7 @@
     "debug:challonge-data": "tsx scripts/debug-challonge-data.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.974.0",
+    "@aws-sdk/client-s3": "^3.980.0",
     "@aws-sdk/s3-request-presigner": "^3.980.0",
     "@google-cloud/recaptcha-enterprise": "^6.3.1",
     "@google-cloud/storage": "^7.19.0",
