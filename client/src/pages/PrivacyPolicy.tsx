@@ -122,9 +122,8 @@ export default function PrivacyPolicy() {
                             </p>
                         </div>
 
-                        <div className="pt-4 border-t">
-                            <span id="ezoic-privacy-policy-embed"></span>
-                        </div>
+
+                        <span id="ezoic-privacy-policy-embed"></span>
                     </div>
                 </Card>
                 <div className="flex justify-center">
