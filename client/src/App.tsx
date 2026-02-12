@@ -92,23 +92,9 @@ function AppRoutes() {
 function AdsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex justify-center min-h-screen">
-      {/* Sidebar Left - placeholder 107 */}
-      <aside className="hidden xl:block w-48 p-4 sticky top-0 h-screen overflow-hidden">
-        <div className="h-full flex flex-col items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
-          <div id="ezoic-pub-ad-placeholder-107"></div>
-        </div>
-      </aside>
-
       <div className="flex-1 w-full max-w-2xl relative">
         {children}
       </div>
-
-      {/* Sidebar Right - placeholder 108 */}
-      <aside className="hidden xl:block w-48 p-4 sticky top-0 h-screen overflow-hidden">
-        <div className="h-full flex flex-col items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
-          <div id="ezoic-pub-ad-placeholder-108"></div>
-        </div>
-      </aside>
     </div>
   );
 }
