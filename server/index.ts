@@ -73,9 +73,9 @@ app.use((req, res, next) => {
       "default-src 'self'",
       // reCAPTCHA v3/Enterprise uses google.com and gstatic.com
       // Google Analytics & Cloudflare
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://cmp.gatekeeperconsent.com https://the.gatekeeperconsent.com https://www.ezojs.com https://*.ezojs.com https://cdn.id5-sync.com https://privacy.gatekeeperconsent.com https://*.adtrafficquality.google https://*.ezoic.net",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://cmp.gatekeeperconsent.com https://the.gatekeeperconsent.com https://www.ezojs.com https://*.ezojs.com http://www.ezojs.com http://*.ezojs.com https://cdn.id5-sync.com https://privacy.gatekeeperconsent.com https://*.adtrafficquality.google https://*.ezoic.net",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: https:",
+      "img-src 'self' data: https: http://*.ezoic.net http://*.ezojs.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       (() => {
         let origins = [
@@ -88,13 +88,17 @@ app.use((req, res, next) => {
           "https://the.gatekeeperconsent.com",
           "https://www.ezojs.com",
           "https://*.ezojs.com",
+          "http://www.ezojs.com",
+          "http://*.ezojs.com",
           "https://*.ezoic.com",
           "https://*.ezoic.net",
+          "http://*.ezoic.net",
           "https://privacy.gatekeeperconsent.com",
           "https://fundingchoicesmessages.google.com",
           "https://ep1.adtrafficquality.google",
           "https://id5-sync.com",
           "https://*.id5-sync.com",
+          "https://lbs.eu-1-id5-sync.com",
           "https://cdn.id5-sync.com"
         ];
         const candidate = process.env.PUBLIC_MINIO_URL || process.env.VITE_PUBLIC_MINIO_URL || '';
@@ -104,7 +108,7 @@ app.use((req, res, next) => {
         return `connect-src ${origins.join(' ')}`;
       })(),
       // invisible v3 may create iframes
-      "frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://*.ezoic.net https://*.ezojs.com https://*.id5-sync.com",
+      "frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://*.ezoic.net https://*.ezojs.com http://*.ezojs.com https://*.id5-sync.com",
       // tighten embedding and object usage
       "frame-ancestors 'none'",
       "object-src 'none'",
