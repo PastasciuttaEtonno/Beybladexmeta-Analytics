@@ -4,44 +4,8 @@ import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
-    useEffect(() => {
-        // Aumentiamo leggermente il timer per dare tempo al DOM di stabilizzarsi
-        const timer = setTimeout(() => {
-            try {
-                // @ts-ignore
-                const ez = window.ezstandalone;
-
-                if (ez && ez.cmd) {
-                    ez.cmd.push(function () {
-                        // LOGICA SEMPLIFICATA:
-
-                        // 1. Controlliamo se Ezoic è GIÀ attivo (venendo dalla Home)
-                        if (!ez.enabled) {
-                            // Se NON è attivo, lo attiviamo.
-                            // enable() cercherà automaticamente lo span della privacy policy.
-                            console.log("Ezoic: Enabling for the first time...");
-                            ez.enable();
-                        } else {
-                            // 2. Se è GIÀ attivo, NON chiamiamo enable() di nuovo.
-                            // E NON chiamiamo refresh() perché non ci sono banner pubblicitari qui.
-                            // Chiamiamo solo la funzione specifica per mostrare la policy.
-                            console.log("Ezoic: Already enabled. Invoking showPrivacyPolicy...");
-                            if (typeof ez.showPrivacyPolicy === 'function') {
-                                ez.showPrivacyPolicy();
-                            }
-                        }
-                    });
-                }
-            } catch (e) {
-                console.error("Ezoic initialization error:", e);
-            }
-        }, 800); // 800ms è un buon compromesso
-
-        return () => clearTimeout(timer);
-    }, []);
 
     return (
         <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -134,9 +98,9 @@ export default function PrivacyPolicy() {
                         </p>
                     </section>
 
-                    <div className="pt-8 border-t">
-                        <span id="ezoic-privacy-policy-embed"></span>
-                    </div>
+
+                    <span id="ezoic-privacy-policy-embed"></span>
+
                 </div>
             </main>
         </div>
