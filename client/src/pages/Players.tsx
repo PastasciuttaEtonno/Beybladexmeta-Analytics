@@ -1,4 +1,5 @@
 import { useLocation, Link } from "wouter";
+import { Seo } from "@/components/Seo";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -167,6 +168,10 @@ export default function Players() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <Seo
+        title="Classifica Giocatori · Beybladexmeta Analytics"
+        description="La classifica globale dei giocatori di Beyblade X. Monitora i punti guadagnati nei tornei Challengermode e Challonge in Italia."
+      />
       <PageHeader title="Classifica Giocatori" />
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-3">
         <Tabs

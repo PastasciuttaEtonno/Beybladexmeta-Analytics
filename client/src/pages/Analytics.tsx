@@ -38,7 +38,8 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import type { ComboStats } from "../../shared/schema";
+import { Seo } from "@/components/Seo";
+import type { ComboStats } from "@shared/schema";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
@@ -410,9 +411,19 @@ export default function Analytics() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <Seo
+        title="Analisi Metagame e Combo X · Beybladexmeta Analytics"
+        description="Analizza le performance delle combinazioni Blade, Ratchet e Bit. Scopri quali combo dominano i tornei e quali sono i trend emergenti."
+      />
       <PageHeader title="Classifiche" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
+        <section className="space-y-2 px-1">
+          <p className="text-sm text-muted-foreground">
+            Esplora le statistiche dettagliate derivate dai tornei Challengermode e Challonge.
+            Cerca combo specifiche e esplora la classifica.
+          </p>
+        </section>
         <Tabs value={activeView} onValueChange={setActiveView} defaultValue="leaderboard" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="leaderboard">Top Combos</TabsTrigger>

@@ -21,6 +21,9 @@ import ComboDetail from "@/pages/ComboDetail";
 import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
 import Players from "@/pages/Players";
 import PlayerDetail from "@/pages/PlayerDetail";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import Terms from "@/pages/Terms";
 import ImportTournament from "@/pages/admin/ImportTournament";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 
@@ -31,6 +34,21 @@ function AppRoutes() {
 
       <Route path="/privacy-policy">
         <PrivacyPolicy />
+        <BottomNav />
+      </Route>
+
+      <Route path="/terms">
+        <Terms />
+        <BottomNav />
+      </Route>
+
+      <Route path="/about">
+        <About />
+        <BottomNav />
+      </Route>
+
+      <Route path="/contact">
+        <Contact />
         <BottomNav />
       </Route>
 

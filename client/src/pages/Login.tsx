@@ -119,20 +119,20 @@ export default function Login() {
 
     if (!sanitizedEmail || !sanitizedPassword) {
       toast({
-        title: "Error",
-        description: "Please enter both email and password",
+        title: "Errore",
+        description: "Inserisci sia l'email che la password",
         variant: "destructive",
       });
       return;
     }
     if (!isValidEmail(sanitizedEmail)) {
-      setEmailError("Invalid email format");
-      toast({ title: "Invalid email", description: "Please enter a valid email", variant: "destructive" });
+      setEmailError("Formato email non valido");
+      toast({ title: "Email non valida", description: "Inserisci un indirizzo email valido", variant: "destructive" });
       return;
     }
     if (sanitizedPassword.length < 8) {
-      setPasswordError("Password must be at least 8 characters");
-      toast({ title: "Weak password", description: "Minimum 8 characters required", variant: "destructive" });
+      setPasswordError("La password deve avere almeno 8 caratteri");
+      toast({ title: "Password debole", description: "Minimo 8 caratteri richiesti", variant: "destructive" });
       return;
     }
 
@@ -140,13 +140,13 @@ export default function Login() {
     try {
       await login(sanitizedEmail, sanitizedPassword);
       toast({
-        title: "Welcome!",
-        description: "Successfully logged in",
+        title: "Benvenuto!",
+        description: "Accesso effettuato con successo",
       });
     } catch (error) {
-      const msg = error instanceof Error && error.message ? error.message : "Failed to login";
+      const msg = error instanceof Error && error.message ? error.message : "Accesso fallito";
       toast({
-        title: "Error",
+        title: "Errore",
         description: msg,
         variant: "destructive",
       });
@@ -170,7 +170,7 @@ export default function Login() {
             className="h-28 w-18"
             data-testid="img-logo"
           />
-          <p className="text-sm text-muted-foreground">Sign in to continue</p>
+          <p className="text-sm text-muted-foreground">Accedi per continuare</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -201,12 +201,12 @@ export default function Login() {
             <Input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Inserisci la tua password"
               value={password}
               onChange={(e) => {
                 const v = e.target.value;
                 setPassword(v);
-                if (v && v.trim().length < 8) setPasswordError("Minimum 8 characters"); else setPasswordError(null);
+                if (v && v.trim().length < 8) setPasswordError("Minimo 8 caratteri"); else setPasswordError(null);
               }}
               className="h-12"
               data-testid="input-password"
@@ -223,7 +223,7 @@ export default function Login() {
             disabled={loading || !!emailError || !!passwordError || !email || !password}
             data-testid="button-login"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Accesso in corso..." : "Accedi"}
           </Button>
         </form>
 
@@ -234,7 +234,7 @@ export default function Login() {
           onClick={() => { window.location.href = "/api/challenger/login"; }}
           data-testid="button-login-challengermode"
         >
-          Sign in with Challengermode
+          Autenticati con Challengermode
         </Button>
 
         <Button
@@ -244,7 +244,7 @@ export default function Login() {
           onClick={() => { window.location.href = "/api/challonge/login"; }}
           data-testid="button-login-challonge"
         >
-          Sign in with Challonge
+          Autenticati con Challonge
         </Button>
 
         <div className="text-xs text-center text-muted-foreground">
@@ -253,7 +253,7 @@ export default function Login() {
             className="underline underline-offset-4 hover:text-foreground"
             onClick={() => setRegisterOpen(true)}
           >
-            Register / Create account
+            Registrati / Crea account
           </button>
         </div>
 
@@ -264,13 +264,13 @@ export default function Login() {
           onClick={goBack}
           data-testid="button-back"
         >
-          Back
+          Indietro
         </Button>
 
         <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Create your account</DialogTitle>
+              <DialogTitle>Crea il tuo account</DialogTitle>
             </DialogHeader>
             <form
               className="space-y-4"
@@ -282,33 +282,33 @@ export default function Login() {
 
                 if (!sanitizedEmail || !sanitizedPassword || !sanitizedDisplayName) {
                   toast({
-                    title: "Error",
-                    description: "Please fill all fields",
+                    title: "Errore",
+                    description: "Compila tutti i campi",
                     variant: "destructive",
                   });
                   return;
                 }
                 if (!isValidEmail(sanitizedEmail)) {
-                  setRegEmailError("Invalid email format");
-                  toast({ title: "Invalid email", description: "Please enter a valid email", variant: "destructive" });
+                  setRegEmailError("Formato email non valido");
+                  toast({ title: "Email non valida", description: "Inserisci un indirizzo email valido", variant: "destructive" });
                   return;
                 }
                 if (!isStrongPassword(sanitizedPassword)) {
-                  setRegPasswordError("Password must be 8+ chars, include upper, lower, number, special");
-                  toast({ title: "Weak password", description: "Use upper, lower, number, and special character", variant: "destructive" });
+                  setRegPasswordError("La password deve contenere 8+ caratteri, una maiuscola, una minuscola, un numero e un carattere speciale");
+                  toast({ title: "Password debole", description: "Usa maiuscole, minuscole, numeri e caratteri speciali", variant: "destructive" });
                   return;
                 }
                 if (sanitizedDisplayName.length < 1 || sanitizedDisplayName.length > 100) {
-                  setRegDisplayNameError("Display name must be 1-100 characters");
-                  toast({ title: "Invalid name", description: "Use between 1 and 100 characters", variant: "destructive" });
+                  setRegDisplayNameError("Il nome visualizzato deve essere tra 1 e 100 caratteri");
+                  toast({ title: "Nome non valido", description: "Usa tra 1 e 100 caratteri", variant: "destructive" });
                   return;
                 }
                 if (!privacyAccepted) {
-                  toast({ title: "Privacy required", description: "Please read and accept the Privacy Policy", variant: "destructive" });
+                  toast({ title: "Privacy richiesta", description: "Leggi e accetta la Privacy Policy", variant: "destructive" });
                   return;
                 }
                 if (!tosAccepted) {
-                  toast({ title: "Terms required", description: "Please read and accept the Terms of Service", variant: "destructive" });
+                  toast({ title: "Termini richiesti", description: "Leggi e accetta i Termini di Servizio", variant: "destructive" });
                   return;
                 }
                 setRegistering(true);
@@ -349,8 +349,8 @@ export default function Login() {
                     throw new Error(data.error || "Failed to register");
                   }
                   toast({
-                    title: "Account created",
-                    description: "Check your email for confirmation",
+                    title: "Account creato",
+                    description: "Controlla la tua email per la conferma",
                   });
                   setRegisterOpen(false);
                   // Prefill email field on login for convenience
@@ -386,17 +386,17 @@ export default function Login() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-name">Display name</Label>
+                <Label htmlFor="reg-name">Nome visualizzato</Label>
                 <Input
                   id="reg-name"
                   type="text"
-                  placeholder="Your name"
+                  placeholder="Il tuo nome"
                   value={regDisplayName}
                   onChange={(e) => {
                     const v = e.target.value;
                     setRegDisplayName(v);
                     const n = v.replace(/\s+/g, " ").trim();
-                    if (v && (n.length < 1 || n.length > 100)) setRegDisplayNameError("Display name must be 1-100 characters"); else setRegDisplayNameError(null);
+                    if (v && (n.length < 1 || n.length > 100)) setRegDisplayNameError("Il nome deve essere tra 1 e 100 caratteri"); else setRegDisplayNameError(null);
                   }}
                   disabled={registering}
                 />
@@ -409,12 +409,12 @@ export default function Login() {
                 <Input
                   id="reg-password"
                   type="password"
-                  placeholder="Choose a password"
+                  placeholder="Scegli una password"
                   value={regPassword}
                   onChange={(e) => {
                     const v = e.target.value;
                     setRegPassword(v);
-                    if (v && !isStrongPassword(v)) setRegPasswordError("Use upper, lower, number, special"); else setRegPasswordError(null);
+                    if (v && !isStrongPassword(v)) setRegPasswordError("Usa maiuscole, minuscole, numeri e speciali"); else setRegPasswordError(null);
                   }}
                   disabled={registering}
                 />
@@ -425,19 +425,19 @@ export default function Login() {
               <div className="flex items-center justify-between gap-3">
                 <label htmlFor="privacy-accept" className="flex items-center gap-2 text-sm">
                   <input id="privacy-accept" type="checkbox" checked={privacyAccepted} onChange={(e) => setPrivacyAccepted(e.target.checked)} />
-                  <span>I accept the Privacy Policy</span>
+                  <span>Accetto la Privacy Policy</span>
                 </label>
-                <button type="button" className="underline text-sm" onClick={() => setPrivacyOpen(true)}>Privacy Policy</button>
+                <button type="button" className="underline text-sm" onClick={() => setPrivacyOpen(true)}>Leggi</button>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <label htmlFor="tos-accept" className="flex items-center gap-2 text-sm">
                   <input id="tos-accept" type="checkbox" checked={tosAccepted} onChange={(e) => setTosAccepted(e.target.checked)} />
-                  <span>I accept the Terms of Service</span>
+                  <span>Accetto i Termini di Servizio</span>
                 </label>
-                <button type="button" className="underline text-sm" onClick={() => setTosOpen(true)}>Terms of Service</button>
+                <button type="button" className="underline text-sm" onClick={() => setTosOpen(true)}>Leggi</button>
               </div>
               <Button type="submit" className="w-full" disabled={registering || !!regEmailError || !!regPasswordError || !!regDisplayNameError || !regEmail || !regPassword || !regDisplayName || !privacyAccepted || !tosAccepted}>
-                {registering ? (recaptchaLoading ? "Verifica reCAPTCHA..." : "Registering...") : "Register"}
+                {registering ? (recaptchaLoading ? "Verifica reCAPTCHA..." : "Registrazione in corso...") : "Registrati"}
               </Button>
             </form>
           </DialogContent>
@@ -445,47 +445,47 @@ export default function Login() {
         <Dialog open={tosOpen} onOpenChange={setTosOpen}>
           <DialogContent className="sm:max-w-2xl max-h-[70vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Terms of Service</DialogTitle>
+              <DialogTitle>Termini di Servizio</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 text-sm">
-              <p>These Terms govern the use of the application by the user.</p>
+              <p>Questi Termini disciplinano l'utilizzo dell'applicazione da parte dell'utente.</p>
               <div>
-                <p className="font-medium">1. Acceptance</p>
-                <p>By creating an account or using the Service, you agree to these Terms.</p>
+                <p className="font-medium">1. Accettazione</p>
+                <p>Creando un account o utilizzando il Servizio, accetti i presenti Termini.</p>
               </div>
               <div>
-                <p className="font-medium">2. Use of the Service</p>
+                <p className="font-medium">2. Utilizzo del Servizio</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Do not abuse, disrupt, or attempt to circumvent security or rate limits.</li>
-                  <li>Content is provided for informational purposes; accuracy is not guaranteed.</li>
+                  <li>Non abusare, interrompere o tentare di eludere la sicurezza o i limiti di frequenza.</li>
+                  <li>I contenuti sono forniti a scopo informativo; l'accuratezza non è garantita.</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium">3. Accounts</p>
+                <p className="font-medium">3. Account</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>You are responsible for safeguarding your account credentials.</li>
-                  <li>We may suspend accounts that violate these Terms or the law.</li>
+                  <li>Sei responsabile della protezione delle tue credenziali.</li>
+                  <li>Possiamo sospendere gli account che violano questi Termini o la legge.</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium">4. Data & Privacy</p>
-                <p>Personal data is processed as described in the Privacy Policy.</p>
+                <p className="font-medium">4. Dati e Privacy</p>
+                <p>I dati personali sono trattati come descritto nella Privacy Policy.</p>
               </div>
               <div>
-                <p className="font-medium">5. Intellectual Property</p>
-                <p>Trademarks and third-party content belong to their respective owners.</p>
+                <p className="font-medium">5. Proprietà Intellettuale</p>
+                <p>I marchi e i contenuti di terze parti appartengono ai rispettivi proprietari.</p>
               </div>
               <div>
-                <p className="font-medium">6. Liability</p>
-                <p>The Service is provided “as is”. We are not liable for indirect or consequential damages.</p>
+                <p className="font-medium">6. Responsabilità</p>
+                <p>Il Servizio è fornito "as is". Non siamo responsabili per danni indiretti o consequenziali.</p>
               </div>
               <div>
-                <p className="font-medium">7. Changes</p>
-                <p>We may update these Terms. Continued use of the Service constitutes acceptance of changes.</p>
+                <p className="font-medium">7. Modifiche</p>
+                <p>Potremmo aggiornare questi Termini. L'uso continuato costituisce accettazione delle modifiche.</p>
               </div>
               <div>
-                <p className="font-medium">8. Contact</p>
-                <p>For questions, contact: <span className="underline">beybladexmeta@outlook.it</span>.</p>
+                <p className="font-medium">8. Contatti</p>
+                <p>Per domande, contatta: <span className="underline">beybladexmeta@outlook.it</span>.</p>
               </div>
             </div>
           </DialogContent>
@@ -497,72 +497,52 @@ export default function Login() {
             </DialogHeader>
             <div className="space-y-4 text-sm">
               <p>
-                This Privacy Policy describes how the Data Controller collects, uses, and protects your personal data when you use this application (the "Service").
+                Questa Privacy Policy descrive come il Titolare raccoglie, utilizza e protegge i tuoi dati personali quando utilizzi questa applicazione (il "Servizio").
               </p>
               <div>
-                <p className="font-medium">1. Data Controller (Titolare del Trattamento)</p>
+                <p className="font-medium">1. Titolare del Trattamento</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Contact Email: beybladexmeta@outlook.it</li>
+                  <li>Email di contatto: beybladexmeta@outlook.it</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium">2. Data We Process (Dati Trattati)</p>
+                <p className="font-medium">2. Dati Trattati</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Account Data: Email address and unique User Identifier (ID) for authentication and account management.</li>
-                  <li>Technical Data: IP Address; Session Cookies (technical, `httpOnly`, `sameSite`); minimized technical logs used for security and debugging.</li>
-                  <li>Third-Party Public Data: Public tournament and profile data from Challengermode for statistical display.</li>
+                  <li>Dati dell'Account: Indirizzo email e identificativo unico (ID) per l'autenticazione e la gestione dell'account.</li>
+                  <li>Dati Tecnici: Indirizzo IP; Cookie di sessione; log tecnici minimizzati per sicurezza e debug.</li>
+                  <li>Dati Pubblici di Terze Parti: Dati pubblici di tornei e profili ottenuti da Challengermode per visualizzazione statistica.</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium">3. Purpose and Legal Basis (Finalità e Base Giuridica)</p>
+                <p className="font-medium">3. Finalità e Base Giuridica</p>
                 <ul className="list-disc pl-5 space-y-2">
-                  <li>Account Management & Authentication — Contractual Necessity (Art. 6.1.b)</li>
-                  <li>Security & Abuse Prevention (rate limiting, reCAPTCHA) — Legitimate Interest (Art. 6.1.f)</li>
-                  <li>Essential Communications (verification emails) — Contractual Necessity (Art. 6.1.b)</li>
-                  <li>Statistics & Analysis (aggregate metagame data) — Legitimate Interest (Art. 6.1.f)</li>
+                  <li>Gestione Account e Autenticazione — Necessità Contrattuale (Art. 6.1.b GDPR)</li>
+                  <li>Sicurezza e Prevenzione Abusi (rate limiting, reCAPTCHA) — Legittimo Interesse (Art. 6.1.f GDPR)</li>
+                  <li>Comunicazioni Essenziali (email di verifica) — Necessità Contrattuale (Art. 6.1.b GDPR)</li>
+                  <li>Statistiche e Analisi (dati aggregati sul metagame) — Legittimo Interesse (Art. 6.1.f GDPR)</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium">4. Data Recipients and Third Parties</p>
+                <p className="font-medium">4. Trasferimento Dati Extra-UE</p>
+                <p>Alcuni fornitori potrebbero avere sede fuori dall'UE/SEE. Vengono applicate le salvaguardie adeguate (es. SCCs).</p>
+              </div>
+              <div>
+                <p className="font-medium">5. Periodo di Conservazione</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Email Provider (Resend).</li>
-                  <li>Google reCAPTCHA (may set functional cookies).</li>
-                  <li>Hosting and Storage providers.</li>
-                  <li>External Data Sources (Challengermode).</li>
+                  <li>Dati Account: conservati fino alla richiesta di cancellazione.</li>
+                  <li>Log di sicurezza: conservati per finestre temporali limitate (es. 30 giorni).</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium">5. International Data Transfers</p>
-                <p>Some suppliers may be outside the EU/EEA. Appropriate safeguards (e.g., SCCs) are applied.</p>
-              </div>
-              <div>
-                <p className="font-medium">6. Retention Period</p>
+                <p className="font-medium">6. Diritti dell'Interessato</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Account Data: retained until requested deletion.</li>
-                  <li>Login and Failed Attempts: retained for limited windows (e.g., 15–30 days).</li>
-                  <li>Aggregated Tournament Data: retained while the application is active.</li>
+                  <li>Accesso, Rettifica, Cancellazione, Limitazione, Opposizione, Portabilità.</li>
                 </ul>
+                <p>Per esercitare i tuoi diritti, contatta: <span className="underline">beybladexmeta@outlook.it</span>.</p>
               </div>
               <div>
-                <p className="font-medium">7. Data Security Measures</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Passwords stored using `bcrypt` hashing.</li>
-                  <li>Secure session cookies with session limits.</li>
-                  <li>Security headers and CSP.</li>
-                  <li>reCAPTCHA anti-bot verification.</li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-medium">8. Your Rights</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Access, Rectification, Erasure, Restriction, Objection, Portability.</li>
-                </ul>
-                <p>To exercise your rights, contact: <span className="underline">beybladexmeta@outlook.it</span>.</p>
-                <p className="mt-2">Right to Lodge a Complaint: Garante per la Protezione dei Dati Personali — garanteprivacy.it.</p>
-              </div>
-              <div>
-                <p className="font-medium">9. Cookies</p>
-                <p>We use only technical session cookies. No profiling cookies. reCAPTCHA may set functional cookies.</p>
+                <p className="font-medium">7. Cookie</p>
+                <p>Utilizziamo solo cookie tecnici di sessione. Nessun cookie di profilazione proprietario.</p>
               </div>
             </div>
           </DialogContent>

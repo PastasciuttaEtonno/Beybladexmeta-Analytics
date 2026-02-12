@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
-
 import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -9,20 +8,15 @@ import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
     useEffect(() => {
-        // Diamo tempo a React di dipingere il DOM e allo script di respirare
         const timer = setTimeout(() => {
             try {
                 // @ts-ignore
                 const ez = window.ezstandalone;
-
                 if (ez && ez.cmd) {
                     ez.cmd.push(function () {
-                        // Forziamo Ezoic a cercare nuovi placeholder
                         if (typeof ez.refresh === 'function') {
-                            console.log("Ezoic: Refreshing Privacy Policy embed...");
                             ez.refresh();
                         }
-                        // A volte serve specificare di mostrare il consent
                         if (typeof ez.showPrivacyPolicy === 'function') {
                             ez.showPrivacyPolicy();
                         }
@@ -31,9 +25,7 @@ export default function PrivacyPolicy() {
             } catch (e) {
                 console.error("Ezoic refresh error:", e);
             }
-        }, 1000); // 1 secondo di ritardo è solitamente sufficiente
-
-        // Puliamo il timer se l'utente cambia pagina velocemente
+        }, 1000);
         return () => clearTimeout(timer);
     }, []);
 
@@ -41,7 +33,7 @@ export default function PrivacyPolicy() {
         <div className="flex flex-col min-h-screen bg-background pb-20">
             <Seo
                 title="Privacy Policy · Beybladexmeta Analytics"
-                description="Privacy Policy and Data Processing Information"
+                description="Informativa sul trattamento dei dati personali e sulla privacy per Beybladexmeta Analytics."
                 robots="noindex, nofollow"
             />
             <PageHeader title="Privacy Policy" action={<HeaderLogo />} />
@@ -52,113 +44,79 @@ export default function PrivacyPolicy() {
                         <a className="no-underline">
                             <Button variant="outline" className="gap-2">
                                 <ArrowLeft className="w-4 h-4" />
-                                Back to Profile
+                                Torna al Profilo
                             </Button>
                         </a>
                     </Link>
                 </div>
 
-                <div className="space-y-8 text-foreground">
+                <div className="space-y-8 text-foreground leading-relaxed">
                     <p>
-                        This Privacy Policy describes how the Data Controller collects, uses, and protects your personal data when you use this application (the "Service").
+                        Questa Privacy Policy descrive come il Titolare raccoglie, utilizza e protegge i tuoi dati personali quando utilizzi questa applicazione (il "Servizio").
                     </p>
 
                     <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">1. Data Controller (Titolare del Trattamento)</h2>
+                        <h2 className="text-xl font-semibold tracking-tight">1. Titolare del Trattamento</h2>
                         <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                            <li>Contact Email: beybladexmeta@outlook.it</li>
+                            <li>Email di contatto: beybladexmeta@outlook.it</li>
                         </ul>
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">2. Data We Process (Dati Trattati)</h2>
+                        <h2 className="text-xl font-semibold tracking-tight">2. Dati Trattati</h2>
                         <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                            <li><strong>Account Data:</strong> Email address and unique User Identifier (ID) for authentication and account management.</li>
-                            <li><strong>Technical Data:</strong> IP Address (for security, abuse prevention, and rate limiting); Session Cookies; minimized technical logs of requests (date, time, action) used for security and debugging.</li>
-                            <li><strong>Third-Party Public Data:</strong> Public tournament and profile data retrieved from sources like Challengermode, processed solely for statistical display and metagame analysis.</li>
-                            <li><strong>Challengermode OAuth:</strong> used to link your Challengermode account to your Beybladexmeta account, enabling access to Challengermode-specific features.</li>
-                            <li><strong>Challonge OAuth:</strong> used to link your Challonge account to your Beybladexmeta account, enabling access to Challonge-specific features.</li>
+                            <li><strong>Dati dell'Account:</strong> Indirizzo email e identificativo unico (ID) per l'autenticazione e la gestione dell'account.</li>
+                            <li><strong>Dati Tecnici:</strong> Indirizzo IP (per sicurezza e prevenzione abusi); Cookie di sessione; log tecnici minimizzati (data, ora, azione) per debug.</li>
+                            <li><strong>Dati Pubblici di Terze Parti:</strong> Dati di tornei e profili pubblici recuperati da fonti come Challengermode e Challonge, trattati esclusivamente per finalità statistiche.</li>
                         </ul>
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">3. Purpose and Legal Basis (Finalità e Base Giuridica)</h2>
+                        <h2 className="text-xl font-semibold tracking-tight">3. Finalità e Base Giuridica</h2>
                         <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                            <li>
-                                <strong>Account Management & Authentication</strong> — Legal Basis: Contractual Necessity (Art. 6.1.b)
-                            </li>
-                            <li>
-                                <strong>Security & Abuse Prevention</strong> (rate limiting, reCAPTCHA) — Legal Basis: Legitimate Interest (Art. 6.1.f)
-                            </li>
-                            <li>
-                                <strong>Essential Communications</strong> (verification emails) — Legal Basis: Contractual Necessity (Art. 6.1.b)
-                            </li>
-                            <li>
-                                <strong>Statistics & Analysis</strong> (aggregate metagame data) — Legal Basis: Legitimate Interest (Art. 6.1.f)
-                            </li>
+                            <li><strong>Gestione Account e Autenticazione</strong> — Necessità Contrattuale (Art. 6.1.b GDPR)</li>
+                            <li><strong>Sicurezza e Prevenzione Abusi</strong> (reCAPTCHA, rate limiting) — Legittimo Interesse (Art. 6.1.f GDPR)</li>
+                            <li><strong>Comunicazioni Essenziali</strong> (email di verifica) — Necessità Contrattuale (Art. 6.1.b GDPR)</li>
+                            <li><strong>Statistiche e Analisi</strong> (dati aggregati sul metagame) — Legittimo Interesse (Art. 6.1.f GDPR)</li>
                         </ul>
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">4. Data Recipients and Third Parties (Destinatari e Terze Parti)</h2>
+                        <h2 className="text-xl font-semibold tracking-tight">4. Destinatari dei Dati</h2>
                         <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                            <li>Email Provider for essential communications.</li>
-                            <li>Google reCAPTCHA for anti-bot protection (may set functional cookies).</li>
-                            <li>Hosting and Storage Services for infrastructure and database.</li>
-                            <li>Cloudflare Web Analytics for privacy-friendly statistical analysis.</li>
-                            <li>External Data Sources (Challengermode, Challonge) for public tournament and profile data.</li>
-                            <li>BeybladeWiki for images.</li>
+                            <li>Fornitore di servizi email per comunicazioni essenziali.</li>
+                            <li>Google reCAPTCHA per protezione anti-bot.</li>
+                            <li>Servizi di Hosting e Cloud per l'infrastruttura e il database.</li>
+                            <li>Cloudflare Web Analytics per analisi statistiche anonime.</li>
                         </ul>
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">5. International Data Transfers (Trasferimenti Extra-UE)</h2>
+                        <h2 className="text-xl font-semibold tracking-tight">5. Trasferimento Dati Extra-UE</h2>
                         <p className="text-muted-foreground">
-                            Some suppliers may be located outside the EU/EEA. Appropriate safeguards are applied (e.g., Standard Contractual Clauses) as required by law.
+                            Alcuni fornitori potrebbero avere sede fuori dall'UE/SEE. In tali casi, vengono applicate le salvaguardie adeguate (es. Clausole Contrattuali Standard) come richiesto dalla legge.
                         </p>
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">6. Retention Period (Conservazione)</h2>
+                        <h2 className="text-xl font-semibold tracking-tight">6. Periodo di Conservazione</h2>
                         <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                            <li><strong>Account Data:</strong> retained until the user requests account deletion.</li>
-                            <li><strong>Login and Failed Attempts:</strong> retained for limited windows (e.g., 15–30 days) for security/abuse monitoring.</li>
-                            <li><strong>Aggregated Tournament Data:</strong> retained for statistical purposes while the application is active.</li>
+                            <li><strong>Dati Account:</strong> conservati fino alla richiesta di cancellazione da parte dell'utente.</li>
+                            <li><strong>Log di sicurezza:</strong> conservati per finestre temporali limitate (es. 30 giorni) per monitoraggio abusi.</li>
                         </ul>
                     </section>
 
                     <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">7. Data Security Measures (Sicurezza)</h2>
-                        <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                            <li>Passwords stored using strong hashing.</li>
-                            <li>Secure, protected session cookies with session limits.</li>
-                            <li>Security headers and Content Security Policy (CSP).</li>
-                            <li>Anti-bot verification via reCAPTCHA.</li>
-                        </ul>
-                    </section>
-
-                    <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">8. Your Rights (Diritti dell’Interessato)</h2>
-                        <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                            <li>Right of Access</li>
-                            <li>Right to Rectification</li>
-                            <li>Right to Erasure (Right to be Forgotten)</li>
-                            <li>Right to Restriction of Processing</li>
-                            <li>Right to Object (e.g., processing based on legitimate interest)</li>
-                            <li>Right to Data Portability</li>
-                        </ul>
-                        <p className="text-muted-foreground mt-2">
-                            To exercise your rights, contact: <span className="underline text-foreground">beybladexmeta@outlook.it</span>.
-                        </p>
-                        <p className="text-muted-foreground mt-2">
-                            Right to Lodge a Complaint: You may lodge a complaint with the competent supervisory authority (in Italy, the Garante per la Protezione dei Dati Personali — garanteprivacy.it).
-                        </p>
-                    </section>
-
-                    <section className="space-y-3">
-                        <h2 className="text-xl font-semibold tracking-tight">9. Cookies</h2>
+                        <h2 className="text-xl font-semibold tracking-tight">7. Diritti dell'Interessato</h2>
                         <p className="text-muted-foreground">
-                            We only use technical session cookies essential for the Service. We do not use profiling or marketing cookies. We use Cloudflare Web Analytics, which is a privacy-first analytics service that does not use cookies or track personal data. Google reCAPTCHA may set functional cookies for its anti-bot protection service.
+                            Puoi esercitare in ogni momento i diritti previsti dal GDPR (accesso, rettifica, cancellazione, limitazione, opposizione, portabilità) scrivendo a: <span className="underline text-foreground">beybladexmeta@outlook.it</span>.
+                        </p>
+                    </section>
+
+                    <section className="space-y-3">
+                        <h2 className="text-xl font-semibold tracking-tight">8. Cookie e Terze Parti</h2>
+                        <p className="text-muted-foreground">
+                            Utilizziamo solo cookie tecnici necessari al funzionamento del sito. Non utilizziamo cookie di profilazione o marketing proprietari. Servizi di terze parti come Ezoic possono gestire le proprie impostazioni cookie attraverso il banner di consenso fornito.
                         </p>
                     </section>
 

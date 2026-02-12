@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
+import { Seo } from '@/components/Seo';
 import {
   Select,
   SelectContent,
@@ -115,6 +116,10 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
+      <Seo
+        title="Beybladexmeta Analytics - Statistiche e Metagame Beyblade X"
+        description="Il portale definitivo per l'analisi del metagame di Beyblade X in Italia. Scopri le migliori combo, i trend dei tornei e scala la classifica globale."
+      />
       <PageHeader title="Home" action={<HeaderLogo />} />
 
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">

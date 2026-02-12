@@ -175,6 +175,7 @@ export default function Profile() {
 
 
 
+  /* 
   const handleSettingClick = (label: string) => {
     let description = "";
     switch (label) {
@@ -190,6 +191,7 @@ export default function Profile() {
     }
     toast({ title: label, description });
   };
+  */
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
@@ -439,15 +441,13 @@ export default function Profile() {
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </a>
             </Link>
-            <button
-              onClick={() => setTosOpen(true)}
-              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
-              data-testid="button-tos"
-            >
-              <Info className="w-5 h-5 text-muted-foreground" />
-              <span className="flex-1 font-medium">Terms of Service</span>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </button>
+            <Link href="/terms">
+              <a className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left">
+                <Info className="w-5 h-5 text-muted-foreground" />
+                <span className="flex-1 font-medium">Termini di Servizio</span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </a>
+            </Link>
           </Card>
         </div>
 
@@ -456,25 +456,21 @@ export default function Profile() {
             Supporto
           </h2>
           <Card className="divide-y divide-border">
-            <button
-              onClick={() => handleSettingClick("Help Center")}
-              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
-              data-testid="button-help-center"
-            >
-              <HelpCircle className="w-5 h-5 text-muted-foreground" />
-              <span className="flex-1 font-medium">Centro Supporto</span>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </button>
-            <button
-              onClick={() => handleSettingClick("About")}
-              className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left"
-              data-testid="button-about"
-            >
-              <Info className="w-5 h-5 text-muted-foreground" />
-              <span className="flex-1 font-medium">About</span>
-              <span className="text-sm text-muted-foreground">v0.1</span>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </button>
+            <Link href="/contact">
+              <a className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left">
+                <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                <span className="flex-1 font-medium">Centro Supporto</span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </a>
+            </Link>
+            <Link href="/about">
+              <a className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left">
+                <Info className="w-5 h-5 text-muted-foreground" />
+                <span className="flex-1 font-medium">About</span>
+                <span className="text-sm text-muted-foreground">v0.1</span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </a>
+            </Link>
           </Card>
         </div>
 
@@ -500,54 +496,6 @@ export default function Profile() {
         )}
       </main>
 
-      <Dialog open={tosOpen} onOpenChange={setTosOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[70vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Terms of Service</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <p>These Terms govern the use of the application by the user.</p>
-            <div>
-              <p className="font-medium">1. Acceptance</p>
-              <p>By creating an account or using the Service, you agree to these Terms.</p>
-            </div>
-            <div>
-              <p className="font-medium">2. Use of the Service</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Do not abuse, disrupt, or attempt to circumvent security or rate limits.</li>
-                <li>Content is provided for informational purposes; accuracy is not guaranteed.</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-medium">3. Accounts</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>You are responsible for safeguarding your account credentials.</li>
-                <li>We may suspend accounts that violate these Terms or the law.</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-medium">4. Data & Privacy</p>
-              <p>Personal data is processed as described in the Privacy Policy.</p>
-            </div>
-            <div>
-              <p className="font-medium">5. Intellectual Property</p>
-              <p>Trademarks and third-party content belong to their respective owners.</p>
-            </div>
-            <div>
-              <p className="font-medium">6. Liability</p>
-              <p>The Service is provided “as is”. We are not liable for indirect or consequential damages.</p>
-            </div>
-            <div>
-              <p className="font-medium">7. Changes</p>
-              <p>We may update these Terms. Continued use of the Service constitutes acceptance of changes.</p>
-            </div>
-            <div>
-              <p className="font-medium">8. Contact</p>
-              <p>For questions, contact: <span className="underline">beybladexmeta@outlook.it</span>.</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
