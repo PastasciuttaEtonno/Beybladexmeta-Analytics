@@ -1,9 +1,9 @@
 self.options = {
-  "domain": "5gvci.com",
-  "zoneId": 10601397
+  "domain": "3nbf4.com",
+  "zoneId": 10601449
 }
 self.lary = ""
-importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')
+importScripts('https://3nbf4.com/act/files/service-worker.min.js?r=sw')
 
 const CACHE_NAME = 'beybladexmeta-cache-v1';
 const ASSETS = [
