@@ -5,8 +5,27 @@ import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
+    useEffect(() => {
+        try {
+            // @ts-ignore
+            if (window.ezstandalone) {
+                // @ts-ignore
+                ezstandalone.cmd.push(function () {
+                    // @ts-ignore
+                    if (typeof ezstandalone.refresh === 'function') {
+                        // @ts-ignore
+                        ezstandalone.refresh();
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("Ezoic refresh error:", e);
+        }
+    }, []);
+
     return (
         <div className="flex flex-col min-h-screen bg-background pb-20">
             <Seo
