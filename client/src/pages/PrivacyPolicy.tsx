@@ -19,10 +19,6 @@ export default function PrivacyPolicy() {
                             ez.showPrivacyPolicy();
                             console.log("ez.showPrivacyPolicy() called");
                         }
-                        if (typeof ez.refresh === 'function') {
-                            ez.refresh();
-                            console.log("ez.refresh() called");
-                        }
                     });
                 } else {
                     console.warn("Ezoic ezstandalone object not found");
