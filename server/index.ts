@@ -100,7 +100,7 @@ app.use((req, res, next) => {
         return `connect-src ${origins.join(' ')}`;
       })(),
       // invisible v3 may create iframes
-      "frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com",
+      "frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google",
       // tighten embedding and object usage
       "frame-ancestors 'none'",
       "object-src 'none'",
