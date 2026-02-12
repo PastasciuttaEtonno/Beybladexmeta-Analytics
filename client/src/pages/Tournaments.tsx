@@ -179,6 +179,22 @@ export default function Tournaments() {
     );
   }
 
+  // Sanitize URL to prevent XSS - only allow http/https protocols
+  const sanitizeImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      // Only allow http and https protocols
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return url;
+      }
+      return null;
+    } catch {
+      // Invalid URL
+      return null;
+    }
+  };
+
   // Elenco regioni italiane (coerente con la validazione lato server)
   const ITALIAN_REGIONS = [
     "Piemonte",
@@ -774,13 +790,16 @@ export default function Tournaments() {
               <Card key={t.torneoId} className="overflow-hidden cursor-pointer" onClick={() => openTournamentDialog(t)}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    {t.hosts?.spaces?.[0]?.logo?.url ? (
-                      <img
-                        src={t.hosts.spaces[0].logo.url!}
-                        alt={t.hosts.spaces?.[0]?.name || "Organizer logo"}
-                        className="w-6 h-6 rounded"
-                      />
-                    ) : null}
+                    {(() => {
+                      const logoUrl = sanitizeImageUrl(t.hosts?.spaces?.[0]?.logo?.url);
+                      return logoUrl ? (
+                        <img
+                          src={logoUrl}
+                          alt={t.hosts?.spaces?.[0]?.name || "Organizer logo"}
+                          className="w-6 h-6 rounded"
+                        />
+                      ) : null;
+                    })()}
                     <h3 className="text-base font-semibold">{t.nomeTorneo}</h3>
                   </div>
                   <div className="flex items-center gap-1">
@@ -802,19 +821,22 @@ export default function Tournaments() {
                   {t.description && (
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{t.description}</p>
                   )}
-                  {t.contactUrl && (
-                    <p className="mt-2 text-xs">
-                      <a
-                        className="text-blue-600 hover:underline no-underline"
-                        href={t.contactUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Contatti e informazioni torneo (si apre in una nuova scheda)"
-                      >
-                        Contatti / Info
-                      </a>
-                    </p>
-                  )}
+                  {(() => {
+                    const contactUrl = sanitizeImageUrl(t.contactUrl);
+                    return contactUrl ? (
+                      <p className="mt-2 text-xs">
+                        <a
+                          className="text-blue-600 hover:underline no-underline"
+                          href={contactUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Contatti e informazioni torneo (si apre in una nuova scheda)"
+                        >
+                          Contatti / Info
+                        </a>
+                      </p>
+                    ) : null;
+                  })()}
                   {/* Placeholder for future filters and per-card dialog */}
                 </CardContent>
               </Card>

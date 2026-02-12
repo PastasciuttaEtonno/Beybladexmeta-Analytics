@@ -65,6 +65,22 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
   );
 }
 
+// Sanitize URL to prevent XSS - only allow http/https protocols
+const sanitizeImageUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    // Only allow http and https protocols
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return url;
+    }
+    return null;
+  } catch {
+    // Invalid URL
+    return null;
+  }
+};
+
 // Simple SVG placeholder used when no combos are assigned
 function SvgPlaceholder() {
   return (
@@ -539,13 +555,16 @@ export default function TournamentDetail() {
                           setEditDialogOpen(true);
                         }}>
                         <div className="flex items-center gap-3">
-                          {url ? (
-                            <img src={url} alt={String(memberName)} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                              <User className="w-5 h-5 text-muted-foreground" />
-                            </div>
-                          )}
+                          {(() => {
+                            const sanitizedUrl = sanitizeImageUrl(url);
+                            return sanitizedUrl ? (
+                              <img src={sanitizedUrl} alt={String(memberName)} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                <User className="w-5 h-5 text-muted-foreground" />
+                              </div>
+                            );
+                          })()}
                           <span className="text-sm font-medium">{String(memberName)}</span>
                           {/* Admin Edit Pencil */}
                           {canEdit && (
@@ -680,19 +699,22 @@ export default function TournamentDetail() {
                 <Badge variant="secondary" className="text-[10px]">Off Season</Badge>
               )}
             </div>
-            {detailResp?.detail?.contactUrl && (
-              <p className="text-xs">
-                <a
-                  className="text-blue-600 hover:underline no-underline"
-                  href={detailResp.detail.contactUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Contatti e informazioni torneo (si apre in una nuova scheda)"
-                >
-                  Contatti / Info
-                </a>
-              </p>
-            )}
+            {(() => {
+              const contactUrl = sanitizeImageUrl(detailResp?.detail?.contactUrl);
+              return contactUrl ? (
+                <p className="text-xs">
+                  <a
+                    className="text-blue-600 hover:underline no-underline"
+                    href={contactUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Contatti e informazioni torneo (si apre in una nuova scheda)"
+                  >
+                    Contatti / Info
+                  </a>
+                </p>
+              ) : null;
+            })()}
             {user?.isAdmin && (
               <div className="pt-2 flex flex-col sm:flex-row gap-2">
                 {detailResp?.detail?.hasCombos && (

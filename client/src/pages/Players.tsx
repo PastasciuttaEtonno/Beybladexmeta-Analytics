@@ -38,6 +38,20 @@ type PlayerItem = {
 export default function Players() {
   const [, setLocation] = useLocation();
 
+  // Sanitize URL to prevent XSS - only allow http/https protocols
+  const sanitizeImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return url;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
   const [selectedSeason, setSelectedSeason] = useState<string>("Off Season 2025");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("challengermode");
   const [query, setQuery] = useState("");
@@ -231,11 +245,14 @@ export default function Players() {
                             {getRankBadge(globalRank)}
                           </div>
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                            {p.avatar ? (
-                              <img src={p.avatar} alt={`Avatar di ${p.nickname}`} className="w-12 h-12 object-cover" />
-                            ) : (
-                              <span className="text-xs text-muted-foreground">N/A</span>
-                            )}
+                            {(() => {
+                              const sanitizedAvatar = sanitizeImageUrl(p.avatar);
+                              return sanitizedAvatar ? (
+                                <img src={sanitizedAvatar} alt={`Avatar di ${p.nickname}`} className="w-12 h-12 object-cover" />
+                              ) : (
+                                <span className="text-xs text-muted-foreground">N/A</span>
+                              );
+                            })()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold truncate">{p.nickname}</p>

@@ -125,6 +125,20 @@ export default function PlayerDetail() {
     );
   }
 
+  // Sanitize URL to prevent XSS - only allow http/https protocols
+  const sanitizeImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return url;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
   function formatComboTitle(c: NonNullable<PlayerProfileResp["stats"]["mostUsedCombo"]>) {
     const blade = c.blade?.trim() || "";
     const assist = c.assistBlade?.trim() || "";
@@ -180,11 +194,14 @@ export default function PlayerDetail() {
             </div>
             <Card className="p-4 flex items-center gap-4">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                {profile?.avatar ? (
-                  <img src={profile.avatar} alt={profile.nickname} className="w-16 h-16 object-cover" />
-                ) : (
-                  <span className="text-xs text-muted-foreground">N/A</span>
-                )}
+                {(() => {
+                  const sanitizedAvatar = sanitizeImageUrl(profile?.avatar);
+                  return sanitizedAvatar ? (
+                    <img src={sanitizedAvatar} alt={profile?.nickname || ""} className="w-16 h-16 object-cover" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">N/A</span>
+                  );
+                })()}
               </div>
               <div className="flex-1">
                 <p className="text-lg font-semibold">{profile?.nickname || ""}</p>

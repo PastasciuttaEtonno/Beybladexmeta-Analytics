@@ -47,6 +47,20 @@ export function PlayerProfileDialog({ nickname, open, onOpenChange }: PlayerProf
         return "bg-muted";
     };
 
+    // Sanitize URL to prevent XSS - only allow http/https protocols
+    const sanitizeImageUrl = (url: string | null | undefined): string | null => {
+        if (!url) return null;
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return url;
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -71,11 +85,14 @@ export function PlayerProfileDialog({ nickname, open, onOpenChange }: PlayerProf
                         {/* Header Section */}
                         <div className="flex flex-col sm:flex-row items-center gap-4 pb-4 border-b">
                             <div className="w-20 h-20 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                                {avatar ? (
-                                    <img src={avatar} alt={`Avatar di ${nickname}`} className="w-20 h-20 object-cover" />
-                                ) : (
-                                    <span className="text-2xl text-muted-foreground">👤</span>
-                                )}
+                                {(() => {
+                                    const sanitizedAvatar = sanitizeImageUrl(avatar);
+                                    return sanitizedAvatar ? (
+                                        <img src={sanitizedAvatar} alt={`Avatar di ${nickname}`} className="w-20 h-20 object-cover" />
+                                    ) : (
+                                        <span className="text-2xl text-muted-foreground">👤</span>
+                                    );
+                                })()}
                             </div>
                             <div className="flex-1 text-center sm:text-left">
                                 <h2 className="text-2xl font-bold">{nickname}</h2>
