@@ -123,8 +123,8 @@ export default function PrivacyPolicy() {
                         </div>
 
 
-                        <span id="ezoic-privacy-policy-embed"></span>
                     </div>
+                    <span id="ezoic-privacy-policy-embed"></span>
                 </Card>
                 <div className="flex justify-center">
                     <Link href="/profile">
