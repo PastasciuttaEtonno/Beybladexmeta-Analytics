@@ -73,7 +73,7 @@ app.use((req, res, next) => {
       "default-src 'self'",
       // reCAPTCHA v3/Enterprise uses google.com and gstatic.com
       // Google Analytics & Cloudflare
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://5gvci.com https://3nbf4.com https://quge5.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://5gvci.com https://3nbf4.com https://quge5.com https://fundingchoicesmessages.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
@@ -85,7 +85,8 @@ app.use((req, res, next) => {
           "https://pagead2.googlesyndication.com",
           "https://adservice.google.com",
           "https://5gvci.com",
-          "https://3nbf4.com"
+          "https://3nbf4.com",
+          "https://6opo.com"
         ];
         const candidate = process.env.PUBLIC_MINIO_URL || process.env.VITE_PUBLIC_MINIO_URL || '';
         try {
