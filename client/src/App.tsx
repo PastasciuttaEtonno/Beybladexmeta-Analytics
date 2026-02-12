@@ -89,6 +89,30 @@ function AppRoutes() {
   );
 }
 
+function AdsLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex justify-center min-h-screen">
+      {/* Sidebar Left - placeholder 107 */}
+      <aside className="hidden xl:block w-48 p-4 sticky top-0 h-screen overflow-hidden">
+        <div className="h-full flex flex-col items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
+          <div id="ezoic-pub-ad-placeholder-107"></div>
+        </div>
+      </aside>
+
+      <div className="flex-1 w-full max-w-2xl relative">
+        {children}
+      </div>
+
+      {/* Sidebar Right - placeholder 108 */}
+      <aside className="hidden xl:block w-48 p-4 sticky top-0 h-screen overflow-hidden">
+        <div className="h-full flex flex-col items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
+          <div id="ezoic-pub-ad-placeholder-108"></div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export default function App() {
   function GlobalCmAuthNotice() {
     const { user } = useAuth();
@@ -115,7 +139,7 @@ export default function App() {
         <div className="rounded-md border bg-background shadow-lg p-3">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">autenticazione con challonge ora disponibile! 😸</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
               {!user?.challengerId && (
                 <Button type="button" size="sm" onClick={() => { window.location.href = "/login"; }}>
                   Accedi
@@ -133,7 +157,9 @@ export default function App() {
       <TooltipProvider>
         <ThemeProvider>
           <AuthProvider>
-            <AppRoutes />
+            <AdsLayout>
+              <AppRoutes />
+            </AdsLayout>
             <Toaster />
             <GlobalCmAuthNotice />
           </AuthProvider>
