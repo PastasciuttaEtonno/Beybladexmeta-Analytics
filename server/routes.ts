@@ -653,6 +653,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch combo by key' });
     }
   });
+
+  // Get tournaments where a specific combo was used (Top 4 only)
+  app.get('/api/stats/combos/:comboKey/tournaments', async (req, res) => {
+    try {
+      const key = String(req.params.comboKey || '').trim();
+      if (!key) return res.status(400).json({ error: 'Missing combo key' });
+
+      const parts = key.split('|');
+      if (parts.length !== 5) return res.status(400).json({ error: 'Invalid key format' });
+      const [blade, assistBlade, ratchet, bit, lockChip] = parts;
+
+      const seasonRaw = String((req.query.season ?? '') as string).trim();
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 50;
+
+      const tournaments: any[] = [];
+
+      // Helper function for Challonge points calculation (same as player tournaments endpoint)
+      const calculateChallongePoints = (rank: number | null, total: number | null): number => {
+        if (!rank || !total) return 0;
+        if (total >= 49) {
+          if (rank === 1) return 400;
+          if (rank === 2) return 280;
+          if (rank === 3) return 160;
+          if (rank === 4) return 120;
+        } else if (total >= 33) {
+          if (rank === 1) return 350;
+          if (rank === 2) return 240;
+          if (rank === 3) return 140;
+          if (rank === 4) return 110;
+        } else if (total >= 25) {
+          if (rank === 1) return 300;
+          if (rank === 2) return 200;
+          if (rank === 3) return 120;
+          if (rank === 4) return 90;
+        } else if (total >= 17) {
+          if (rank === 1) return 250;
+          if (rank === 2) return 160;
+          if (rank === 3) return 100;
+          if (rank === 4) return 80;
+        } else if (total >= 13) {
+          if (rank === 1) return 200;
+          if (rank === 2) return 120;
+          if (rank === 3) return 80;
+          if (rank === 4) return 60;
+        } else if (total >= 8) {
+          if (rank === 1) return 150;
+          if (rank === 2) return 80;
+          if (rank === 3) return 60;
+          if (rank === 4) return 40;
+        } else if (total >= 6) {
+          if (rank === 1) return 100;
+          if (rank === 2) return 70;
+          if (rank === 3) return 50;
+          if (rank === 4) return 30;
+        }
+        return 0;
+      };
+
+      // Query ChallengerMode data
+      const cmQuery = seasonRaw
+        ? sql`
+          SELECT 
+            epc.tournament_id,
+            epc.player_id,
+            cm.nickname as player_name,
+            epc.placement,
+            epc.total_participants,
+            epc.tournament_date as date,
+            epc.season,
+            'challengermode' as platform
+          FROM external_player_combos epc
+          JOIN cm_players cm ON epc.player_id = cm.id
+          WHERE epc.blade = ${blade}
+            AND epc.assist_blade = ${assistBlade}
+            AND epc.ratchet = ${ratchet}
+            AND epc.bit = ${bit}
+            AND epc.lock_chip = ${lockChip}
+            AND epc.placement <= 4
+            AND epc.season = ${seasonRaw}
+          ORDER BY epc.tournament_date DESC
+          LIMIT ${limit}
+        `
+        : sql`
+          SELECT 
+            epc.tournament_id,
+            epc.player_id,
+            cm.nickname as player_name,
+            epc.placement,
+            epc.total_participants,
+            epc.tournament_date as date,
+            epc.season,
+            'challengermode' as platform
+          FROM external_player_combos epc
+          JOIN cm_players cm ON epc.player_id = cm.id
+          WHERE epc.blade = ${blade}
+            AND epc.assist_blade = ${assistBlade}
+            AND epc.ratchet = ${ratchet}
+            AND epc.bit = ${bit}
+            AND epc.lock_chip = ${lockChip}
+            AND epc.placement <= 4
+          ORDER BY epc.tournament_date DESC
+          LIMIT ${limit}
+        `;
+
+      const cmResults = await db.execute(cmQuery);
+
+      // Fetch CM tournament names
+      const cmTournaments = await Promise.all((cmResults.rows || []).map(async (r: any) => {
+        try {
+          const detail = await fetchTournamentDetail(String(r.tournament_id));
+          const name = detail?.name || null;
+          const startedAt = detail?.schedule?.startedAt as string | undefined;
+          const dateFromDetail = startedAt ? String(startedAt).slice(0, 10) : null;
+
+          // Calculate points (placement * participants, same as CM scoring)
+          const points = (r.placement && r.total_participants)
+            ? Number(r.placement) * Number(r.total_participants)
+            : 0;
+
+          return {
+            tournamentId: String(r.tournament_id),
+            tournamentName: name || `Tournament ${r.tournament_id}`,
+            date: r.date ? String(r.date) : dateFromDetail,
+            playerName: r.player_name,
+            playerId: r.player_id,
+            placement: r.placement != null ? Number(r.placement) : null,
+            totalParticipants: Number(r.total_participants || 0),
+            points,
+            platform: 'challengermode',
+            season: r.season || 'Unknown',
+          };
+        } catch {
+          const points = (r.placement && r.total_participants)
+            ? Number(r.placement) * Number(r.total_participants)
+            : 0;
+
+          return {
+            tournamentId: String(r.tournament_id),
+            tournamentName: `Tournament ${r.tournament_id}`,
+            date: r.date ? String(r.date) : null,
+            playerName: r.player_name,
+            playerId: r.player_id,
+            placement: r.placement != null ? Number(r.placement) : null,
+            totalParticipants: Number(r.total_participants || 0),
+            points,
+            platform: 'challengermode',
+            season: r.season || 'Unknown',
+          };
+        }
+      }));
+
+      tournaments.push(...cmTournaments);
+
+      // Query Challonge data
+      const challongeQuery = seasonRaw
+        ? sql`
+          SELECT 
+            crc.tournament_id,
+            crc.tournament_name,
+            crc.created_at as date,
+            u.display_name as player_name,
+            u.id as player_id,
+            crc.rank as placement,
+            crc.season,
+            'challonge' as platform,
+            COALESCE(
+              NULLIF((mr.data->>'participants_count')::int, 0),
+              NULLIF((mr.data->>'total_players')::int, 0),
+              jsonb_array_length(mr.data->'standings')
+            ) as total_participants
+          FROM challonge_reported_combos crc
+          JOIN users u ON crc.user_id = u.id
+          LEFT JOIN challonge_match_results mr ON crc.tournament_id = mr.tournament_id
+          WHERE crc.blade = ${blade}
+            AND COALESCE(crc.assist_blade, 'None') = ${assistBlade}
+            AND crc.ratchet = ${ratchet}
+            AND crc.bit = ${bit}
+            AND COALESCE(crc.lock_chip, 'None') = ${lockChip}
+            AND crc.rank <= 4
+            AND crc.season = ${seasonRaw}
+          ORDER BY crc.created_at DESC
+          LIMIT ${limit}
+        `
+        : sql`
+          SELECT 
+            crc.tournament_id,
+            crc.tournament_name,
+            crc.created_at as date,
+            u.display_name as player_name,
+            u.id as player_id,
+            crc.rank as placement,
+            crc.season,
+            'challonge' as platform,
+            COALESCE(
+              NULLIF((mr.data->>'participants_count')::int, 0),
+              NULLIF((mr.data->>'total_players')::int, 0),
+              jsonb_array_length(mr.data->'standings')
+            ) as total_participants
+          FROM challonge_reported_combos crc
+          JOIN users u ON crc.user_id = u.id
+          LEFT JOIN challonge_match_results mr ON crc.tournament_id = mr.tournament_id
+          WHERE crc.blade = ${blade}
+            AND COALESCE(crc.assist_blade, 'None') = ${assistBlade}
+            AND crc.ratchet = ${ratchet}
+            AND crc.bit = ${bit}
+            AND COALESCE(crc.lock_chip, 'None') = ${lockChip}
+            AND crc.rank <= 4
+          ORDER BY crc.created_at DESC
+          LIMIT ${limit}
+        `;
+
+      const challongeResults = await db.execute(challongeQuery);
+
+      const challongeTournaments = (challongeResults.rows || []).map((r: any) => ({
+        tournamentId: String(r.tournament_id),
+        tournamentName: r.tournament_name ? String(r.tournament_name) : `Tournament ${r.tournament_id}`,
+        date: r.date ? String(r.date).slice(0, 10) : null,
+        playerName: r.player_name || 'Unknown',
+        playerId: r.player_id,
+        placement: r.placement != null ? Number(r.placement) : null,
+        totalParticipants: Number(r.total_participants || 0),
+        points: calculateChallongePoints(Number(r.placement), Number(r.total_participants)),
+        platform: 'challonge',
+        season: r.season || 'Unknown',
+      }));
+
+      tournaments.push(...challongeTournaments);
+
+      // Sort all tournaments by date descending
+      tournaments.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      res.json({ tournaments: tournaments.slice(0, limit) });
+    } catch (error) {
+      console.error('Combo tournaments error:', error);
+      res.status(500).json({ error: 'Failed to fetch combo tournaments' });
+    }
+  });
   app.get('/api/stats/combos/by-slug', async (req, res) => {
     try {
       const slug = String(req.query.slug || '').trim();

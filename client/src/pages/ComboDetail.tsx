@@ -10,8 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Trophy, Medal, Award } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Trophy, Medal, Award, ChevronLeft, ChevronRight } from "lucide-react";
 import { Seo } from "@/components/Seo";
+import { format } from "date-fns";
 
 type ComboStats = {
   blade: string;
@@ -100,6 +102,24 @@ export default function ComboDetail() {
       return resp.json();
     },
   });
+
+  const { data: tourData, isLoading: tourLoading } = useQuery<{ tournaments: any[] }>({
+    queryKey: ['/api/stats/combos', decodedId, 'tournaments'],
+    queryFn: async () => {
+      const resp = await fetch(`/api/stats/combos/${encodeURIComponent(decodedId!)}/tournaments`);
+      if (!resp.ok) throw new Error('Failed to fetch combo tournaments');
+      return resp.json();
+    },
+    enabled: !!decodedId,
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const tournamentsPerPage = 5;
+  const totalTournaments = tourData?.tournaments?.length || 0;
+  const totalPages = Math.ceil(totalTournaments / tournamentsPerPage);
+  const startIndex = (currentPage - 1) * tournamentsPerPage;
+  const endIndex = startIndex + tournamentsPerPage;
+  const currentTournaments = (tourData?.tournaments || []).slice(startIndex, endIndex);
 
   if (!comboId) {
     return null;
@@ -316,6 +336,84 @@ export default function ComboDetail() {
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-base">Apparizione tornei recenti</CardTitle>
+                <CardDescription className="text-xs">
+                  Clicca un torneo per vedere i dettagli
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {tourLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-16 bg-muted/30 animate-pulse rounded" />
+                    ))}
+                  </div>
+                ) : totalTournaments === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nessun torneo trovato
+                  </p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {currentTournaments.map((t: any) => (
+                        <Link
+                          key={`${t.tournamentId}-${t.playerId}`}
+                          href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}
+                        >
+                          <a className="block no-underline">
+                            <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate">
+                                    {t.tournamentName || `Torneo ${t.tournamentId}`}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t.playerName} • {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    #{t.placement}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </Card>
+                          </a>
+                        </Link>
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between pt-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          aria-label="Pagina precedente"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                          {currentPage} di {totalPages}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          aria-label="Pagina successiva"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </CardContent>
