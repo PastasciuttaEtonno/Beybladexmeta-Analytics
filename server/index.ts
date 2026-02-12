@@ -75,7 +75,7 @@ app.use((req, res, next) => {
       // Google Analytics & Cloudflare
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://cmp.gatekeeperconsent.com https://the.gatekeeperconsent.com https://www.ezojs.com https://*.ezojs.com http://www.ezojs.com http://*.ezojs.com https://cdn.id5-sync.com https://privacy.gatekeeperconsent.com https://*.adtrafficquality.google https://*.ezoic.net",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: https: http://*.ezoic.net http://*.ezojs.com https://www.google-analytics.com https://www.googletagmanager.com",
+      "img-src 'self' data: https: http://*.ezoic.net http://*.ezojs.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       (() => {
         let origins = [
@@ -99,10 +99,7 @@ app.use((req, res, next) => {
           "https://id5-sync.com",
           "https://*.id5-sync.com",
           "https://lbs.eu-1-id5-sync.com",
-          "https://cdn.id5-sync.com",
-          "https://www.google-analytics.com",
-          "https://analytics.google.com",
-          "https://www.googletagmanager.com"
+          "https://cdn.id5-sync.com"
         ];
         const candidate = process.env.PUBLIC_MINIO_URL || process.env.VITE_PUBLIC_MINIO_URL || '';
         try {
