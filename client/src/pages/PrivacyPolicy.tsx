@@ -4,8 +4,71 @@ import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
+    useEffect(() => {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        console.log('[Ezoic CMP] Component mounted, initializing...');
+        console.log('[Ezoic CMP] Is localhost:', isLocalhost);
+
+        // Wait for DOM to be ready before accessing the element
+        setTimeout(() => {
+            // Check if target element exists
+            const targetElement = document.getElementById('ezoic-privacy-policy-embed');
+            console.log('[Ezoic CMP] Target element found:', targetElement);
+
+            if (isLocalhost && targetElement) {
+                // Show development message for localhost
+                targetElement.innerHTML = `
+                <div style="padding: 1rem; border: 2px dashed #666; border-radius: 8px; background: #f5f5f5; color: #333;">
+                    <p style="margin: 0; font-weight: 600;">Development Mode</p>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        Ezoic CMP content will display in production at <strong>beybladexmeta.com</strong>
+                    </p>
+                </div>
+            `;
+                console.log('[Ezoic CMP] Localhost detected - showing development placeholder');
+                return; // Don't load the script on localhost
+            }
+
+            // Load Ezoic CMP script for production
+            const script = document.createElement('script');
+            script.src = 'https://g.ezoic.net/privacy/beybladexmeta.com/cmp.js';
+            script.async = true;
+
+            script.onload = () => {
+                console.log('[Ezoic CMP] Script loaded successfully');
+                console.log('[Ezoic CMP] Target element content:', targetElement?.innerHTML);
+
+                // Check again after a delay to see if content was injected
+                setTimeout(() => {
+                    const updatedElement = document.getElementById('ezoic-privacy-policy-embed');
+                    console.log('[Ezoic CMP] Element content after 2s:', updatedElement?.innerHTML);
+                    console.log('[Ezoic CMP] Element has children:', updatedElement?.children.length);
+                }, 2000);
+            };
+
+            script.onerror = (error) => {
+                console.error('[Ezoic CMP] Script failed to load:', error);
+                // Show fallback message on error
+                if (targetElement) {
+                    targetElement.innerHTML = `
+                    <div style="padding: 1rem; border: 2px solid #f44336; border-radius: 8px; background: #ffebee; color: #c62828;">
+                        <p style="margin: 0; font-weight: 600;">Unable to load Ezoic privacy policy</p>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                            Please contact us at <a href="mailto:beybladexmeta@outlook.it" style="color: #1976d2;">beybladexmeta@outlook.it</a> for privacy information.
+                        </p>
+                    </div>
+                `;
+                }
+            };
+
+            console.log('[Ezoic CMP] Appending script to body...');
+            document.body.appendChild(script);
+        }, 0); // Execute on next tick to ensure DOM is ready
+    }, []);
 
     return (
         <div className="flex flex-col min-h-screen bg-background pb-20">
