@@ -15,6 +15,10 @@ export default function PrivacyPolicy() {
                 if (ez && ez.cmd) {
                     ez.cmd.push(function () {
                         console.log("Attempting to show Ezoic Privacy Policy...");
+                        if (typeof ez.enable === 'function') {
+                            ez.enable();
+                            console.log("ez.enable() called");
+                        }
                         if (typeof ez.showPrivacyPolicy === 'function') {
                             ez.showPrivacyPolicy();
                             console.log("ez.showPrivacyPolicy() called");
