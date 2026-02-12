@@ -8,29 +8,43 @@ import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
     useEffect(() => {
-        const timer = setTimeout(() => {
+        // 1. Definiamo la funzione di inizializzazione
+        const initEzoic = () => {
             try {
                 // @ts-ignore
                 const ez = window.ezstandalone;
-                if (ez && ez.cmd) {
-                    ez.cmd.push(function () {
-                        console.log("Attempting to show Ezoic Privacy Policy...");
-                        if (typeof ez.enable === 'function') {
-                            ez.enable();
-                            console.log("ez.enable() called");
-                        }
-                        if (typeof ez.showPrivacyPolicy === 'function') {
-                            ez.showPrivacyPolicy();
-                            console.log("ez.showPrivacyPolicy() called");
-                        }
-                    });
-                } else {
-                    console.warn("Ezoic ezstandalone object not found");
-                }
+
+                // Se Ezoic non è ancora caricato o non ha la coda comandi, usciamo
+                if (!ez || !ez.cmd) return;
+
+                ez.cmd.push(function () {
+                    // A. Se non è abilitato, abilitiamolo
+                    if (!ez.enabled) {
+                        ez.enable();
+                        console.log("ez.enable() called");
+                    }
+
+                    // B. QUESTO È IL PUNTO CHIAVE:
+                    // Diciamo a Ezoic di "ri-scansionare" la pagina per nuovi placeholder.
+                    console.log("Ezoic: Refreshing placeholders for SPA navigation...");
+                    ez.refresh();
+
+                    // C. Se c'è una funzione specifica per la privacy, chiamiamola
+                    if (typeof ez.showPrivacyPolicy === 'function') {
+                        ez.showPrivacyPolicy();
+                        console.log("ez.showPrivacyPolicy() called");
+                    }
+                });
+
             } catch (e) {
-                console.error("Ezoic initialization error:", e);
+                console.error("Ezoic init error:", e);
             }
-        }, 500);
+        };
+
+        // 2. Usiamo un timeout per dare tempo a React di "dipingere" lo span nel DOM
+        const timer = setTimeout(initEzoic, 500);
+
+        // 3. Cleanup
         return () => clearTimeout(timer);
     }, []);
 
