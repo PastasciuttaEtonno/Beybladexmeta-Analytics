@@ -8,22 +8,30 @@ import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
     useEffect(() => {
-        try {
-            // @ts-ignore
-            const ez = window.ezstandalone;
-            if (ez && ez.cmd) {
-                ez.cmd.push(function () {
-                    if (typeof ez.showPrivacyPolicy === 'function') {
-                        ez.showPrivacyPolicy();
-                    }
-                    if (typeof ez.refresh === 'function') {
-                        ez.refresh();
-                    }
-                });
+        const timer = setTimeout(() => {
+            try {
+                // @ts-ignore
+                const ez = window.ezstandalone;
+                if (ez && ez.cmd) {
+                    ez.cmd.push(function () {
+                        console.log("Attempting to show Ezoic Privacy Policy...");
+                        if (typeof ez.showPrivacyPolicy === 'function') {
+                            ez.showPrivacyPolicy();
+                            console.log("ez.showPrivacyPolicy() called");
+                        }
+                        if (typeof ez.refresh === 'function') {
+                            ez.refresh();
+                            console.log("ez.refresh() called");
+                        }
+                    });
+                } else {
+                    console.warn("Ezoic ezstandalone object not found");
+                }
+            } catch (e) {
+                console.error("Ezoic initialization error:", e);
             }
-        } catch (e) {
-            console.error("Ezoic initialization error:", e);
-        }
+        }, 500);
+        return () => clearTimeout(timer);
     }, []);
 
     return (

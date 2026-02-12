@@ -41,6 +41,13 @@ export const processExternalCombo = async (result: ExternalComboResult) => {
   const points = calculatePoints(result.placement, result.totalParticipants);
   if (!points) return; // Non processare se nessun punto
 
+  // Hardening: Validate inputs to ensure no malicious characters
+  const safeStr = (s: string) => /^[a-zA-Z0-9\s\-\(\)\.]+$/.test(s);
+  if (!safeStr(result.blade) || !safeStr(result.ratchet) || !safeStr(result.bit)) {
+    console.warn("Potential injection detected in combo update:", result);
+    throw new Error("Invalid characters in component names");
+  }
+
   const { primiPosti, secondiPosti, terziPosti, quartiPosti } = getPlacementCounts(result.placement);
 
   await db.transaction(async (tx: any) => {
