@@ -7,7 +7,7 @@ import { hashPassword, verifyPassword } from "./auth";
 import { loginSchema, updateProfileSchema, registerSchema, users, User } from "@shared/schema";
 import { db } from "./db";
 import { comboStats, favoriteCombos, favoriteDecks, favoriteDeckCombos, addFavoriteComboSchema, addFavoriteDeckSchema, addFavoriteDeckComboSchema, tournamentResultSchema, tournamentComboSchema, bladeStats, assistBladeStats, ratchetStats, bitStats, lockChipStats, externalPlayerCombos, upsertTournamentPlayerCombosSchema, externalTournamentResultSchema, cmPlayers, cmMatchResults, adminAuditLogs, playerLeaderboardView, playerPlatformStats, challongeReportedCombos, challongePlayers, unifiedMetaView, challongeMatchResults, userAliases } from "@shared/schema";
-import { desc, asc, or, ilike, sql, eq, and } from "drizzle-orm";
+import { desc, asc, or, ilike, sql, eq, and, inArray } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { loginRateLimiter } from "./rateLimiter";
 import crypto from "node:crypto";
@@ -904,7 +904,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Transaction: Delete existing -> Insert New
         await db.transaction((async (tx: any) => {
-          await tx.execute(sql`DELETE FROM challonge_reported_combos WHERE tournament_id = ${parsed.tournamentId} AND user_id = ${user.id}`);
+          await tx.delete(challongeReportedCombos)
+            .where(
+              and(
+                eq(challongeReportedCombos.tournamentId, parsed.tournamentId),
+                eq(challongeReportedCombos.userId, user.id)
+              )
+            );
 
           for (let i = 0; i < parsed.combos.length; i++) {
             const c = parsed.combos[i];
@@ -960,7 +966,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch { }
 
-        await db.execute(sql`DELETE FROM external_player_combos WHERE tournament_id = ${parsed.tournamentId} AND player_id = ${challengerId}`);
+        await db.delete(externalPlayerCombos)
+          .where(
+            and(
+              eq(externalPlayerCombos.tournamentId, parsed.tournamentId),
+              eq(externalPlayerCombos.playerId, challengerId)
+            )
+          );
 
         const seasonVal = tournamentDate ? determineSeason(tournamentDate) : determineSeason(new Date());
         const values = parsed.combos.map((c, idx) => ({
@@ -3409,9 +3421,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // OR a fake ID if coming from list. But to fetch combos, we probably want the User ID.
 
       let rows: any[] = [];
-      const challongeRows = await db.execute(sql`
-        SELECT * FROM challonge_reported_combos WHERE tournament_id = ${tournamentId} AND user_id = ${playerId} ORDER BY combo_number ASC
-      `);
+      const challongeRowsResult = await db.select().from(challongeReportedCombos)
+        .where(
+          and(
+            eq(challongeReportedCombos.tournamentId, tournamentId),
+            eq(challongeReportedCombos.userId, playerId)
+          )
+        )
+        .orderBy(asc(challongeReportedCombos.comboNumber));
+
+      const challongeRows = { rows: challongeRowsResult };
 
       if (challongeRows.rows.length > 0) {
         rows = challongeRows.rows;
@@ -3778,7 +3797,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const normalize = (s: string) => s?.trim().toLowerCase() || '';
 
       let validUserNames: string[] = [];
-      const aliasesRes = await db.execute(sql`SELECT alias FROM user_aliases WHERE user_id = ${user.id} AND is_verified = TRUE`);
+      const aliasesResRaw = await db.select({ alias: userAliases.alias })
+        .from(userAliases)
+        .where(
+          and(
+            eq(userAliases.userId, user.id),
+            eq(userAliases.isVerified, true)
+          )
+        );
+
+      const aliasesRes = { rows: aliasesResRaw };
       validUserNames = aliasesRes.rows.map((r: any) => r.alias);
       if (user.challongeUsername) validUserNames.push(user.challongeUsername);
 
@@ -3823,7 +3851,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 4. Validate & Save Combos
       const payload = req.body; // Expect { combos: [...] }
-      const combos = Array.isArray(payload.combos) ? payload.combos : [];
+      // DoS Prevention: Limit max combos to 3
+      const combosRaw = Array.isArray(payload.combos) ? payload.combos : [];
+      const combos = combosRaw.slice(0, 3);
 
       // Basic validation handled by frontend, but we enforce strictly here?
       // For now trust schema parsing or do basic loop.
@@ -3850,24 +3880,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // REVERT LOGIC: Before deleting, revert old combos from stats to prevent duplicates
       // 1. Revert User-Reported Combos (challonge_reported_combos)
-      const existingCombosRes = await db.execute(sql`
-        SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", rank, season
-        FROM challonge_reported_combos
-        WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}
-      `);
+      const existingCombosRows = await db.select({
+        blade: challongeReportedCombos.blade,
+        assistBlade: challongeReportedCombos.assistBlade,
+        ratchet: challongeReportedCombos.ratchet,
+        bit: challongeReportedCombos.bit,
+        lockChip: challongeReportedCombos.lockChip,
+        rank: challongeReportedCombos.rank,
+        season: challongeReportedCombos.season
+      })
+        .from(challongeReportedCombos)
+        .where(
+          and(
+            eq(challongeReportedCombos.tournamentId, tournamentId),
+            eq(challongeReportedCombos.userId, user.id)
+          )
+        );
+
+      const existingCombosRes = { rows: existingCombosRows };
 
       // 2. Revert Admin-Reported Combos (external_player_combos)
       // Check for any of the possible player IDs
       // This is the CRITICAL STEP for anti-duplication
       if (possiblePlayerIds.size > 0) {
         const pIds = Array.from(possiblePlayerIds);
-        const adminCombosRes = await db.execute(sql`
-          SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", placement as "rank", season, player_id
-          FROM external_player_combos
-          WHERE tournament_id = ${tournamentId} 
-            AND platform = 'challonge'
-            AND player_id IN ${pIds}
-        `);
+        const adminCombosRows = await db.select({
+          blade: externalPlayerCombos.blade,
+          assistBlade: externalPlayerCombos.assistBlade,
+          ratchet: externalPlayerCombos.ratchet,
+          bit: externalPlayerCombos.bit,
+          lockChip: externalPlayerCombos.lockChip,
+          rank: externalPlayerCombos.placement,
+          season: externalPlayerCombos.season,
+          playerId: externalPlayerCombos.playerId
+        })
+          .from(externalPlayerCombos)
+          .where(
+            and(
+              eq(externalPlayerCombos.tournamentId, tournamentId),
+              eq(externalPlayerCombos.platform, 'challonge'),
+              inArray(externalPlayerCombos.playerId, pIds)
+            )
+          );
+
+        const adminCombosRes = { rows: adminCombosRows };
 
         if (adminCombosRes.rows.length > 0) {
           console.log(`[Anti-Duplication] Found ${adminCombosRes.rows.length} admin combos for user ${user.id} (participant ${participant?.name}). Removing them.`);
@@ -3892,12 +3948,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           // DELETE from external_player_combos
-          await db.execute(sql`
-             DELETE FROM external_player_combos 
-             WHERE tournament_id = ${tournamentId} 
-               AND platform = 'challonge'
-               AND player_id IN ${pIds}
-           `);
+          // DELETE from external_player_combos
+          await db.delete(externalPlayerCombos)
+            .where(
+              and(
+                eq(externalPlayerCombos.tournamentId, tournamentId),
+                eq(externalPlayerCombos.platform, 'challonge'),
+                inArray(externalPlayerCombos.playerId, pIds)
+              )
+            );
         }
       }
 
@@ -3923,7 +3982,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      await db.execute(sql`DELETE FROM challonge_reported_combos WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}`);
+      await db.delete(challongeReportedCombos)
+        .where(
+          and(
+            eq(challongeReportedCombos.tournamentId, tournamentId),
+            eq(challongeReportedCombos.userId, user.id)
+          )
+        );
 
       for (let i = 0; i < combos.length; i++) {
         const c = combos[i];
@@ -4276,7 +4341,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `);
           if (userRows.rows.length > 0) {
             const uid = (userRows.rows[0] as any).id;
-            await db.execute(sql`DELETE FROM challonge_reported_combos WHERE tournament_id = ${parsed.tournamentId} AND user_id = ${uid}`);
+            await db.delete(challongeReportedCombos)
+              .where(
+                and(
+                  eq(challongeReportedCombos.tournamentId, parsed.tournamentId),
+                  eq(challongeReportedCombos.userId, uid)
+                )
+              );
           }
         } catch (err) {
           console.warn('Failed to clean up potential duplicate Challonge reported combos:', err);
