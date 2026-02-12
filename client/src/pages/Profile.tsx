@@ -486,7 +486,7 @@ export default function Profile() {
         ) : (
           <Link href="/login">
             <a
-              className="inline-flex items-center justify-center w-full h-12 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors no-underline min-w-[44px] min-h-[44px]"
+              className="inline-flex items-center justify-center w-full h-12 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors no-underline min-w-[44px] min-h-[44px] mt-6"
               data-testid="button-login-register"
             >
               Login / Register
