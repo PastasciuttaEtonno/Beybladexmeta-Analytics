@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import rateLimit from "express-rate-limit";
 
 const viteLogger = createLogger();
 
@@ -18,6 +19,15 @@ export function log(message: string, source = "express") {
 
   console.log(`${formattedTime} [${source}] ${message}`);
 }
+
+// Rate limiter for HTML serving to prevent DoS
+const htmlRateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // Limit each IP to 100 requests per minute
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -41,7 +51,12 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
+
+  // Cache for the template file to reduce filesystem reads
+  let templateCache: string | null = null;
+  let templateMtime: number = 0;
+
+  app.use("*", htmlRateLimiter, async (req, res, next) => {
     const url = req.originalUrl;
 
     try {
@@ -52,13 +67,22 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
+      // Check if template needs to be reloaded (file changed or not cached)
+      const stats = await fs.promises.stat(clientTemplate);
+      if (!templateCache || stats.mtimeMs > templateMtime) {
+        templateCache = await fs.promises.readFile(clientTemplate, "utf-8");
+        templateMtime = stats.mtimeMs;
+      }
+
+      let template = templateCache.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(req.path, template);
+
+      // Sanitize path to prevent XSS - normalize and ensure it's a valid path
+      const sanitizedPath = path.normalize(req.path).replace(/\.\./g, '');
+
+      const page = await vite.transformIndexHtml(sanitizedPath, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
