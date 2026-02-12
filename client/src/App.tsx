@@ -90,10 +90,29 @@ function AppRoutes() {
 }
 
 function AdsLayout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    try {
+      // @ts-ignore
+      if (window.ezstandalone) {
+        // @ts-ignore
+        ezstandalone.cmd.push(function () {
+          // @ts-ignore
+          ezstandalone.showAds(103);
+        });
+      }
+    } catch (e) {
+      console.error("Ezoic ad error:", e);
+    }
+  }, []);
+
   return (
-    <div className="flex justify-center min-h-screen">
+    <div className="flex flex-col items-center min-h-screen">
       <div className="flex-1 w-full max-w-2xl relative">
         {children}
+      </div>
+      {/* Bottom Ad Placeholder - 103 */}
+      <div className="w-full flex justify-center p-4 min-h-[100px]">
+        <div id="ezoic-pub-ad-placeholder-103"></div>
       </div>
     </div>
   );
