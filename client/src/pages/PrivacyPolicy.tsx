@@ -8,43 +8,38 @@ import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
     useEffect(() => {
-        // 1. Definiamo la funzione di inizializzazione
-        const initEzoic = () => {
+        // Aumentiamo leggermente il timer per dare tempo al DOM di stabilizzarsi
+        const timer = setTimeout(() => {
             try {
                 // @ts-ignore
                 const ez = window.ezstandalone;
 
-                // Se Ezoic non è ancora caricato o non ha la coda comandi, usciamo
-                if (!ez || !ez.cmd) return;
+                if (ez && ez.cmd) {
+                    ez.cmd.push(function () {
+                        // LOGICA SEMPLIFICATA:
 
-                ez.cmd.push(function () {
-                    // A. Se non è abilitato, abilitiamolo
-                    if (!ez.enabled) {
-                        ez.enable();
-                        console.log("ez.enable() called");
-                    }
-
-                    // B. QUESTO È IL PUNTO CHIAVE:
-                    // Diciamo a Ezoic di "ri-scansionare" la pagina per nuovi placeholder.
-                    console.log("Ezoic: Refreshing placeholders for SPA navigation...");
-                    ez.refresh();
-
-                    // C. Se c'è una funzione specifica per la privacy, chiamiamola
-                    if (typeof ez.showPrivacyPolicy === 'function') {
-                        ez.showPrivacyPolicy();
-                        console.log("ez.showPrivacyPolicy() called");
-                    }
-                });
-
+                        // 1. Controlliamo se Ezoic è GIÀ attivo (venendo dalla Home)
+                        if (!ez.enabled) {
+                            // Se NON è attivo, lo attiviamo.
+                            // enable() cercherà automaticamente lo span della privacy policy.
+                            console.log("Ezoic: Enabling for the first time...");
+                            ez.enable();
+                        } else {
+                            // 2. Se è GIÀ attivo, NON chiamiamo enable() di nuovo.
+                            // E NON chiamiamo refresh() perché non ci sono banner pubblicitari qui.
+                            // Chiamiamo solo la funzione specifica per mostrare la policy.
+                            console.log("Ezoic: Already enabled. Invoking showPrivacyPolicy...");
+                            if (typeof ez.showPrivacyPolicy === 'function') {
+                                ez.showPrivacyPolicy();
+                            }
+                        }
+                    });
+                }
             } catch (e) {
-                console.error("Ezoic init error:", e);
+                console.error("Ezoic initialization error:", e);
             }
-        };
+        }, 800); // 800ms è un buon compromesso
 
-        // 2. Usiamo un timeout per dare tempo a React di "dipingere" lo span nel DOM
-        const timer = setTimeout(initEzoic, 500);
-
-        // 3. Cleanup
         return () => clearTimeout(timer);
     }, []);
 
