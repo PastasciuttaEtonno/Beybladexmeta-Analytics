@@ -9,21 +9,32 @@ import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
     useEffect(() => {
-        try {
-            // @ts-ignore
-            if (window.ezstandalone) {
+        // Diamo tempo a React di dipingere il DOM e allo script di respirare
+        const timer = setTimeout(() => {
+            try {
                 // @ts-ignore
-                ezstandalone.cmd.push(function () {
-                    // @ts-ignore
-                    if (typeof ezstandalone.refresh === 'function') {
-                        // @ts-ignore
-                        ezstandalone.refresh();
-                    }
-                });
+                const ez = window.ezstandalone;
+
+                if (ez && ez.cmd) {
+                    ez.cmd.push(function () {
+                        // Forziamo Ezoic a cercare nuovi placeholder
+                        if (typeof ez.refresh === 'function') {
+                            console.log("Ezoic: Refreshing Privacy Policy embed...");
+                            ez.refresh();
+                        }
+                        // A volte serve specificare di mostrare il consent
+                        if (typeof ez.showPrivacyPolicy === 'function') {
+                            ez.showPrivacyPolicy();
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Ezoic refresh error:", e);
             }
-        } catch (e) {
-            console.error("Ezoic refresh error:", e);
-        }
+        }, 1000); // 1 secondo di ritardo è solitamente sufficiente
+
+        // Puliamo il timer se l'utente cambia pagina velocemente
+        return () => clearTimeout(timer);
     }, []);
 
     return (
