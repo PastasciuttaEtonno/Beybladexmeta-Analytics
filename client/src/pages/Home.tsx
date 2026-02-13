@@ -6,7 +6,7 @@ import { useTheme } from '@/contexts/ThemeProvider';
 import { PageHeader } from '@/components/PageHeader';
 import { HeaderLogo } from '@/components/HeaderLogo';
 import { LeaderboardDialog } from '@/components/LeaderboardDialog';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
@@ -96,6 +96,37 @@ export default function Home() {
   const dialogOpen = leaderboardType !== null;
   const [activeTab, setActiveTab] = useState<'components' | 'players'>('components');
   const [selectedSeason, setSelectedSeason] = useState<string>("All Time");
+
+  // Handle back button for dialog
+  const poppedRef = useRef(false);
+
+  useEffect(() => {
+    if (dialogOpen) {
+      // Push state when dialog opens
+      window.history.pushState({ dialog: 'leaderboard' }, '', '');
+      poppedRef.current = false;
+
+      const handlePopState = () => {
+        // User pressed back button
+        poppedRef.current = true;
+        setLeaderboardType(null);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        // If the dialog is closing but we didn't just pop state (i.e. closed via UI),
+        // we need to go back in history to remove the pushed state.
+        if (!poppedRef.current) {
+          window.history.back();
+        }
+      };
+    }
+  }, [dialogOpen]);
+
+
+
 
   const { data: topComponents, isLoading } = useQuery<TopComponentsResponse>({
     queryKey: ['/api/stats/top/components', selectedSeason],
