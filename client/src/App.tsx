@@ -124,44 +124,60 @@ function AdsLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  function GlobalCmAuthNotice() {
-    const { user } = useAuth();
+  function KofiSupportNotice() {
     const [open, setOpen] = useState(false);
+
     useEffect(() => {
-      const paramForce = new URLSearchParams(window.location.search).get('showCmBanner');
+      const paramForce = new URLSearchParams(window.location.search).get('showKofiBanner');
       if (paramForce === '1') { setOpen(true); return; }
-      const dismissedAtStr = localStorage.getItem("challonge_auth_info_dismissed_at");
+      const dismissedAtStr = localStorage.getItem("kofi_support_dismissed_at");
       if (!dismissedAtStr) { setOpen(true); return; }
       const dismissedAt = new Date(dismissedAtStr).getTime();
       const now = Date.now();
-      const twoDays = 2 * 24 * 60 * 60 * 1000;
-      if (!(dismissedAt > 0) || (now - dismissedAt) > twoDays) {
+      const threeDays = 3 * 24 * 60 * 60 * 1000;
+      if (!(dismissedAt > 0) || (now - dismissedAt) > threeDays) {
         setOpen(true);
       }
     }, []);
+
     const close = () => {
-      localStorage.setItem("challonge_auth_info_dismissed_at", new Date().toISOString());
+      localStorage.setItem("kofi_support_dismissed_at", new Date().toISOString());
       setOpen(false);
     };
+
+    const openKofi = () => {
+      window.open('https://ko-fi.com/Y8Y61U5MNM', '_blank');
+      close();
+    };
+
     if (!open) return null;
+
     return (
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-md pointer-events-auto">
-        <div className="rounded-md border bg-background shadow-lg p-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">autenticazione con challonge ora disponibile! 😸</p>
-            <div className="flex items-center justify-between gap-2">
-              {!user?.challengerId && (
-                <Button type="button" size="sm" onClick={() => { window.location.href = "/login"; }}>
-                  Accedi
-                </Button>
-              )}
-              <Button type="button" size="sm" variant="outline" onClick={close}>Chiudi</Button>
-            </div>
+        <div className="rounded-lg border bg-background/95 backdrop-blur-sm shadow-lg px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Ti piace BeybladeXMeta?{' '}
+              <button
+                onClick={openKofi}
+                className="text-[#683ae6] hover:text-[#5a32c7] underline underline-offset-2 font-medium transition-colors"
+              >
+                Supportami ☕
+              </button>
+            </p>
+            <button
+              onClick={close}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Chiudi"
+            >
+              ✕
+            </button>
           </div>
         </div>
       </div>
     );
   }
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -171,7 +187,7 @@ export default function App() {
               <AppRoutes />
             </AdsLayout>
             <Toaster />
-            <GlobalCmAuthNotice />
+            <KofiSupportNotice />
           </AuthProvider>
         </ThemeProvider>
       </TooltipProvider>
