@@ -73,9 +73,9 @@ app.use((req, res, next) => {
       "default-src 'self'",
       // reCAPTCHA v3/Enterprise uses google.com and gstatic.com
       // Google Analytics & Cloudflare
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://cmp.gatekeeperconsent.com https://the.gatekeeperconsent.com https://www.ezojs.com https://*.ezojs.com http://www.ezojs.com http://*.ezojs.com https://cdn.id5-sync.com https://privacy.gatekeeperconsent.com https://*.adtrafficquality.google https://*.ezoic.net https://*.google-analytics.com https://*.ezodn.com https://*.ezoic-id.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google https://*.google-analytics.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: https: http://*.ezoic.net http://*.ezojs.com",
+      "img-src 'self' data: https: ",
       "font-src 'self' data: https://fonts.gstatic.com",
       (() => {
         let origins = [
@@ -85,26 +85,10 @@ app.use((req, res, next) => {
           "https://*.gstatic.com",
           "https://pagead2.googlesyndication.com",
           "https://adservice.google.com",
-          "https://cmp.gatekeeperconsent.com",
-          "https://the.gatekeeperconsent.com",
-          "https://www.ezojs.com",
-          "https://*.ezojs.com",
-          "http://www.ezojs.com",
-          "http://*.ezojs.com",
-          "https://*.ezoic.com",
-          "https://*.ezoic.net",
-          "http://*.ezoic.net",
-          "https://privacy.gatekeeperconsent.com",
           "https://fundingchoicesmessages.google.com",
           "https://ep1.adtrafficquality.google",
-          "https://id5-sync.com",
-          "https://*.id5-sync.com",
-          "https://lbs.eu-1-id5-sync.com",
-          "https://cdn.id5-sync.com",
           "https://*.google-analytics.com",
           "https://*.doubleclick.net",
-          "https://*.ezodn.com",
-          "https://*.ezoic-id.com"
         ];
         const candidate = process.env.PUBLIC_MINIO_URL || process.env.VITE_PUBLIC_MINIO_URL || '';
         try {
@@ -113,7 +97,7 @@ app.use((req, res, next) => {
         return `connect-src ${origins.join(' ')}`;
       })(),
       // invisible v3 may create iframes
-      "frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://*.ezoic.net https://*.ezojs.com http://*.ezojs.com https://*.id5-sync.com https://*.google.com https://*.ezoic-id.com",
+      "frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://*.google.com",
       // tighten embedding and object usage
       "frame-ancestors 'none'",
       "object-src 'none'",
@@ -121,11 +105,6 @@ app.use((req, res, next) => {
   );
 
   next();
-});
-
-// ads.txt redirect for Ezoic manager
-app.get('/ads.txt', (_req, res) => {
-  res.redirect(301, 'https://srv.adstxtmanager.com/19390/beybladexmeta.com');
 });
 
 app.use(express.json({
