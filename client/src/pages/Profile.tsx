@@ -543,10 +543,7 @@ function ParticipationsList() {
                 </div>
                 <div className="flex items-center gap-2">
                   {t.bestPlacement != null && (
-                    <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
-                  )}
-                  {t.platform === 'challengermode' && (
-                    <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
+                    <Badge variant="secondary" className="text-xs">#{t.bestPlacement}</Badge>
                   )}
                 </div>
               </div>
