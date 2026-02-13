@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, TrendingUp, Shield, Cog, Zap } from 'lucide-react';
+import { Trophy, TrendingUp, Shield, Cog, Zap, Eye } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { PageHeader } from '@/components/PageHeader';
@@ -174,10 +174,11 @@ export default function Home() {
                 </div>
               </Card>
             ) : !topBlade ? (
-              <Card className="p-6 cursor-pointer min-h-[180px]" data-testid="card-top-blade-empty" onClick={() => setLeaderboardType('blade')}>
+              <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-blade-empty" onClick={() => setLeaderboardType('blade')}>
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-5 h-5 text-yellow-500" />
                   <h2 className="text-lg font-semibold">Top Blade</h2>
+                  <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
                 <div className="py-6 text-center">
                   <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
@@ -187,10 +188,11 @@ export default function Home() {
                 </div>
               </Card>
             ) : (
-              <Card className="p-6 space-y-4 cursor-pointer min-h-[180px]" data-testid="card-top-blade" onClick={() => setLeaderboardType('blade')}>
+              <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-blade" onClick={() => setLeaderboardType('blade')}>
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-5 h-5 text-yellow-500" />
                   <h2 className="text-lg font-semibold">Top Blade</h2>
+                  <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -236,10 +238,11 @@ export default function Home() {
                 </div>
               </Card>
             ) : !topRatchet ? (
-              <Card className="p-6 cursor-pointer min-h-[180px]" data-testid="card-top-ratchet-empty" onClick={() => setLeaderboardType('ratchet')}>
+              <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-ratchet-empty" onClick={() => setLeaderboardType('ratchet')}>
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-5 h-5 text-gray-400" />
                   <h2 className="text-lg font-semibold">Top Ratchet</h2>
+                  <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
                 <div className="py-6 text-center">
                   <Cog className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
@@ -249,10 +252,11 @@ export default function Home() {
                 </div>
               </Card>
             ) : (
-              <Card className="p-6 space-y-4 cursor-pointer min-h-[180px]" data-testid="card-top-ratchet" onClick={() => setLeaderboardType('ratchet')}>
+              <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-ratchet" onClick={() => setLeaderboardType('ratchet')}>
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-5 h-5 text-gray-400" />
                   <h2 className="text-lg font-semibold">Top Ratchet</h2>
+                  <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -298,10 +302,11 @@ export default function Home() {
                 </div>
               </Card>
             ) : !topBit ? (
-              <Card className="p-6 cursor-pointer min-h-[180px]" data-testid="card-top-bit-empty" onClick={() => setLeaderboardType('bit')}>
+              <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-bit-empty" onClick={() => setLeaderboardType('bit')}>
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-5 h-5 text-amber-600" />
                   <h2 className="text-lg font-semibold">Top Bit</h2>
+                  <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
                 <div className="py-6 text-center">
                   <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
@@ -311,10 +316,11 @@ export default function Home() {
                 </div>
               </Card>
             ) : (
-              <Card className="p-6 space-y-4 cursor-pointer min-h-[180px]" data-testid="card-top-bit" onClick={() => setLeaderboardType('bit')}>
+              <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-bit" onClick={() => setLeaderboardType('bit')}>
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-5 h-5 text-amber-600" />
                   <h2 className="text-lg font-semibold">Top Bit</h2>
+                  <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
 
                 <div className="flex items-center gap-4">
