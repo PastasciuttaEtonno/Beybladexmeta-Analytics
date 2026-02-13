@@ -134,8 +134,8 @@ export default function App() {
       if (!dismissedAtStr) { setOpen(true); return; }
       const dismissedAt = new Date(dismissedAtStr).getTime();
       const now = Date.now();
-      const threeDays = 3 * 24 * 60 * 60 * 1000;
-      if (!(dismissedAt > 0) || (now - dismissedAt) > threeDays) {
+      const oneDay = 1 * 24 * 60 * 60 * 1000;
+      if (!(dismissedAt > 0) || (now - dismissedAt) > oneDay) {
         setOpen(true);
       }
     }, []);

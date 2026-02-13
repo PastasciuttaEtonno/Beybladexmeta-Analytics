@@ -278,15 +278,7 @@ export default function Profile() {
             {!user?.challongeId ? (
               <div className="p-3 bg-orange-500/10 text-orange-700 dark:text-orange-400 rounded-md text-sm border border-orange-500/20">
                 <p className="font-medium mb-2">Autenticazione Challonge richiesta</p>
-                <p className="text-xs mb-3">Per richiedere alias devi prima collegare il tuo account Challonge.</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full bg-orange-600 text-white hover:bg-orange-700 border-0"
-                  onClick={() => { window.location.href = "/api/challonge/login"; }}
-                >
-                  Collega account Challonge
-                </Button>
+                <p className="text-xs mb-2">Per richiedere alias devi prima collegare il tuo account Challonge.</p>
               </div>
             ) : (
               <>
@@ -360,7 +352,7 @@ export default function Profile() {
             </div>
 
             {/* Challonge Section */}
-            <div className="space-y-2 pt-4 border-t">
+            <div className="space-y-2 mt-4">
 
               {(user as any)?.challongeUsername || user?.challongeId ? (
                 <div className="p-3 bg-orange-500/10 text-orange-700 dark:text-orange-400 rounded-md text-sm border border-orange-500/20">
