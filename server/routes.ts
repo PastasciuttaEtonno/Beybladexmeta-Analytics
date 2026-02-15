@@ -790,9 +790,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? Number(r.placement) * Number(r.total_participants)
             : 0;
 
+          // Fallback: Check if it's a Challonge tournament in our DB
+          let fallbackName = `Tournament ${r.tournament_id}`;
+          try {
+            const tCheck = await db.execute(sql`SELECT data FROM challonge_match_results WHERE tournament_id = ${String(r.tournament_id)} LIMIT 1`);
+            if (tCheck.rows.length > 0) {
+              const data = tCheck.rows[0].data as any;
+              const foundName = data.tournament_name || data.name || (data.tournament && data.tournament.name);
+              if (foundName) fallbackName = foundName;
+            }
+          } catch (e) {
+            // Ignore db error
+          }
+
           return {
             tournamentId: String(r.tournament_id),
-            tournamentName: `Tournament ${r.tournament_id}`,
+            tournamentName: fallbackName,
             date: r.date ? String(r.date) : null,
             playerName: r.player_name,
             playerId: r.player_id,
@@ -812,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? sql`
           SELECT 
             crc.tournament_id,
-            crc.tournament_name,
+            COALESCE(crc.tournament_name, mr.data->>'tournament_name', mr.data->>'name', mr.data->'tournament'->>'name') as tournament_name,
             crc.created_at as date,
             u.display_name as player_name,
             u.id as player_id,
@@ -840,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : sql`
           SELECT 
             crc.tournament_id,
-            crc.tournament_name,
+            COALESCE(crc.tournament_name, mr.data->>'tournament_name', mr.data->>'name', mr.data->'tournament'->>'name') as tournament_name,
             crc.created_at as date,
             u.display_name as player_name,
             u.id as player_id,

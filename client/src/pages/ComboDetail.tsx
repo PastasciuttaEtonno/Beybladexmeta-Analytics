@@ -370,7 +370,7 @@ export default function ComboDetail() {
                               <div className="flex items-center justify-between gap-3">
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium truncate">
-                                    {t.tournamentName || `Torneo ${t.tournamentId}`}
+                                    {t.tournamentName || t.tournament_name || `Torneo ${t.tournamentId}`}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     {t.playerName} • {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
