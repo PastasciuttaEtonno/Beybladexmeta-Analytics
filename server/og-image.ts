@@ -1,5 +1,7 @@
-
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import path from 'path';
+import fs from 'fs/promises';
+
 
 // Helper to sanitize filenames for MinIO lookup
 function getVariations(name: string): string[] {
@@ -66,6 +68,25 @@ export async function generateComboImage(combo: any): Promise<Buffer> {
         ctx.fillStyle = '#f59e0b'; // Amber 500
         ctx.font = 'bold 40px Arial';
         ctx.fillText(`Rank #${combo.rank}`, width / 2, 160);
+    }
+
+    // Draw White Logo (Top Right)
+    try {
+        const logoPath = path.join(process.cwd(), 'client', 'public', 'meta logoWhite.png');
+        const logoBuffer = await fs.readFile(logoPath);
+        const logoImg = await loadImage(logoBuffer);
+
+        // Target width 150px, maintain aspect ratio
+        const logoWidth = 150;
+        const scale = logoWidth / logoImg.width;
+        const logoHeight = logoImg.height * scale;
+
+        const logoX = width - logoWidth - 40; // 40px padding from right
+        const logoY = 40; // 40px padding from top
+
+        ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+    } catch (e) {
+        console.error("Failed to load logo for OG image:", e);
     }
 
     // Load Component Images
