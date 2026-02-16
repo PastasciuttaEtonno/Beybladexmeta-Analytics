@@ -828,7 +828,7 @@ export default function TournamentDetail() {
                     } else if (!user?.isAdmin && editCombos.some(c => c.lockTime)) {
                       return (
                         <div className="mt-1 text-sm">
-                          <span className="text-destructive font-semibold">Tempo per le modifiche scaduto.</span>
+                          <span className="text-destructive font-semibold">Tempo per modifiche scaduto.</span>
                         </div>
                       );
                     }
