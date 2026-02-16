@@ -18,6 +18,7 @@ import { processExternalCombo, calculatePoints as calcExternalPoints, revertExte
 // Import recalculateAllRegionalStats
 import { recalculateAllRegionalStats } from "./lib/regionalScoring";
 import { determineSeason } from "./lib/seasons";
+import { generateComboImage } from "./og-image";
 
 // Extend express session type
 declare module 'express-session' {
@@ -609,47 +610,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const key = String(req.query.key || '').trim();
       if (!key) return res.status(400).json({ error: 'Missing key' });
-      const parts = key.split('|');
-      if (parts.length !== 5) return res.status(400).json({ error: 'Invalid key format' });
-      const [blade, assistBlade, ratchet, bit, lockChip] = parts;
 
-      const result = await db.execute(sql`
-        WITH ranked AS (
-          SELECT blade, assist_blade, ratchet, bit, lock_chip,
-                 primi_posti, secondi_posti, terzi_posti, quarti_posti, punteggio_totale, data_creazione,
-                 ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
+      let combo: any = null;
+      let rank = 0;
+
+      // Strategy 1: exact match with pipe separator (Fast)
+      if (key.includes('|')) {
+        const parts = key.split('|');
+        if (parts.length === 5) {
+          const [blade, assistBlade, ratchet, bit, lockChip] = parts;
+          const result = await db.execute(sql`
+            WITH ranked AS (
+              SELECT blade, assist_blade, ratchet, bit, lock_chip,
+                     primi_posti, secondi_posti, terzi_posti, quarti_posti, punteggio_totale, data_creazione,
+                     ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
+              FROM combo_stats
+            )
+            SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
+                   primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
+                   punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
+            FROM ranked
+            WHERE blade = ${blade}
+              AND assist_blade = ${assistBlade}
+              AND ratchet = ${ratchet}
+              AND bit = ${bit}
+              AND lock_chip = ${lockChip}
+            LIMIT 1
+          `);
+          if (result.rows.length > 0) {
+            combo = (result.rows as any[])[0];
+            rank = Number(combo.rank);
+          }
+        }
+      }
+
+      // Strategy 2: Slug match (Slow fallback for SEO links)
+      if (!combo) {
+        const allCombos = await db.execute(sql`
+          SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
+                 primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
+                 punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione"
           FROM combo_stats
-        )
-        SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
-               primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
-               punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
-        FROM ranked
-        WHERE blade = ${blade}
-          AND assist_blade = ${assistBlade}
-          AND ratchet = ${ratchet}
-          AND bit = ${bit}
-          AND lock_chip = ${lockChip}
-        LIMIT 1
-      `);
+          ORDER BY punteggio_totale DESC, data_creazione DESC
+        `);
 
-      const row = (result.rows as any[])[0];
-      if (!row) return res.status(404).json({ error: 'Combo not found' });
+        const toSlug = (s: string) => String(s).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+        const targetIndex = (allCombos.rows as any[]).findIndex((c: any) => {
+          const parts = [
+            (c.lockChip || '').toLowerCase() !== 'none' ? c.lockChip : '',
+            c.blade,
+            (c.assistBlade || '').toLowerCase() !== 'none' ? c.assistBlade : '',
+            (c.ratchet || '').toLowerCase() !== 'none' ? c.ratchet : '',
+            c.bit
+          ].filter(Boolean).map(toSlug);
+          return parts.join('-') === key;
+        });
+
+        if (targetIndex !== -1) {
+          combo = (allCombos.rows as any[])[targetIndex];
+          rank = targetIndex + 1;
+        }
+      }
+
+      if (!combo) return res.status(404).json({ error: 'Combo not found' });
+
       return res.json({
         combo: {
-          blade: row.blade,
-          assistBlade: row.assistBlade,
-          ratchet: row.ratchet,
-          bit: row.bit,
-          lockChip: row.lockChip,
-          primiPosti: row.primiPosti,
-          secondiPosti: row.secondiPosti,
-          terziPosti: row.terziPosti,
-          quartiPosti: row.quartiPosti,
-          punteggioTotale: row.punteggioTotale,
-          dataCreazione: row.dataCreazione,
-        }, rank: Number(row.rank)
+          blade: combo.blade,
+          assistBlade: combo.assistBlade,
+          ratchet: combo.ratchet,
+          bit: combo.bit,
+          lockChip: combo.lockChip,
+          primiPosti: combo.primiPosti,
+          secondiPosti: combo.secondiPosti,
+          terziPosti: combo.terziPosti,
+          quartiPosti: combo.quartiPosti,
+          punteggioTotale: combo.punteggioTotale,
+          dataCreazione: combo.dataCreazione,
+        },
+        rank
       });
     } catch (error) {
+      console.error('Error fetching combo by key:', error);
       res.status(500).json({ error: 'Failed to fetch combo by key' });
     }
   });
@@ -3091,6 +3133,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching Challengermode tournaments:', error);
       res.status(500).json({ error: error?.message || 'Failed to fetch external tournaments' });
+    }
+  });
+
+  app.get('/api/og/combo/:key', async (req, res) => {
+    try {
+      const key = req.params.key;
+      let target: any = null;
+      let rank = 0;
+
+      // Strategy 1: Pipe separator (Internal links)
+      if (key.includes('|')) {
+        const parts = key.split('|');
+        if (parts.length === 5) {
+          const [blade, assistBlade, ratchet, bit, lockChip] = parts;
+          const result = await db.execute(sql`
+            WITH ranked AS (
+              SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
+                     primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
+                     punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione",
+                     ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
+              FROM combo_stats
+            )
+            SELECT * FROM ranked
+            WHERE blade = ${blade}
+              AND "assistBlade" = ${assistBlade}
+              AND ratchet = ${ratchet}
+              AND bit = ${bit}
+              AND "lockChip" = ${lockChip}
+            LIMIT 1
+          `);
+          if (result.rows.length > 0) {
+            const row = (result.rows as any[])[0];
+            target = {
+              blade: row.blade,
+              assistBlade: row.assistBlade,
+              ratchet: row.ratchet,
+              bit: row.bit,
+              lockChip: row.lockChip,
+              punteggioTotale: row.punteggioTotale
+            };
+            rank = Number(row.rank);
+          }
+        }
+      }
+
+      // Strategy 2: Slug match (Sitemap/SEO links)
+      if (!target) {
+        const allCombos = await db.select().from(comboStats);
+        // Note: Sort in memory to determine rank
+        allCombos.sort((a, b) => b.punteggioTotale - a.punteggioTotale || (b.dataCreazione?.getTime() || 0) - (a.dataCreazione?.getTime() || 0));
+
+        const toSlug = (s: string) => String(s).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+        const targetIndex = allCombos.findIndex((c: any) => {
+          const parts = [
+            (c.lockChip || '').toLowerCase() !== 'none' ? c.lockChip : '',
+            c.blade,
+            (c.assistBlade || '').toLowerCase() !== 'none' ? c.assistBlade : '',
+            (c.ratchet || '').toLowerCase() !== 'none' ? c.ratchet : '',
+            c.bit
+          ].filter(Boolean).map(toSlug);
+          return parts.join('-') === key;
+        });
+
+        if (targetIndex !== -1) {
+          target = allCombos[targetIndex];
+          rank = targetIndex + 1;
+        }
+      }
+
+      if (!target) {
+        return res.status(404).send('Combo not found');
+      }
+
+      const buffer = await generateComboImage({ ...target, rank });
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+      res.send(buffer);
+    } catch (err) {
+      console.error('Error generating OG image:', err);
+      res.status(500).send('Internal Server Error');
     }
   });
 

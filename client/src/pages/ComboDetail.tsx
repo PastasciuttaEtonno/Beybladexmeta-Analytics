@@ -11,7 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy, Medal, Award, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Trophy, Medal, Award, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Seo } from "@/components/Seo";
 import { format } from "date-fns";
 
@@ -88,6 +89,7 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
 export default function ComboDetail() {
   const [, params] = useRoute("/combo/:id");
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const comboId = params?.id;
 
@@ -217,7 +219,36 @@ export default function ComboDetail() {
   ].filter(Boolean).join(" • ");
   const canonical = `${window.location.origin}/combo/${encodeURIComponent(decodedId || "")}`;
   const origin = window.location.origin;
-  const imageUrl = `${origin}/meta%20logo.svg`;
+  const imageUrl = `${origin}/api/og/combo/${encodeURIComponent(decodedId || "")}`;
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${comboTitle} · Combo`,
+          text: `Check out this Beyblade X combo: ${comboTitle}`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Link copiato!",
+          description: "Il link della combo è stato copiato negli appunti.",
+        });
+      } catch (err) {
+        toast({
+          title: "Errore",
+          description: "Impossibile copiare il link.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
@@ -244,15 +275,21 @@ export default function ComboDetail() {
         }}
       />
       <div className="max-w-2xl mx-auto space-y-6">
-        <Link href="/analytics">
-          <a
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Indietro
-          </a>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/analytics">
+            <a
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Indietro
+            </a>
+          </Link>
+          <Button onClick={handleShare} variant="ghost" className="gap-2">
+            <Share2 className="w-4 h-4" />
+            Condividi
+          </Button>
+        </div>
 
         <Card>
           <CardHeader>
