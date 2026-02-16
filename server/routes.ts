@@ -1,4 +1,6 @@
 import type { Express, Request, Response } from "express";
+import fs from "fs";
+import path from "path";
 import { z } from "zod";
 import { RecaptchaEnterpriseServiceClient } from "@google-cloud/recaptcha-enterprise";
 import { createServer, type Server } from "http";
@@ -776,6 +778,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error generating combo OG image:', error);
       res.status(500).send('Failed to generate image');
+    }
+  });
+
+  // Serve dynamic index.html for combo routes to support social sharing previews
+  app.get('/combo/:id', async (req, res, next) => {
+    try {
+      // In production, we serve the built index.html with modified meta tags
+      // In development, we might let the client-side router handle it,
+      // but to test OG tags, we need to intercept.
+
+      const isProduction = process.env.NODE_ENV === 'production';
+      const publicPath = isProduction
+        ? path.resolve(process.cwd(), 'dist', 'public')
+        : path.resolve(process.cwd(), 'client'); // Dev fallback might need different handling
+
+      const indexPath = path.join(publicPath, 'index.html');
+
+      // If file doesn't exist (e.g. dev mode without build), pass strictly to next handler
+      if (!fs.existsSync(indexPath)) {
+        return next();
+      }
+
+      let html = await fs.promises.readFile(indexPath, 'utf-8');
+      const comboId = req.params.id;
+      const ogImageUrl = `https://beybladexmeta.com/api/og/combo/${comboId}`;
+
+      // Replace the default OG image
+      // Robust regex to handle optional self-closing slash and spacing
+      html = html.replace(
+        /<meta property="og:image" content="[^"]*"\s*\/?>/g,
+        `<meta property="og:image" content="${ogImageUrl}" />`
+      );
+
+      // Also update twitter card image
+      html = html.replace(
+        /<meta name="twitter:image" content="[^"]*"\s*\/?>/g,
+        `<meta name="twitter:image" content="${ogImageUrl}" />`
+      );
+
+      res.send(html);
+    } catch (error) {
+      console.error('Error injecting OG tags:', error);
+      next();
     }
   });
 
