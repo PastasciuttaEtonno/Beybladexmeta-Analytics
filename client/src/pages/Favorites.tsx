@@ -773,12 +773,12 @@ export default function Favorites() {
                           />
                         </PaginationItem>
                         {page > 2 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>1</PaginationLink>
                           </PaginationItem>
                         )}
                         {page > 3 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationEllipsis />
                           </PaginationItem>
                         )}
@@ -790,12 +790,12 @@ export default function Favorites() {
                             </PaginationItem>
                           ))}
                         {page < totalPages - 2 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationEllipsis />
                           </PaginationItem>
                         )}
                         {page < totalPages - 1 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>{totalPages}</PaginationLink>
                           </PaginationItem>
                         )}
@@ -1127,12 +1127,12 @@ export default function Favorites() {
                           />
                         </PaginationItem>
                         {deckPage > 2 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(1); }}>1</PaginationLink>
                           </PaginationItem>
                         )}
                         {deckPage > 3 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationEllipsis />
                           </PaginationItem>
                         )}
@@ -1144,12 +1144,12 @@ export default function Favorites() {
                             </PaginationItem>
                           ))}
                         {deckPage < totalDeckPages - 2 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationEllipsis />
                           </PaginationItem>
                         )}
                         {deckPage < totalDeckPages - 1 && (
-                          <PaginationItem>
+                          <PaginationItem className="hidden sm:block">
                             <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentDeckPage(totalDeckPages); }}>{totalDeckPages}</PaginationLink>
                           </PaginationItem>
                         )}

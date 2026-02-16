@@ -625,7 +625,7 @@ export default function Analytics() {
                                     name={combo.blade}
                                   />
                                 </div>
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 max-[330px]:hidden">
                                   <p className="text-xs text-muted-foreground">
                                     Blade
                                   </p>
@@ -644,7 +644,7 @@ export default function Analytics() {
                                     <div className="w-10 h-10 shrink-0">
                                       <ComponentImage folder={folderMap['assist-blade']} name={combo.assistBlade} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 max-[330px]:hidden">
                                       <p className="text-xs text-muted-foreground">
                                         <span className="sm:hidden">As. Blade</span>
                                         <span className="hidden sm:inline">Assist Blade</span>
@@ -658,7 +658,7 @@ export default function Analytics() {
                                     <div className="w-10 h-10 shrink-0">
                                       <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 max-[330px]:hidden">
                                       <p className="text-xs text-muted-foreground">Ratchet</p>
                                       <p className="text-sm font-medium truncate">{combo.ratchet}</p>
                                     </div>
@@ -668,7 +668,7 @@ export default function Analytics() {
                                   <div className="w-10 h-10 shrink-0">
                                     <ComponentImage folder={folderMap['bit']} name={combo.bit} />
                                   </div>
-                                  <div className="min-w-0">
+                                  <div className="min-w-0 max-[330px]:hidden">
                                     <p className="text-xs text-muted-foreground">Bit</p>
                                     <p className="text-sm font-medium truncate">{combo.bit}</p>
                                   </div>
@@ -678,7 +678,7 @@ export default function Analytics() {
                                     <div className="w-10 h-10 shrink-0">
                                       <ComponentImage folder={folderMap['lock-chip']} name={combo.lockChip} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 max-[330px]:hidden">
                                       <p className="text-xs text-muted-foreground">Lock Chip</p>
                                       <p className="text-sm font-medium truncate">{combo.lockChip}</p>
                                     </div>

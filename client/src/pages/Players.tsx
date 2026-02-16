@@ -302,12 +302,12 @@ export default function Players() {
                         />
                       </PaginationItem>
                       {page > 2 && (
-                        <PaginationItem>
+                        <PaginationItem className="hidden sm:block">
                           <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(1); }}>1</PaginationLink>
                         </PaginationItem>
                       )}
                       {page > 3 && (
-                        <PaginationItem>
+                        <PaginationItem className="hidden sm:block">
                           <PaginationEllipsis />
                         </PaginationItem>
                       )}
@@ -319,12 +319,12 @@ export default function Players() {
                           </PaginationItem>
                         ))}
                       {page < totalPages - 2 && (
-                        <PaginationItem>
+                        <PaginationItem className="hidden sm:block">
                           <PaginationEllipsis />
                         </PaginationItem>
                       )}
                       {page < totalPages - 1 && (
-                        <PaginationItem>
+                        <PaginationItem className="hidden sm:block">
                           <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(totalPages); }}>{totalPages}</PaginationLink>
                         </PaginationItem>
                       )}

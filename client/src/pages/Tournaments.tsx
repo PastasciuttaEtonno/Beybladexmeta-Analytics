@@ -861,12 +861,12 @@ export default function Tournaments() {
                 />
               </PaginationItem>
               {page > 2 && (
-                <PaginationItem>
+                <PaginationItem className="hidden sm:block">
                   <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>1</PaginationLink>
                 </PaginationItem>
               )}
               {page > 3 && (
-                <PaginationItem>
+                <PaginationItem className="hidden sm:block">
                   <PaginationEllipsis />
                 </PaginationItem>
               )}
@@ -878,12 +878,12 @@ export default function Tournaments() {
                   </PaginationItem>
                 ))}
               {page < totalPages - 2 && (
-                <PaginationItem>
+                <PaginationItem className="hidden sm:block">
                   <PaginationEllipsis />
                 </PaginationItem>
               )}
               {page < totalPages - 1 && (
-                <PaginationItem>
+                <PaginationItem className="hidden sm:block">
                   <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>{totalPages}</PaginationLink>
                 </PaginationItem>
               )}
