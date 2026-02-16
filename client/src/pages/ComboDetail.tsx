@@ -225,13 +225,22 @@ export default function ComboDetail() {
         title={`${comboTitle} · Combo`}
         description={`Dettagli della combo: ${comboTitle}. Rank #${rank}.`}
         canonical={canonical}
-        type="website"
+        type="article"
         imageUrl={imageUrl}
         structuredData={{
           "@context": "https://schema.org",
-          "@type": "WebPage",
-          "name": comboTitle,
-          "url": canonical,
+          "@type": "Article",
+          "headline": comboTitle,
+          "author": {
+            "@type": "Organization",
+            "name": "Beyblade X Meta"
+          },
+          "datePublished": combo.dataCreazione,
+          "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": canonical
+          },
+          "image": imageUrl
         }}
       />
       <div className="max-w-2xl mx-auto space-y-6">

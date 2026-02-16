@@ -54,7 +54,7 @@ export default function About() {
                     <section className="space-y-3">
                         <h2 className="text-2xl font-bold tracking-tight">Dati e funzionamento</h2>
                         <p className="text-muted-foreground">
-                            I dati sono raccolti dai tornei realizzati nella comunita di <a href="https://www.ibna.it/" target="_blank" rel="noopener noreferrer" className="font-bold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors">IBNA</a> in particolare da Challengermode e Challonge.
+                            I dati sono raccolti dai tornei realizzati nella community di <a href="https://www.ibna.it/" target="_blank" rel="noopener noreferrer" className="font-bold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors">IBNA</a> in particolare da Challengermode e Challonge.
                             Gli utenti autenticati hanno la possibilità di registrare le combo che hanno utilizzato per ottenere il podio in un torneo.
                             In questo modo si contribuisce all'aggiornamento delle classifiche e all'analisi del metagame in italia.
                         </p>

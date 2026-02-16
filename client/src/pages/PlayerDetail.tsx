@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Seo } from "@/components/Seo";
 
 type PlayerProfileResp = {
   player: { nickname: string; avatar: string | null; platforms: string[] };
@@ -155,6 +156,52 @@ export default function PlayerDetail() {
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
       <PageHeader title={profile ? profile.nickname : "Profilo Giocatore"} />
+      {profile && (
+        <Seo
+          title={`${profile.nickname} - Profilo Giocatore | Beyblade X Meta`}
+          description={`Guarda le statistiche, le combo preferite e i tornei di ${profile.nickname} su Beyblade X Meta.`}
+          imageUrl={sanitizeImageUrl(profile.avatar) || undefined}
+          type="profile"
+          structuredData={{
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "name": profile.nickname,
+            "image": sanitizeImageUrl(profile.avatar),
+            "url": window.location.href,
+            "description": `Profilo giocatore di Beyblade X per ${profile.nickname}`,
+            "interactionStatistic": stats ? [
+              {
+                "@type": "InteractionCounter",
+                "interactionType": "https://schema.org/ParticipateAction",
+                "userInteractionCount": tourData?.tournaments.length || 0
+              }
+            ] : undefined
+          }}
+        />
+      )}
+      {profile && (
+        <Seo
+          title={`${profile.nickname} - Profilo Giocatore | Beyblade X Meta`}
+          description={`Guarda le statistiche, le combo preferite e i tornei di ${profile.nickname} su Beyblade X Meta.`}
+          image={sanitizeImageUrl(profile.avatar) || undefined}
+          type="profile"
+          structuredData={{
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "name": profile.nickname,
+            "image": sanitizeImageUrl(profile.avatar),
+            "url": window.location.href,
+            "description": `Profilo giocatore di Beyblade X per ${profile.nickname}`,
+            "interactionStatistic": stats ? [
+              {
+                "@type": "InteractionCounter",
+                "interactionType": "https://schema.org/ParticipateAction",
+                "userInteractionCount": tourData?.tournaments.length || 0
+              }
+            ] : undefined
+          }}
+        />
+      )}
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-3">
         <Tabs
           value={"players"}
