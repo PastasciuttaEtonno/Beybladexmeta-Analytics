@@ -1,7 +1,7 @@
 {
   "name": "BeybladeXMeta Analytics",
   "short_name": "BBX Meta",
-  "description": "In-depth stats and analytics for the Beyblade X metagame.",
+  "description": "Statistiche e analisi sul meta di Beyblade X.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

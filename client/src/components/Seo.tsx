@@ -64,41 +64,41 @@ export function Seo({ title, description, canonical, imageUrl, type, structuredD
   useEffect(() => {
     const origin = window.location.origin;
     const url = canonical || `${origin}${window.location.pathname}`;
-    
+
     // Set title
     if (title) {
       document.title = title;
       setProperty("og:title", title);
       setMeta("twitter:title", title);
     }
-    
+
     // Set description
     if (description) {
       setMeta("description", description);
       setProperty("og:description", description);
       setMeta("twitter:description", description);
     }
-    
+
     // Set canonical
     setCanonical(url);
     setProperty("og:url", url);
-    
+
     // Set Open Graph type
     if (type) setProperty("og:type", type);
-    
+
     // Set images
-    const img = imageUrl || `${origin}/meta%20logo.svg`;
+    const img = imageUrl || `${origin}/meta%20logo.png`;
     setProperty("og:image", img);
     setMeta("twitter:image", img);
-    
+
     // Set Twitter Card type
     setMeta("twitter:card", "summary_large_image");
-    
+
     // Set robots meta tag
     if (robots) {
       setMeta("robots", robots);
     }
-    
+
     // Set structured data
     if (structuredData) setJsonLd(structuredData);
   }, [title, description, canonical, imageUrl, type, structuredData, robots]);
