@@ -3715,7 +3715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ratchet: r.ratchet,
         bit: r.bit,
         lockChip: r.lockChip || r.lock_chip || 'None',
-        season: r.season || undefined
+        season: r.season || undefined,
+        lockTime: r.createdAt || r.updatedAt || r.updated_at
       }));
       res.json({ combos });
     } catch (error: any) {
@@ -4024,7 +4025,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch combos for this user and tournament from challonge_reported_combos
       const combosRes = await db.execute(sql`
-        SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", combo_number as "comboNumber"
+        SELECT blade, assist_blade as "assistBlade", ratchet, bit, lock_chip as "lockChip", combo_number as "comboNumber", created_at as "createdAt"
         FROM challonge_reported_combos
         WHERE tournament_id = ${tournamentId} AND user_id = ${user.id}
         ORDER BY combo_number ASC
@@ -4036,6 +4037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ratchet: row.ratchet || '',
         bit: row.bit || '',
         lockChip: row.lockChip || 'None',
+        lockTime: row.createdAt,
       }));
 
       res.json({ combos });
@@ -4052,6 +4054,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user!; // Populated by global middleware
 
       if (!tournamentId) return res.status(400).json({ error: 'Missing tournament id' });
+
+      // Check 48h edit window for non-admins (Challonge)
+      if (!req.user!.isAdmin) {
+        const existingCombosCheck = await db.select({
+          createdAt: challongeReportedCombos.createdAt
+        })
+          .from(challongeReportedCombos)
+          .where(
+            and(
+              eq(challongeReportedCombos.tournamentId, tournamentId),
+              eq(challongeReportedCombos.userId, user.id)
+            )
+          )
+          .orderBy(asc(challongeReportedCombos.createdAt))
+          .limit(1);
+
+        if (existingCombosCheck.length > 0) {
+          const firstCreated = existingCombosCheck[0].createdAt;
+          // 48 hours = 48 * 60 * 60 * 1000 = 172800000 ms
+          if (firstCreated && (Date.now() - new Date(firstCreated).getTime() > 172800000)) {
+            return res.status(403).json({ error: 'Tempo per le modifiche scaduto (48 ore).' });
+          }
+        }
+      }
 
       // 1. Fetch Tournament Data (Challonge)
       const challongeRes = await db.execute(sql`SELECT data FROM challonge_match_results WHERE tournament_id = ${tournamentId} LIMIT 1`);
@@ -4356,6 +4382,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = rows[0];
       if (!existing) return res.status(404).json({ error: 'Combo non trovata o non di tua proprietà' });
 
+      // Check 48h edit window for non-admins (Challengermode)
+      if (!req.user!.isAdmin) {
+        const lastUpdated = existing.updatedAt;
+        if (lastUpdated && (Date.now() - new Date(lastUpdated).getTime() > 172800000)) {
+          return res.status(403).json({ error: 'Tempo per le modifiche scaduto (48 ore).' });
+        }
+      }
+
       const placement = Number(existing.placement ?? 0);
       const totalParticipants = Number(existing.totalParticipants ?? 0);
 
@@ -4497,6 +4531,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
       const existing = rows[0];
       if (!existing) return res.status(404).json({ error: 'Combo non trovata o non di tua proprietà' });
+
+      // Check 48h edit window for non-admins (Challengermode)
+      if (!req.user!.isAdmin) {
+        const lastUpdated = existing.updatedAt;
+        if (lastUpdated && (Date.now() - new Date(lastUpdated).getTime() > 172800000)) {
+          return res.status(403).json({ error: 'Tempo per le modifiche scaduto (48 ore).' });
+        }
+      }
 
       const placement = Number(existing.placement ?? 0);
       const totalParticipants = Number(existing.totalParticipants ?? 0);

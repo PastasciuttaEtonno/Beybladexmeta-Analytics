@@ -23,6 +23,7 @@ type ComboForm = {
   bit: string;
   lockChip: string;
   season?: string;
+  lockTime?: string;
 };
 
 const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
@@ -412,9 +413,22 @@ export default function TournamentDetail() {
       setEditDialogOpen(false);
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err?.message || "Failed to save combos", variant: "destructive" });
+      if (err.message && err.message.includes("Tempo per le modifiche scaduto")) {
+        toast({ title: "Modifica bloccata", description: "Finestra di modifica chiusa, contattare l'admin", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: err?.message || "Failed to save combos", variant: "destructive" });
+      }
     },
   });
+
+  // Calculate lock status
+  const isLocked = !user?.isAdmin && (() => {
+    const times = editCombos.map(c => c.lockTime).filter(Boolean).map(t => new Date(t!).getTime());
+    if (times.length === 0) return false;
+    const latest = Math.max(...times);
+    const deadline = latest + (48 * 60 * 60 * 1000);
+    return Date.now() > deadline;
+  })();
 
   const renderLineups = () => {
     const detail = detailResp?.detail;
@@ -792,6 +806,34 @@ export default function TournamentDetail() {
                       ? `Modifica combo: ${selectedPlayer?.username || 'Giocatore'}`
                       : (selectedPlayer ? `Modifica combo: ${selectedPlayer.username}` : 'Modifica combo')}
                   </DialogTitle>
+                  {(() => {
+                    if (!isLocked) {
+                      const times = editCombos.map(c => c.lockTime).filter(Boolean).map(t => new Date(t!).getTime());
+                      if (times.length === 0) return null;
+                      const latest = Math.max(...times);
+                      const deadline = latest + (48 * 60 * 60 * 1000); // 48 hours
+                      const now = Date.now();
+                      const diff = deadline - now;
+                      if (diff <= 0) return null; // Logic handled by isLocked, but just in case
+
+                      const hours = Math.floor(diff / (1000 * 60 * 60));
+                      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                      return (
+                        <div className="mt-1 text-sm">
+                          <span className="text-muted-foreground">
+                            Tempo rimasto: <span className="font-semibold text-primary">{hours}h {minutes}m</span>
+                          </span>
+                        </div>
+                      );
+                    } else if (!user?.isAdmin && editCombos.some(c => c.lockTime)) {
+                      return (
+                        <div className="mt-1 text-sm">
+                          <span className="text-destructive font-semibold">Tempo per le modifiche scaduto.</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </DialogHeader>
 
                 {playerCombosLoading ? (
@@ -890,7 +932,7 @@ export default function TournamentDetail() {
 
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                      <Button type="button" onClick={() => saveCombosMutation.mutate()} disabled={saveCombosMutation.isPending}>
+                      <Button type="button" onClick={() => saveCombosMutation.mutate()} disabled={saveCombosMutation.isPending || isLocked}>
                         {saveCombosMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : 'Save'}
@@ -902,6 +944,6 @@ export default function TournamentDetail() {
             </Dialog>
           )}
       </main>
-    </div>
+    </div >
   );
 }
