@@ -9,6 +9,9 @@ export function registerChallongeAuth(app: express.Express) {
     const router = express.Router();
 
     const computeRedirectUri = (req: express.Request): string => {
+        if (process.env.APP_BASE_URL) {
+            return `${process.env.APP_BASE_URL}/api/challonge/callback`;
+        }
         const forwardedProto = req.header('x-forwarded-proto');
         const proto = (forwardedProto && forwardedProto.split(',')[0]) || req.protocol || 'https';
         const forwardedHost = req.header('x-forwarded-host');
@@ -30,14 +33,20 @@ export function registerChallongeAuth(app: express.Express) {
         const state = crypto.randomBytes(16).toString("hex");
         (req.session as any).challonge_oauth_state = state;
 
-        const authUrl = new URL("https://api.challonge.com/oauth/authorize");
-        authUrl.searchParams.set("client_id", clientId);
-        authUrl.searchParams.set("redirect_uri", redirectUri);
-        authUrl.searchParams.set("response_type", "code");
-        authUrl.searchParams.set("scope", scope);
-        authUrl.searchParams.set("state", state);
+        req.session.save((err) => {
+            if (err) {
+                console.error("Session save error:", err);
+                return res.redirect("/profile?error=" + encodeURIComponent("Session error"));
+            }
+            const authUrl = new URL("https://api.challonge.com/oauth/authorize");
+            authUrl.searchParams.set("client_id", clientId);
+            authUrl.searchParams.set("redirect_uri", redirectUri);
+            authUrl.searchParams.set("response_type", "code");
+            authUrl.searchParams.set("scope", scope);
+            authUrl.searchParams.set("state", state);
 
-        res.redirect(authUrl.toString());
+            res.redirect(authUrl.toString());
+        });
     });
 
     router.get("/callback", async (req, res) => {
@@ -64,7 +73,6 @@ export function registerChallongeAuth(app: express.Express) {
             const clientId = process.env.CHALLONGE_APP_CLIENT_ID;
             const clientSecret = process.env.CHALLONGE_APP_CLIENT_SECRET;
             const redirectUri = computeRedirectUri(req);
-
 
             if (!clientId || !clientSecret) {
                 return res.redirect("/profile?error=" + encodeURIComponent("Challonge OAuth misconfigured"));

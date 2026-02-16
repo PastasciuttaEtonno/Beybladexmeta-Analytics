@@ -218,10 +218,10 @@ app.use((req, res, next) => {
     saveUninitialized: false,
     proxy: true,
     cookie: {
-      secure: isProduction, // Enforce HTTPS in production
+      secure: isProduction && (!process.env.APP_BASE_URL || process.env.APP_BASE_URL.startsWith("https")), // Enforce HTTPS in production unless APP_BASE_URL is http
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      sameSite: 'strict', // CSRF protection: prevents cookies from being sent in cross-site requests
+      sameSite: 'lax', // CSRF protection: prevents cookies from being sent in cross-site requests
     }
   }));
 
