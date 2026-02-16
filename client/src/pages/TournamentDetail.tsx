@@ -468,7 +468,7 @@ export default function TournamentDetail() {
             user: {
               userId: String(p.id), // Use the ID from backend (name or challonge ID)
               username: p.username,
-              profilePicture: { url: null } // Avatar not always available
+              profilePicture: p.profilePicture || { url: null } // Use backend avatar
             },
             // Attach combos directly for local usage
             _directCombos: combos,

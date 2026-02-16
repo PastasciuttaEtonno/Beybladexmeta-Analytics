@@ -1754,7 +1754,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (u?.photoURL) userAvatar = u.photoURL;
       }
       if (!userAvatar && challongePlayer) {
-        const u = await db.query.users.findFirst({ where: eq(users.challongeId, challongePlayer.id) });
+        // First try matching by ID
+        let u = await db.query.users.findFirst({ where: eq(users.challongeId, challongePlayer.id) });
+
+        // Fallback: Try matching by Username if ID lookup failed
+        if (!u) {
+          u = await db.query.users.findFirst({
+            where: sql`LOWER(${users.challongeUsername}) = LOWER(${nickname})`
+          });
+        }
+
         if (u?.photoURL) userAvatar = u.photoURL;
       }
 
@@ -3902,12 +3911,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Extract Top 3 from standings
+        // Extract Top 4 from standings
         const standings = data.standings || [];
-        const top3 = standings
-          .filter((p: any) => p.rank <= 4)
+
+        // PRE-FETCH USERS FOR AVATARS
+        // 1. Collect IDs and Usernames from top 4 participants
+        const topParticipants = standings.filter((p: any) => p.rank <= 4);
+        const pIds: string[] = [];
+        const pUsernames: string[] = [];
+
+        topParticipants.forEach((p: any) => {
+          const pRaw = p.participant || p;
+          if (pRaw.user_id) pIds.push(String(pRaw.user_id));
+          if (pRaw.username) pUsernames.push(String(pRaw.username).toLowerCase());
+          if (pRaw.challonge_username) pUsernames.push(String(pRaw.challonge_username).toLowerCase());
+
+          // Added fallback for name-only participants
+          if (pRaw.name) pUsernames.push(String(pRaw.name).toLowerCase());
+          if (pRaw.display_name) pUsernames.push(String(pRaw.display_name).toLowerCase());
+        });
+
+        const usersMap = new Map<string, string>(); // key -> photoURL
+        if (pIds.length > 0 || pUsernames.length > 0) {
+          try {
+            const criteria = [];
+            if (pIds.length > 0) criteria.push(inArray(users.challongeId, pIds));
+            // Use a simpler username check or skip if too complex to mix with inArray for now,
+            // typically ID is enough but fallback is good.
+            // OR construct a query with OR
+            if (pUsernames.length > 0) {
+              criteria.push(inArray(sql`LOWER(${users.challongeUsername})`, pUsernames));
+              criteria.push(inArray(sql`LOWER(${users.displayName})`, pUsernames));
+            }
+
+            if (criteria.length > 0) {
+              const foundUsers = await db.select({
+                cid: users.challongeId,
+                cname: users.challongeUsername,
+                dname: users.displayName,
+                photo: users.photoURL
+              }).from(users).where(or(...criteria));
+
+              foundUsers.forEach((u: { cid: string | null; cname: string | null; dname: string | null; photo: string | null }) => {
+                if (u.photo) {
+                  if (u.cid) usersMap.set(`id:${u.cid}`, u.photo);
+                  if (u.cname) usersMap.set(`name:${u.cname.toLowerCase()}`, u.photo);
+                  if (u.dname) usersMap.set(`name:${u.dname.toLowerCase()}`, u.photo);
+                }
+              });
+            }
+          } catch (err) {
+            console.error("Failed to fetch users for avatars:", err);
+          }
+        }
+
+        const top3 = topParticipants
           .sort((a: any, b: any) => a.rank - b.rank)
           .map((p: any) => {
+            const pRaw = p.participant || p;
             const pName = p.name || p.username || '';
             const pNameNorm = normalize(pName);
 
@@ -3927,8 +3988,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
 
-            if (req.user) {
-              // console.log(`[DEBUG] Participant '${pName}' (norm: '${pNameNorm}') isCurrentUser? ${isCurrentUser}`);
+            // Resolve Avatar
+            let avatarUrl = pRaw.avatar_url || pRaw.attached_participatable_portrait_url || pRaw.portrait_url || null;
+            const pid = pRaw.user_id ? String(pRaw.user_id) : null;
+            const puname = (pRaw.username || pRaw.challonge_username || pRaw.name || pRaw.display_name || '').trim().toLowerCase();
+
+            // Priority: Linked User Photo -> Challonge Avatar
+            if (pid && usersMap.has(`id:${pid}`)) {
+              avatarUrl = usersMap.get(`id:${pid}`);
+            } else if (puname && usersMap.has(`name:${puname}`)) {
+              avatarUrl = usersMap.get(`name:${puname}`);
             }
 
             return {
@@ -3936,7 +4005,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               username: pName,
               placement: p.rank,
               isCurrentUser: isCurrentUser, // Permission flag
-              deck: [] // filled by frontend
+              deck: [], // filled by frontend
+              profilePicture: { url: avatarUrl } // Inject Avatar 
             };
           });
 
