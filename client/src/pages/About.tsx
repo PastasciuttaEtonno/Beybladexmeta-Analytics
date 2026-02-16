@@ -30,9 +30,9 @@ export default function About() {
                     <section className="space-y-3">
                         <h2 className="text-2xl font-bold tracking-tight">Il Progetto</h2>
                         <p className="text-muted-foreground">
-                            Beybladexmeta Analytics è un progetto nato dalla passione per il nuovo metagame di Beyblade X.
+                            Beybladexmeta Analytics è un progetto nato dalla passione per il metagame di Beyblade X.
                             Il nostro obiettivo è fornire ai giocatori strumenti avanzati per analizzare le performance delle diverse combo,
-                            monitorare i trend dei tornei e migliorare le proprie strategie competitive.
+                            monitorare i trend dei tornei e registrare i propri risultati.
                         </p>
                     </section>
 
@@ -46,7 +46,18 @@ export default function About() {
                             <li><strong>Top Combos:</strong> Classifiche sempre aggiornate delle combinazioni più vincenti.</li>
                             <li><strong>Analisi Trend:</strong> Monitoraggio dell'evoluzione del meta nel tempo.</li>
                             <li><strong>Leaderboard Giocatori:</strong> Un sistema di ranking globale per confrontarsi con i migliori.</li>
+                            <li><strong>Preferiti:</strong> Salva le combo che ti piacciono di più.</li>
+                            <li><strong>Profilo:</strong> Autenticati per vedere i tornei a cui hai partecipato.</li>
                         </ul>
+                    </section>
+
+                    <section className="space-y-3">
+                        <h2 className="text-2xl font-bold tracking-tight">Dati e funzionamento</h2>
+                        <p className="text-muted-foreground">
+                            I dati sono raccolti da tornei realizzati nella comunita di <a href="https://www.ibna.it/" target="_blank" rel="noopener noreferrer" className="font-bold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors">IBNA</a> in particolare da Challengermode e Challonge.
+                            Gli utenti autenticati hanno la possibilità di registrare le combo che hanno utilizzato per ottenere il podio in un torneo.
+                            In questo modo si contribuisce all'aggiornamento delle classifiche e all'analisi del metagame in italia.
+                        </p>
                     </section>
 
                     <section className="space-y-3">
