@@ -210,7 +210,7 @@ export default function Home() {
             ) : !topBlade ? (
               <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-blade-empty" onClick={() => setLeaderboardType('blade')}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  <Trophy className="w-5 h-5 text-purple-500" />
                   <h2 className="text-lg font-semibold">Top Blade</h2>
                   <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
@@ -224,7 +224,7 @@ export default function Home() {
             ) : (
               <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-blade" onClick={() => setLeaderboardType('blade')}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  <Trophy className="w-5 h-5 text-purple-500" />
                   <h2 className="text-lg font-semibold">Top Blade</h2>
                   <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
@@ -275,7 +275,7 @@ export default function Home() {
             ) : !topRatchet ? (
               <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-ratchet-empty" onClick={() => setLeaderboardType('ratchet')}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="w-5 h-5 text-gray-400" />
+                  <Trophy className="w-5 h-5 text-purple-500" />
                   <h2 className="text-lg font-semibold">Top Ratchet</h2>
                   <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
@@ -289,7 +289,7 @@ export default function Home() {
             ) : (
               <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-ratchet" onClick={() => setLeaderboardType('ratchet')}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="w-5 h-5 text-gray-400" />
+                  <Trophy className="w-5 h-5 text-purple-500" />
                   <h2 className="text-lg font-semibold">Top Ratchet</h2>
                   <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
@@ -339,7 +339,7 @@ export default function Home() {
             ) : !topBit ? (
               <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-bit-empty" onClick={() => setLeaderboardType('bit')}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="w-5 h-5 text-amber-600" />
+                  <Trophy className="w-5 h-5 text-purple-500" />
                   <h2 className="text-lg font-semibold">Top Bit</h2>
                   <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
@@ -353,7 +353,7 @@ export default function Home() {
             ) : (
               <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-bit" onClick={() => setLeaderboardType('bit')}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="w-5 h-5 text-amber-600" />
+                  <Trophy className="w-5 h-5 text-purple-500" />
                   <h2 className="text-lg font-semibold">Top Bit</h2>
                   <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
                 </div>
