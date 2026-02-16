@@ -20,7 +20,7 @@ export const calculatePoints = (placement: number, totalParticipants: number): n
   let basePoints = 0;
   if (placement === 1) basePoints = 10;
   else if (placement === 2) basePoints = 7;
-  else if (placement === 2) basePoints = 7;
+
   else if (placement === 3) basePoints = 5;
   else if (placement === 4) basePoints = 3;
   else return 0; // Solo Top 4 ottengono punti

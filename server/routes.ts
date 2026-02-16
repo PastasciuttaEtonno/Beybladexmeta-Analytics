@@ -2381,12 +2381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (position === 1) return participants * 3;
         if (position === 2) return participants * 2;
         if (position === 3) return participants * 1;
+        if (position === 4) return Math.floor(participants * 0.5); // Example logic for 4th place, adjust if needed
         return 0;
       };
 
       const firstPoints = calculatePoints(data.participants, 1);
       const secondPoints = calculatePoints(data.participants, 2);
       const thirdPoints = calculatePoints(data.participants, 3);
+      const fourthPoints = calculatePoints(data.participants, 4);
 
       const processCombo = async (combo: any, position: number) => {
         const points = position === 1 ? firstPoints : position === 2 ? secondPoints : thirdPoints;
@@ -2474,9 +2476,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const firstCombos = await loadCombosForPlayer(data.firstPlacePlayerId);
       const secondCombos = await loadCombosForPlayer(data.secondPlacePlayerId);
       const thirdCombos = await loadCombosForPlayer(data.thirdPlacePlayerId);
+      const fourthCombos = data.fourthPlacePlayerId ? await loadCombosForPlayer(data.fourthPlacePlayerId) : [];
 
       if (firstCombos.length !== 3 || secondCombos.length !== 3 || thirdCombos.length !== 3) {
         return res.status(400).json({ error: 'Each winner must have exactly 3 combos in external_player_combos' });
+      }
+      if (data.fourthPlacePlayerId && fourthCombos.length !== 3) {
+        return res.status(400).json({ error: '4th place player must have exactly 3 combos' });
       }
 
       // Pre-fetch existing results to avoid double-counting on re-submission
@@ -2491,6 +2497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { id: data.firstPlacePlayerId, nickname: data.firstPlacePlayerId, avatar: null },
         { id: data.secondPlacePlayerId, nickname: data.secondPlacePlayerId, avatar: null },
         { id: data.thirdPlacePlayerId, nickname: data.thirdPlacePlayerId, avatar: null },
+        ...(data.fourthPlacePlayerId ? [{ id: data.fourthPlacePlayerId, nickname: data.fourthPlacePlayerId, avatar: null }] : []),
       ]).onConflictDoUpdate({
         target: cmPlayers.id,
         set: { nickname: sql`excluded.nickname`, avatar: sql`excluded.avatar`, updatedAt: sql`now()` }
@@ -2540,6 +2547,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dataTorneo: new Date(data.dataTorneo),
           puntiGuadagnati: thirdPoints,
         })),
+        ...fourthCombos.map((combo, idx) => ({
+          tournamentId: data.tournamentId,
+          playerId: data.fourthPlacePlayerId!,
+          comboNumber: idx + 1,
+          blade: combo.blade,
+          assistBlade: combo.assistBlade,
+          ratchet: combo.ratchet,
+          bit: combo.bit,
+          lockChip: combo.lockChip,
+          piazzamento: 4,
+          numeroPartecipanti: data.participants,
+          dataTorneo: new Date(data.dataTorneo),
+          puntiGuadagnati: fourthPoints,
+        })),
       ];
 
       // Ensure combo_stats rows exist for all 9 combos to satisfy fk_combo_components
@@ -2547,6 +2568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...firstCombos,
         ...secondCombos,
         ...thirdCombos,
+        ...fourthCombos,
       ].map((combo) => ({
         blade: combo.blade,
         assistBlade: combo.assistBlade,
@@ -2617,6 +2639,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lockChip: combo.lockChip,
             season: seasonValAdmin,
             placement: 3,
+            totalParticipants: data.participants,
+          });
+        }
+      }
+      for (const [idx, combo] of fourthCombos.entries()) {
+        if (!data.fourthPlacePlayerId) break;
+        const key = `${data.fourthPlacePlayerId}|${idx + 1}`;
+        if (!existingKeySet.has(key)) {
+          await processExternalCombo({
+            blade: combo.blade,
+            assistBlade: combo.assistBlade,
+            ratchet: combo.ratchet,
+            bit: combo.bit,
+            lockChip: combo.lockChip,
+            season: seasonValAdmin,
+            placement: 4,
             totalParticipants: data.participants,
           });
         }
@@ -2707,8 +2745,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lockChip: r.lockChip,
         puntiGuadagnati: r.puntiGuadagnati,
       }));
+      const fourthPlaceCombos = results.filter((r: any) => r.piazzamento === 4).map((r: any) => ({
+        blade: r.blade,
+        assistBlade: r.assistBlade,
+        ratchet: r.ratchet,
+        bit: r.bit,
+        lockChip: r.lockChip,
+        puntiGuadagnati: r.puntiGuadagnati,
+      }));
 
-      res.json({ firstPlaceCombos, secondPlaceCombos, thirdPlaceCombos });
+      res.json({ firstPlaceCombos, secondPlaceCombos, thirdPlaceCombos, fourthPlaceCombos });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch tournament results' });
     }
@@ -4393,9 +4439,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const placement = Number(existing.placement ?? 0);
       const totalParticipants = Number(existing.totalParticipants ?? 0);
 
-      // Enforce Top 3 check for CM
-      if (placement > 3) {
-        return res.status(403).json({ error: 'Solo i primi 3 classificati possono registrare le combo.' });
+      // Enforce Top 4 check for CM
+      if (placement > 4) {
+        return res.status(403).json({ error: 'Solo i primi 4 classificati possono registrare le combo.' });
       }
 
       if (placement > 0 && totalParticipants > 0) {
@@ -4788,7 +4834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           piazzamento: placement ?? 0,
           numeroPartecipanti: totalParticipants ?? 0,
           dataTorneo: tournamentDate,
-          puntiGuadagnati: (placement && totalParticipants && placement >= 1 && placement <= 3 && totalParticipants > 0)
+          puntiGuadagnati: (placement && totalParticipants && placement >= 1 && placement <= 4 && totalParticipants > 0)
             ? calcExternalPoints(placement, totalParticipants)
             : 0,
         }));
@@ -4809,7 +4855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       // Update aggregate stats using placement/participants (only if available)
-      if (placement && totalParticipants && placement >= 1 && placement <= 3 && totalParticipants > 0) {
+      if (placement && totalParticipants && placement >= 1 && placement <= 4 && totalParticipants > 0) {
         for (const r of inserted) {
           const comboNum = Number(r.comboNumber ?? 0);
           const prev = prevMap.get(comboNum);

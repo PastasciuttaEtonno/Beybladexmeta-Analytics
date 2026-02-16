@@ -294,6 +294,7 @@ export const externalTournamentResultSchema = z.object({
   firstPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()),
   secondPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()),
   thirdPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()),
+  fourthPlacePlayerId: z.string().min(1).max(128).transform((s) => s.trim()).optional(),
 });
 
 export type ExternalTournamentResult = z.infer<typeof externalTournamentResultSchema>;
