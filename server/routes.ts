@@ -698,6 +698,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate OG image for combo
+  app.get('/api/og/combo/:id', async (req, res) => {
+    try {
+      const key = String(req.params.id || '').trim();
+      if (!key) return res.status(400).send('Missing key');
+
+      let combo: any = null;
+      let rank = 0;
+
+      // Strategy 1: exact match with pipe separator (Fast)
+      if (key.includes('|')) {
+        const parts = key.split('|');
+        if (parts.length === 5) {
+          const [blade, assistBlade, ratchet, bit, lockChip] = parts;
+          const result = await db.execute(sql`
+            WITH ranked AS (
+              SELECT blade, assist_blade, ratchet, bit, lock_chip,
+                     primi_posti, secondi_posti, terzi_posti, quarti_posti, punteggio_totale, data_creazione,
+                     ROW_NUMBER() OVER (ORDER BY punteggio_totale DESC, data_creazione DESC) AS rank
+              FROM combo_stats
+            )
+            SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
+                   primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
+                   punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
+            FROM ranked
+            WHERE blade = ${blade}
+              AND assist_blade = ${assistBlade}
+              AND ratchet = ${ratchet}
+              AND bit = ${bit}
+              AND lock_chip = ${lockChip}
+            LIMIT 1
+          `);
+          if (result.rows.length > 0) {
+            combo = (result.rows as any[])[0];
+            rank = Number(combo.rank);
+          }
+        }
+      }
+
+      // Strategy 2: Slug match (Slow fallback)
+      if (!combo) {
+        const allCombos = await db.execute(sql`
+          SELECT blade, assist_blade AS "assistBlade", ratchet, bit, lock_chip AS "lockChip",
+                 primi_posti AS "primiPosti", secondi_posti AS "secondiPosti", terzi_posti AS "terziPosti", quarti_posti AS "quartiPosti",
+                 punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione"
+          FROM combo_stats
+          ORDER BY punteggio_totale DESC, data_creazione DESC
+        `);
+
+        const toSlug = (s: string) => String(s).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\\-]/g, '');
+        const targetIndex = (allCombos.rows as any[]).findIndex((c: any) => {
+          const parts = [
+            (c.lockChip || '').toLowerCase() !== 'none' ? c.lockChip : '',
+            c.blade,
+            (c.assistBlade || '').toLowerCase() !== 'none' ? c.assistBlade : '',
+            (c.ratchet || '').toLowerCase() !== 'none' ? c.ratchet : '',
+            c.bit
+          ].filter(Boolean).map(toSlug);
+          return parts.join('-') === key;
+        });
+
+        if (targetIndex !== -1) {
+          combo = (allCombos.rows as any[])[targetIndex];
+          rank = targetIndex + 1;
+        }
+      }
+
+      if (!combo) {
+        return res.status(404).send('Combo not found');
+      }
+
+      const imageBuffer = await generateComboImage({ ...combo, rank });
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.send(imageBuffer);
+    } catch (error) {
+      console.error('Error generating combo OG image:', error);
+      res.status(500).send('Failed to generate image');
+    }
+  });
+
   // Get tournaments where a specific combo was used (Top 4 only)
   app.get('/api/stats/combos/:comboKey/tournaments', async (req, res) => {
     try {
