@@ -1365,6 +1365,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               rank: parsed.rank || 0,
             } as any); // Type assertion needed until schema types update fully propagates
           }
+          // Sync Avatar if user has Challonge ID
+          if (user.challongeId) {
+            await tx.insert(challongePlayers).values({
+              id: user.challongeId,
+              nickname: user.challongeUsername || user.displayName,
+              avatar: user.photoURL,
+              updatedAt: new Date(),
+            } as any).onConflictDoUpdate({
+              target: challongePlayers.id,
+              set: {
+                avatar: sql`excluded.avatar`,
+                updatedAt: sql`now()`,
+              }
+            });
+          }
         }) as any); // Type assertion needed until schema types update fully propagates
 
         return res.json({ success: true, message: 'Deck Challonge registrato' });
@@ -1379,7 +1394,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // ... existing CM logic ...
         // I will copy-paste existing logic here but reusing 'parsed' variables
 
-        await db.insert(cmPlayers).values({ id: challengerId, nickname: user?.displayName || challengerId, avatar: null as any }).onConflictDoNothing();
+        await db.insert(cmPlayers).values({ id: challengerId, nickname: user?.displayName || challengerId, avatar: user.photoURL || null })
+          .onConflictDoUpdate({
+            target: cmPlayers.id,
+            set: {
+              avatar: sql`excluded.avatar`,
+              updatedAt: sql`now()`,
+            }
+          });
 
         let placement: number | null = null;
         let totalParticipants: number | null = null;
@@ -1725,6 +1747,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Player not found' });
       }
 
+      // Try to find linked user to get the most up-to-date avatar
+      let userAvatar: string | null = null;
+      if (cmPlayer) {
+        const u = await db.query.users.findFirst({ where: eq(users.challengerId, cmPlayer.id) });
+        if (u?.photoURL) userAvatar = u.photoURL;
+      }
+      if (!userAvatar && challongePlayer) {
+        const u = await db.query.users.findFirst({ where: eq(users.challongeId, challongePlayer.id) });
+        if (u?.photoURL) userAvatar = u.photoURL;
+      }
+
       // Get platform stats for this player (with top-3 calculation)
       const platformStats = await db.select()
         .from(playerPlatformStats)
@@ -1958,7 +1991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         player: {
           nickname,
-          avatar: cmPlayer?.avatar || challongePlayer?.avatar || null,
+          avatar: userAvatar || challongePlayer?.avatar || cmPlayer?.avatar || null,
           platforms: platformStatsWithTop3.map(s => s.platform),
         },
         stats: {

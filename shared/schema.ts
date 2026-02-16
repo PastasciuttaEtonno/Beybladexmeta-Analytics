@@ -192,7 +192,6 @@ export const registerSchema = z.object({
 
 export const updateProfileSchema = z.object({
   displayName: z.string().min(1).max(100).transform((s) => s.replace(/\s+/g, " ").trim()).optional(),
-  photoURL: z.string().max(500).transform((s) => s.trim()).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
