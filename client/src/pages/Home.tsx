@@ -47,12 +47,14 @@ function ComponentImage({
   name,
   type,
   fallbackIcon,
-  testId
+  testId,
+  priority = false
 }: {
   name: string;
   type: string;
   fallbackIcon: React.ReactNode;
   testId: string;
+  priority?: boolean;
 }) {
   const [attemptIndex, setAttemptIndex] = useState(0);
   const imageUrls = getImageUrls(name, type);
@@ -77,6 +79,7 @@ function ComponentImage({
           className="w-full h-full object-contain"
           onError={handleImageError}
           data-testid={testId}
+          {...(priority ? { fetchPriority: "high", loading: "eager" } : {})}
         />
       )}
     </div>
@@ -232,6 +235,7 @@ export default function Home() {
                     type="blades"
                     fallbackIcon={<Shield className="w-12 h-12 text-muted-foreground" />}
                     testId="img-top-blade"
+                    priority={true}
                   />
 
                   <div className="flex-1">

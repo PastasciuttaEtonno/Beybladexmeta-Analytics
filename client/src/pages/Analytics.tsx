@@ -71,7 +71,7 @@ if (!PUBLIC_MINIO_URL) {
 
 const imageCache = new Map<string, string>();
 
-function ComponentImage({ folder, name }: { folder: string; name: string }) {
+function ComponentImage({ folder, name, priority = false }: { folder: string; name: string; priority?: boolean }) {
   const cacheKey = `${folder}/${name}`;
   const [attemptIndex, setAttemptIndex] = useState(0);
   const [currentSrc, setCurrentSrc] = useState<string | null>(() => {
@@ -131,6 +131,7 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
           onError={handleImageError}
           onLoad={handleImageLoad}
           style={{ display: currentSrc ? 'block' : 'none' }}
+          {...(priority ? { fetchPriority: "high", loading: "eager" } : {})}
         />
       )}
     </div>
@@ -623,6 +624,7 @@ export default function Analytics() {
                                   <ComponentImage
                                     folder="blades"
                                     name={combo.blade}
+                                    priority={index === 0}
                                   />
                                 </div>
                                 <div className="flex-1 min-w-0 max-[330px]:hidden">
