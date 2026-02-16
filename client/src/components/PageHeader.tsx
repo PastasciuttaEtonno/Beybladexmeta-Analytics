@@ -2,16 +2,20 @@ import { ReactNode } from 'react';
 
 interface PageHeaderProps {
   title: string;
+  description?: string;
   action?: ReactNode;
 }
 
-export function PageHeader({ title, action }: PageHeaderProps) {
+export function PageHeader({ title, description, action }: PageHeaderProps) {
   // Note: document.title is now handled by Seo component
   // This component only handles the visual header
   return (
     <header role="banner" className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="flex items-center justify-between h-14 px-4 max-w-2xl mx-auto">
-        <h1 className="text-xl font-bold" data-testid="text-page-title">{title}</h1>
+        <div>
+          <h1 className="text-xl font-bold" data-testid="text-page-title">{title}</h1>
+          {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        </div>
         {action && <div>{action}</div>}
       </div>
     </header>

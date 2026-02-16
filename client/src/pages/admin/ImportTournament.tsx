@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export default function ImportTournament() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     console.log("DEBUG: Admin Page - Current User:", user);
     const [jsonInput, setJsonInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -67,6 +69,7 @@ export default function ImportTournament() {
                     title: "Import Successful",
                     description: `Tournament imported with ID: ${data.id}`,
                 });
+                queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
                 setJsonInput(""); // Clear input on success
             } else {
                 throw new Error(data.error || "Unknown error");
@@ -82,11 +85,25 @@ export default function ImportTournament() {
         }
     };
 
+    const handleForceRefresh = async () => {
+        await queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+        toast({
+            title: "Refreshed",
+            description: "Tournament list has been refreshed.",
+        });
+    };
+
     return (
         <div className="container max-w-4xl mx-auto py-8 px-4 pb-20">
             <PageHeader
                 title="Admin Import"
                 description="Manually import normalized tournament JSON files."
+                action={
+                    <Button variant="outline" size="sm" onClick={handleForceRefresh}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Force Refresh
+                    </Button>
+                }
             />
 
             <Card>
