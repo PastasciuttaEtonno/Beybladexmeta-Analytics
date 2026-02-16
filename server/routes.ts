@@ -3753,16 +3753,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const pNameNorm = normalize(pName);
 
             // Check permission
-            const isCurrentUser = validUserNames.some(v => {
-              const vNorm = normalize(v);
-              const match = vNorm === pNameNorm;
-              if (!match && req.user) {
-                // Verbose debug only if failing? Or maybe just log matches to reduce noise?
-                // Let's log potential near-matches or just one line per check if needed.
-                // console.log(`[DEBUG] Compare '${vNorm}' vs '${pNameNorm}' -> ${match}`);
-              }
-              return match;
+            let isCurrentUser = validUserNames.some(v => {
+              return normalize(v) === pNameNorm;
             });
+
+            // Fallback: if not matched, try matching against display_name / display_user
+            if (!isCurrentUser) {
+              const pDisplayName = p.display_name || p.display_user || '';
+              const pDisplayNameNorm = normalize(pDisplayName);
+              if (pDisplayNameNorm && pDisplayNameNorm !== pNameNorm) {
+                isCurrentUser = validUserNames.some(v => {
+                  return normalize(v) === pDisplayNameNorm;
+                });
+              }
+            }
 
             if (req.user) {
               // console.log(`[DEBUG] Participant '${pName}' (norm: '${pNameNorm}') isCurrentUser? ${isCurrentUser}`);
