@@ -114,8 +114,8 @@ function formatComboTitle(combo: ComboForm): string {
 
   const ratchetPart = ratchet && ratchet.toLowerCase() !== 'none' ? ratchet : '';
   const parts = [
-    lockPart,
-    blade + (assistPart ? `${assistPart}` : ''),
+    lockPart + blade,
+    assistPart,
     ratchetPart,
     bit,
   ].filter(Boolean);
@@ -452,10 +452,10 @@ export default function TournamentDetail() {
           // Map to ComboForm
           combos = matches.map((m: any) => ({
             blade: m.blade,
-            assistBlade: m.assist_blade || m.assistBlade,
+            assistBlade: m.assist_blade || m.assistBlade || 'None',
             ratchet: m.ratchet,
             bit: m.bit,
-            lockChip: m.lock_chip || m.lockChip
+            lockChip: m.lock_chip || m.lockChip || 'None'
           }));
         }
 
