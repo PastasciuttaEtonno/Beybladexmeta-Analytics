@@ -472,7 +472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const seasonLower = seasonRaw.toLowerCase();
       const isAllTime = seasonLower === 'all' || seasonLower === 'all time' || seasonLower === 'all-time';
 
-      const validSortFields = ['score', 'first', 'second', 'third'];
+      const validSortFields = ['score', 'first', 'second', 'third', 'fourth'];
       const sortBy = validSortFields.includes(sortByParam) ? sortByParam : 'score';
 
       // Build WHERE for both modes when search is present
@@ -495,6 +495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sumFirst = sql<number>`sum(${comboStats.primiPosti})`.mapWith(Number);
         const sumSecond = sql<number>`sum(${comboStats.secondiPosti})`.mapWith(Number);
         const sumThird = sql<number>`sum(${comboStats.terziPosti})`.mapWith(Number);
+        const sumFourth = sql<number>`sum(${comboStats.quartiPosti})`.mapWith(Number);
 
         let aggQuery = db
           .select({
@@ -507,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             primiPosti: sumFirst,
             secondiPosti: sumSecond,
             terziPosti: sumThird,
-            quartiPosti: sql<number>`sum(${comboStats.quartiPosti})`.mapWith(Number),
+            quartiPosti: sumFourth,
           })
           .from(comboStats);
 
@@ -579,6 +580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         first: comboStats.primiPosti,
         second: comboStats.secondiPosti,
         third: comboStats.terziPosti,
+        fourth: comboStats.quartiPosti,
         date: comboStats.dataCreazione,
       }[sortBy];
 

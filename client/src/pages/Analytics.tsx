@@ -455,7 +455,9 @@ export default function Analytics() {
                           ? "2nd Place"
                           : sortBy === "third"
                             ? "3rd Place"
-                            : "Date"}
+                            : sortBy === "fourth"
+                              ? "4th Place"
+                              : "Date"}
                     </Badge>
                   )}
                   {sortOrder !== "desc" && (
@@ -526,6 +528,7 @@ export default function Analytics() {
                             <SelectItem value="first">1st Place</SelectItem>
                             <SelectItem value="second">2nd Place</SelectItem>
                             <SelectItem value="third">3rd Place</SelectItem>
+                            <SelectItem value="fourth">4th Place</SelectItem>
                             <SelectItem value="date">Date</SelectItem>
                           </SelectContent>
                         </Select>
