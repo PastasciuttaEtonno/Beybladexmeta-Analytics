@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install git and configure safe.directory to avoid git safety errors during builds
 RUN apk add --no-cache git \
- && git config --global --add safe.directory /app
+    && git config --global --add safe.directory /app
 
 # Copy package manifests and install all deps (including dev)
 COPY package.json package-lock.json ./
@@ -33,7 +33,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Environment
-ENV NODE_ENV=production
+# ENV NODE_ENV=production
 ENV PORT=5000
 
 # Pass the build-time arg to the runner environment
@@ -46,6 +46,8 @@ RUN npm ci --omit=dev
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/client/public ./client/public
+
 
 # Expose app port
 EXPOSE 5000
