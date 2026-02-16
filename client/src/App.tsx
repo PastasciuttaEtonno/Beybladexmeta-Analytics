@@ -1,15 +1,16 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BottomNav } from "@/components/BottomNav";
+import { TournamentRegistrationNotice } from "@/components/TournamentRegistrationNotice";
+import { IntroAnimation } from "@/components/IntroAnimation";
+import { useState } from "react";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import Analytics from "@/pages/Analytics";
@@ -124,59 +125,17 @@ function AdsLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  function KofiSupportNotice() {
-    const [open, setOpen] = useState(false);
+  const [location] = useLocation();
+  const [showIntro, setShowIntro] = useState(() => {
+    // Only show on home page AND if not shown this session
+    const hasShown = sessionStorage.getItem("intro_shown");
+    return location === "/" && !hasShown;
+  });
 
-    useEffect(() => {
-      const paramForce = new URLSearchParams(window.location.search).get('showKofiBanner');
-      if (paramForce === '1') { setOpen(true); return; }
-      const dismissedAtStr = localStorage.getItem("kofi_support_dismissed_at");
-      if (!dismissedAtStr) { setOpen(true); return; }
-      const dismissedAt = new Date(dismissedAtStr).getTime();
-      const now = Date.now();
-      const oneDay = 1 * 24 * 60 * 60 * 1000;
-      if (!(dismissedAt > 0) || (now - dismissedAt) > oneDay) {
-        setOpen(true);
-      }
-    }, []);
-
-    const close = () => {
-      localStorage.setItem("kofi_support_dismissed_at", new Date().toISOString());
-      setOpen(false);
-    };
-
-    const openKofi = () => {
-      window.open('https://ko-fi.com/Y8Y61U5MNM', '_blank');
-      close();
-    };
-
-    if (!open) return null;
-
-    return (
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-md pointer-events-auto">
-        <div className="rounded-lg border bg-background/95 backdrop-blur-sm shadow-lg px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              Ti piace BeybladeXMeta?{' '}
-              <button
-                onClick={openKofi}
-                className="text-[#683ae6] hover:text-[#5a32c7] underline underline-offset-2 font-medium transition-colors"
-              >
-                Supportami ☕
-              </button>
-            </p>
-            <button
-              onClick={close}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Chiudi"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleIntroComplete = () => {
+    setShowIntro(false);
+    sessionStorage.setItem("intro_shown", "true");
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -187,7 +146,10 @@ export default function App() {
               <AppRoutes />
             </AdsLayout>
             <Toaster />
-            <KofiSupportNotice />
+            {/* <TournamentRegistrationNotice /> */}
+            {showIntro && (
+              <IntroAnimation onComplete={handleIntroComplete} />
+            )}
           </AuthProvider>
         </ThemeProvider>
       </TooltipProvider>
