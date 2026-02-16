@@ -427,11 +427,13 @@ export default function Profile() {
               <span className="text-sm text-muted-foreground">On</span>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button> */}
-            <a href="/privacy-policy" className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left">
-              <Lock className="w-5 h-5 text-muted-foreground" />
-              <span className="flex-1 font-medium">Privacy Policy</span>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </a>
+            <Link href="/privacy-policy">
+              <a className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left">
+                <Lock className="w-5 h-5 text-muted-foreground" />
+                <span className="flex-1 font-medium">Privacy Policy</span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </a>
+            </Link>
             <Link href="/terms">
               <a className="w-full p-4 flex items-center gap-3 hover-elevate active-elevate-2 text-left">
                 <Info className="w-5 h-5 text-muted-foreground" />
