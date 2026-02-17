@@ -121,7 +121,7 @@ export default function ComponentLeaderboard() {
         }}
       />
       <PageHeader title={title} action={<HeaderLogo />} />
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-3">
+      <main className="flex-1 px-4 py-6 w-full mx-auto space-y-3">
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(10)].map((_, i) => (

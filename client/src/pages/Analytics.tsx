@@ -35,6 +35,7 @@ import {
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
+  Search,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
@@ -43,6 +44,7 @@ import type { ComboStats } from "@shared/schema";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { DesktopAnalyticsGrid } from "@/components/analytics/desktop/DesktopAnalyticsGrid";
 
 const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE"];
 
@@ -416,23 +418,47 @@ export default function Analytics() {
         title="Analisi Metagame e Combo X · Beybladexmeta Analytics"
         description="Analizza le performance delle combinazioni Blade, Ratchet e Bit. Scopri quali combo dominano i tornei e quali sono i trend emergenti."
       />
-      <PageHeader title="Classifiche" action={<HeaderLogo />} />
+      <PageHeader
+        title="Classifiche"
+        description="Esplora le statistiche dettagliate derivate dai tornei Challengermode e Challonge. Cerca combo specifiche e esplora la classifica."
+        action={<HeaderLogo />}
+      />
 
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
-        <section className="space-y-2 px-1">
-          <p className="text-sm text-muted-foreground">
-            Esplora le statistiche dettagliate derivate dai tornei Challengermode e Challonge.
-            Cerca combo specifiche e esplora la classifica.
-          </p>
-        </section>
+      <main className="flex-1 px-4 py-6 w-full max-w-[1400px] mx-auto space-y-6">
         <Tabs value={activeView} onValueChange={setActiveView} defaultValue="leaderboard" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 md:hidden">
             <TabsTrigger value="leaderboard">Top Combos</TabsTrigger>
             <TabsTrigger value="trends">Analisi Trend</TabsTrigger>
           </TabsList>
 
           <TabsContent value="leaderboard">
             <Card className="p-4">
+              {/* Desktop Search Bar */}
+              <div className="hidden md:flex mb-4 gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca per blade, assist blade, ratchet, bit, o chip..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                    data-testid="input-desktop-search"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  className="relative"
+                  onClick={handleOpenFilterModal}
+                  data-testid="button-filter-desktop"
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtri
+                  {hasActiveFilters && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                  )}
+                </Button>
+              </div>
+
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 flex-wrap flex-1 mr-2 min-h-[40px]">
                   <span className="text-xs text-muted-foreground mr-1">
@@ -480,7 +506,7 @@ export default function Analytics() {
                     <Button
                       size="icon"
                       variant="outline"
-                      className="relative"
+                      className="relative md:hidden"
                       onClick={handleOpenFilterModal}
                       data-testid="button-filter"
                     >
@@ -500,11 +526,11 @@ export default function Analytics() {
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                      <div className="space-y-2">
+                      <div className="space-y-2 md:hidden">
                         <Label htmlFor="search">Cerca</Label>
                         <Input
                           id="search"
-                          placeholder="Search by blade, assist blade, ratchet, bit, or chip..."
+                          placeholder="Cerca per blade, assist blade, ratchet, bit, o chip..."
                           value={tempSearchTerm}
                           onChange={(e) => setTempSearchTerm(e.target.value)}
                           data-testid="input-modal-search"
@@ -524,12 +550,12 @@ export default function Analytics() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="score">Total Score</SelectItem>
-                            <SelectItem value="first">1st Place</SelectItem>
-                            <SelectItem value="second">2nd Place</SelectItem>
-                            <SelectItem value="third">3rd Place</SelectItem>
-                            <SelectItem value="fourth">4th Place</SelectItem>
-                            <SelectItem value="date">Date</SelectItem>
+                            <SelectItem value="score">Punteggio totale</SelectItem>
+                            <SelectItem value="first">1° Posto</SelectItem>
+                            <SelectItem value="second">2° Posto</SelectItem>
+                            <SelectItem value="third">3° Posto</SelectItem>
+                            <SelectItem value="fourth">4° Posto</SelectItem>
+                            <SelectItem value="date">Data</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -580,7 +606,7 @@ export default function Analytics() {
                         data-testid="button-clear-filters"
                       >
                         <X className="w-4 h-4 mr-2" />
-                        Clear
+                        Pulisci
                       </Button>
                       <Button
                         onClick={handleApplyFilters}
@@ -588,7 +614,7 @@ export default function Analytics() {
                         data-testid="button-apply-filters"
                       >
                         <Filter className="w-4 h-4 mr-2" />
-                        Apply
+                        Applica
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -607,142 +633,156 @@ export default function Analytics() {
                   ))}
                 </div>
               ) : data?.combos && data.combos.length > 0 ? (
-                <div className="space-y-3">
-                  {data.combos.map((combo, index) => (
-                    <Link
-                      key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
-                      href={`/combo/${getComboId(combo)}`}
-                    >
-                      <a className="block no-underline" data-testid={`card-combo-${index}`}>
-                        <Card className="p-4 hover-elevate active-elevate-2 cursor-pointer transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className="flex flex-col items-center gap-1 min-w-[3rem]">
-                              {getRankIcon(index)}
-                              {getRankBadge(index)}
-                            </div>
+                <>
+                  {/* Desktop Grid View (>= 768px) */}
+                  <div className="hidden md:block">
+                    <DesktopAnalyticsGrid
+                      combos={data.combos}
+                      currentPage={data.pagination?.page || 1}
+                      itemsPerPage={data.pagination?.limit || 20}
+                      getComboId={getComboId}
+                    />
+                  </div>
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className="w-16 h-16 shrink-0">
-                                  <ComponentImage
-                                    folder="blades"
-                                    name={combo.blade}
-                                    priority={index === 0}
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0 max-[330px]:hidden">
-                                  <p className="text-xs text-muted-foreground">
-                                    Blade
-                                  </p>
-                                  <p
-                                    className="text-sm font-medium truncate"
-                                    data-testid={`text-blade-${index}`}
-                                  >
-                                    {combo.blade}
-                                  </p>
-                                </div>
+                  {/* Mobile List View (< 768px) */}
+                  <div className="space-y-3 md:hidden">
+                    {data.combos.map((combo, index) => (
+                      <Link
+                        key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
+                        href={`/combo/${getComboId(combo)}`}
+                      >
+                        <a className="block no-underline" data-testid={`card-combo-${index}`}>
+                          <Card className="p-4 hover-elevate active-elevate-2 cursor-pointer transition-colors">
+                            <div className="flex items-start gap-3">
+                              <div className="flex flex-col items-center gap-1 min-w-[3rem]">
+                                {getRankIcon(index)}
+                                {getRankBadge(index)}
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2 mb-3">
-                                {combo.assistBlade !== "None" && (
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className="w-16 h-16 shrink-0">
+                                    <ComponentImage
+                                      folder="blades"
+                                      name={combo.blade}
+                                      priority={index === 0}
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0 max-[330px]:hidden">
+                                    <p className="text-xs text-muted-foreground">
+                                      Blade
+                                    </p>
+                                    <p
+                                      className="text-sm font-medium truncate"
+                                      data-testid={`text-blade-${index}`}
+                                    >
+                                      {combo.blade}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                  {combo.assistBlade !== "None" && (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-10 h-10 shrink-0">
+                                        <ComponentImage folder={folderMap['assist-blade']} name={combo.assistBlade} />
+                                      </div>
+                                      <div className="min-w-0 max-[330px]:hidden">
+                                        <p className="text-xs text-muted-foreground">
+                                          <span className="sm:hidden">As. Blade</span>
+                                          <span className="hidden sm:inline">Assist Blade</span>
+                                        </p>
+                                        <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {combo.ratchet !== 'None' && (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-10 h-10 shrink-0">
+                                        <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
+                                      </div>
+                                      <div className="min-w-0 max-[330px]:hidden">
+                                        <p className="text-xs text-muted-foreground">Ratchet</p>
+                                        <p className="text-sm font-medium truncate">{combo.ratchet}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                   <div className="flex items-center gap-2">
                                     <div className="w-10 h-10 shrink-0">
-                                      <ComponentImage folder={folderMap['assist-blade']} name={combo.assistBlade} />
+                                      <ComponentImage folder={folderMap['bit']} name={combo.bit} />
                                     </div>
                                     <div className="min-w-0 max-[330px]:hidden">
-                                      <p className="text-xs text-muted-foreground">
-                                        <span className="sm:hidden">As. Blade</span>
-                                        <span className="hidden sm:inline">Assist Blade</span>
-                                      </p>
-                                      <p className="text-sm font-medium truncate">{combo.assistBlade}</p>
+                                      <p className="text-xs text-muted-foreground">Bit</p>
+                                      <p className="text-sm font-medium truncate">{combo.bit}</p>
                                     </div>
                                   </div>
-                                )}
-                                {combo.ratchet !== 'None' && (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-10 h-10 shrink-0">
-                                      <ComponentImage folder={folderMap['ratchet']} name={combo.ratchet} />
+                                  {combo.lockChip !== "None" && (
+                                    <div className="col-span-2 flex items-center gap-2">
+                                      <div className="w-10 h-10 shrink-0">
+                                        <ComponentImage folder={folderMap['lock-chip']} name={combo.lockChip} />
+                                      </div>
+                                      <div className="min-w-0 max-[330px]:hidden">
+                                        <p className="text-xs text-muted-foreground">Lock Chip</p>
+                                        <p className="text-sm font-medium truncate">{combo.lockChip}</p>
+                                      </div>
                                     </div>
-                                    <div className="min-w-0 max-[330px]:hidden">
-                                      <p className="text-xs text-muted-foreground">Ratchet</p>
-                                      <p className="text-sm font-medium truncate">{combo.ratchet}</p>
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-2">
-                                  <div className="w-10 h-10 shrink-0">
-                                    <ComponentImage folder={folderMap['bit']} name={combo.bit} />
-                                  </div>
-                                  <div className="min-w-0 max-[330px]:hidden">
-                                    <p className="text-xs text-muted-foreground">Bit</p>
-                                    <p className="text-sm font-medium truncate">{combo.bit}</p>
-                                  </div>
+                                  )}
                                 </div>
-                                {combo.lockChip !== "None" && (
-                                  <div className="col-span-2 flex items-center gap-2">
-                                    <div className="w-10 h-10 shrink-0">
-                                      <ComponentImage folder={folderMap['lock-chip']} name={combo.lockChip} />
-                                    </div>
-                                    <div className="min-w-0 max-[330px]:hidden">
-                                      <p className="text-xs text-muted-foreground">Lock Chip</p>
-                                      <p className="text-sm font-medium truncate">{combo.lockChip}</p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
 
-                              <div className="flex items-center gap-4 pt-3 border-t border-border">
-                                <div className="text-center">
-                                  <p className="text-xs text-muted-foreground">
-                                    Score
-                                  </p>
-                                  <p
-                                    className="text-lg font-bold text-primary"
-                                    data-testid={`text-score-${index}`}
-                                  >
-                                    {combo.punteggioTotale.toLocaleString()}
-                                  </p>
-                                </div>
-                                <div className="text-center">
-                                  <p className="text-xs text-muted-foreground">
-                                    1st
-                                  </p>
-                                  <p className="text-sm font-semibold text-yellow-500">
-                                    {combo.primiPosti}
-                                  </p>
-                                </div>
-                                <div className="text-center">
-                                  <p className="text-xs text-muted-foreground">
-                                    2nd
-                                  </p>
-                                  <p className="text-sm font-semibold text-gray-400">
-                                    {combo.secondiPosti}
-                                  </p>
-                                </div>
-                                <div className="text-center">
-                                  <p className="text-xs text-muted-foreground">
-                                    3rd
-                                  </p>
-                                  <p className="text-sm font-semibold text-amber-600">
-                                    {combo.terziPosti}
-                                  </p>
-                                </div>
-                                <div className="text-center">
-                                  <p className="text-xs text-muted-foreground">
-                                    4th
-                                  </p>
-                                  <p className="text-sm font-semibold text-slate-500">
-                                    {combo.quartiPosti}
-                                  </p>
+                                <div className="flex items-center gap-4 pt-3 border-t border-border">
+                                  <div className="text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                      Score
+                                    </p>
+                                    <p
+                                      className="text-lg font-bold text-primary"
+                                      data-testid={`text-score-${index}`}
+                                    >
+                                      {combo.punteggioTotale.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                      1st
+                                    </p>
+                                    <p className="text-sm font-semibold text-yellow-500">
+                                      {combo.primiPosti}
+                                    </p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                      2nd
+                                    </p>
+                                    <p className="text-sm font-semibold text-gray-400">
+                                      {combo.secondiPosti}
+                                    </p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                      3rd
+                                    </p>
+                                    <p className="text-sm font-semibold text-amber-600">
+                                      {combo.terziPosti}
+                                    </p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                      4th
+                                    </p>
+                                    <p className="text-sm font-semibold text-slate-500">
+                                      {combo.quartiPosti}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </Card>
-                      </a>
-                    </Link>
-                  ))}
-                </div>
+                          </Card>
+                        </a>
+                      </Link>
+                    ))}
+
+                  </div>
+                </>
               ) : (
                 <div className="py-12 text-center">
                   <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
@@ -759,8 +799,8 @@ export default function Analytics() {
                     className="text-center text-sm text-muted-foreground"
                     data-testid="text-pagination-info"
                   >
-                    Page {data.pagination.page} of {data.pagination.totalPages} (
-                    {data.pagination.total.toLocaleString()} total combos)
+                    Pagina {data.pagination.page} di {data.pagination.totalPages} (
+                    {data.pagination.total.toLocaleString()} combo)
                   </div>
 
                   <div className="flex items-center justify-center gap-2">
@@ -1042,6 +1082,6 @@ export default function Analytics() {
           </TabsContent>
         </Tabs>
       </main>
-    </div>
+    </div >
   );
 }

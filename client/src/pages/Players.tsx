@@ -187,7 +187,7 @@ export default function Players() {
         description="La classifica globale dei giocatori di Beyblade X. Monitora i punti guadagnati nei tornei Challengermode e Challonge in Italia."
       />
       <PageHeader title="Classifica Giocatori" />
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-3">
+      <main className="flex-1 px-4 py-6 w-full mx-auto space-y-3">
         <Tabs
           value="players"
           onValueChange={(val) => {
@@ -195,7 +195,7 @@ export default function Players() {
           }}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 w-full mb-4">
+          <TabsList className="grid grid-cols-2 w-full mb-4 max-w-md mx-auto md:mx-0">
             <TabsTrigger value="components">Componenti</TabsTrigger>
             <TabsTrigger value="players">Giocatori</TabsTrigger>
           </TabsList>
@@ -225,22 +225,22 @@ export default function Players() {
               </div>
             </div>
             {isLoading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="h-20 bg-muted/30 animate-pulse" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <Card key={i} className="h-24 bg-muted/30 animate-pulse" />
                 ))}
               </div>
             ) : filteredPlayers.length === 0 ? (
               <Card className="p-6 text-center">Nessun giocatore trovato</Card>
             ) : (
-              <div className="overflow-y-auto space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pageItems.map((p, idx) => {
                   const globalRank = (page - 1) * perPage + idx;
 
                   return (
-                    <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`} className="block mb-0">
-                      <a className="block no-underline">
-                        <Card className="p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all duration-200 active:scale-[0.99]">
+                    <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`} className="block h-full">
+                      <a className="block no-underline h-full">
+                        <Card className="p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all duration-200 active:scale-[0.99] h-full">
                           <div className="w-10 text-center flex-shrink-0 flex justify-center">
                             {getRankBadge(globalRank)}
                           </div>

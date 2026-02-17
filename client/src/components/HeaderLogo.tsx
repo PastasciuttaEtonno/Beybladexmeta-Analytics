@@ -7,7 +7,7 @@ export function HeaderLogo() {
     <img
       src={src}
       alt="Beybladexmeta Analytics Logo"
-      className="h-12 w-auto"
+      className="h-12 w-auto md:hidden"
       data-testid="img-header-logo"
     />
   );

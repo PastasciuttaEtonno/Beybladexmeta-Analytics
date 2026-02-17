@@ -1594,7 +1594,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .limit(limit);
         } else {
           // Filter by specific season
-          rows = await db.select()
+          rows = await db.select({
+            blade: bladeStats.blade,
+            punteggioTotale: bladeStats.punteggioTotale,
+            primiPosti: bladeStats.primiPosti,
+            secondiPosti: bladeStats.secondiPosti,
+            terziPosti: bladeStats.terziPosti,
+            quartiPosti: bladeStats.quartiPosti,
+          })
             .from(bladeStats)
             .where(eq(bladeStats.season, season))
             .orderBy(desc(bladeStats.punteggioTotale))
@@ -1617,7 +1624,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .limit(limit);
         } else {
           // Filter by specific season
-          rows = await db.select()
+          rows = await db.select({
+            ratchet: ratchetStats.ratchet,
+            punteggioTotale: ratchetStats.punteggioTotale,
+            primiPosti: ratchetStats.primiPosti,
+            secondiPosti: ratchetStats.secondiPosti,
+            terziPosti: ratchetStats.terziPosti,
+            quartiPosti: ratchetStats.quartiPosti,
+          })
             .from(ratchetStats)
             .where(eq(ratchetStats.season, season))
             .orderBy(desc(ratchetStats.punteggioTotale))
@@ -1640,7 +1654,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .limit(limit);
         } else {
           // Filter by specific season
-          rows = await db.select()
+          rows = await db.select({
+            bit: bitStats.bit,
+            punteggioTotale: bitStats.punteggioTotale,
+            primiPosti: bitStats.primiPosti,
+            secondiPosti: bitStats.secondiPosti,
+            terziPosti: bitStats.terziPosti,
+            quartiPosti: bitStats.quartiPosti,
+          })
             .from(bitStats)
             .where(eq(bitStats.season, season))
             .orderBy(desc(bitStats.punteggioTotale))

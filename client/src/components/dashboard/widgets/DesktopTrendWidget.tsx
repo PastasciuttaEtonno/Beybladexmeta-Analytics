@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer } from "recharts";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DesktopTrendWidgetProps {
     selectedSeason: string;
@@ -34,6 +35,14 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                         <TrendingUp className="w-4 h-4 text-green-400" />
                     </div>
                     <span className="font-semibold text-sm">Trend Monitor</span>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[200px] text-xs">
+                            Visualizza l'andamento dell' utilizzo del componente selezionato nel tempo.
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
 
                 <div className="flex gap-2">
@@ -89,7 +98,7 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                             </defs>
                             <XAxis dataKey="name" hide />
                             <YAxis hide domain={[0, 'dataMax + 10']} />
-                            <Tooltip
+                            <ChartTooltip
                                 contentStyle={{
                                     backgroundColor: 'rgba(23, 23, 23, 0.9)',
                                     border: '1px solid rgba(255,255,255,0.1)',

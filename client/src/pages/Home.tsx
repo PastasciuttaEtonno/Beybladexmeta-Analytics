@@ -302,20 +302,21 @@ export default function Home() {
             </TabsContent>
           </Tabs>
         </main>
-        <LeaderboardDialog
-          type={leaderboardType}
-          season={selectedSeason}
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            if (!open) setLeaderboardType(null);
-          }}
-        />
       </div>
 
+      <LeaderboardDialog
+        type={leaderboardType}
+        season={selectedSeason}
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) setLeaderboardType(null);
+        }}
+      />
+
       {/* DESKTOP CONTENT (>= 768px) */}
-      <div className="hidden md:block">
+      <div className="hidden md:block max-w-[1400px] mx-auto w-full p-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-black tracking-tight text-foreground/90">Dashboard</h1>
+          <h1 className="text-4xl font-black tracking-tight text-foreground/90">Il Meta in Sintesi</h1>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground mr-2">Filtra per stagione:</span>
             <Select value={selectedSeason} onValueChange={setSelectedSeason}>
@@ -331,7 +332,10 @@ export default function Home() {
           </div>
         </div>
 
-        <DesktopBentoGrid selectedSeason={selectedSeason} />
+        <DesktopBentoGrid
+          selectedSeason={selectedSeason}
+          onSelectType={(type) => setLeaderboardType(type)}
+        />
 
         {/* Note: In a real "split" we might render other desktop sections here */}
       </div>

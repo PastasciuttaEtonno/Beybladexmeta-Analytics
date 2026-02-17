@@ -667,11 +667,8 @@ export default function Tournaments() {
     const pageItems = filtered.slice(startIdx, endIdx);
     return (
       <div className="space-y-4">
-        {/* Compact filter bar with description */}
+        {/* Compact filter bar */}
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-muted-foreground w-full mb-2">
-            Esplora i tornei, analizza le combo utilizzate e registra i tuoi risultati per scalare le classifiche.
-          </p>
           <div className="flex-1 min-w-[180px]">
             <Label htmlFor="filter-name" className="sr-only">Tournament name</Label>
             <Input
@@ -785,7 +782,7 @@ export default function Tournaments() {
             <p className="text-muted-foreground">Nessun torneo trovato.</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {(pageItems.length > 0 ? pageItems : []).map((t) => (
               <Card key={t.torneoId} className="overflow-hidden cursor-pointer" onClick={() => openTournamentDialog(t)}>
                 <CardHeader className="pb-2">
@@ -904,9 +901,13 @@ export default function Tournaments() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title="Tornei" action={<HeaderLogo />} />
+      <PageHeader
+        title="Tornei"
+        description="Esplora i tornei, analizza le combo utilizzate e registra i tuoi risultati per scalare le classifiche."
+        action={<HeaderLogo />}
+      />
 
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
+      <main className="flex-1 px-4 py-6 w-full mx-auto">
         {/* Single list view; admins can edit combos from player dialog */}
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'list')} className="w-full">
 
