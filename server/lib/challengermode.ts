@@ -20,10 +20,15 @@ export async function getAppAccessToken(): Promise<string> {
   if (!clientId || !clientSecret) throw new Error("Missing CM_CLIENT_ID or CM_CLIENT_SECRET");
   const body = new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret });
   const res = await fetch(OAUTH_URL, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+
   const text = await res.text();
-  if (!res.ok) throw new Error(`OAuth token error ${res.status}`);
+  if (!res.ok) {
+    console.error("OAuth Error Body:", text);
+    throw new Error(`OAuth token error ${res.status}`);
+  }
+
   let json: any = {};
-  try { json = JSON.parse(text); } catch {}
+  try { json = JSON.parse(text); } catch { }
   const token: string = json?.access_token || json?.token || "";
   const expiresIn: number = typeof json?.expires_in === "number" ? json.expires_in : 600;
   if (!token) throw new Error("Missing access_token in response");
@@ -53,7 +58,7 @@ export async function checkTournamentPlacement(tournamentId: string, userId: str
   const text = await res.text();
   if (!res.ok) throw new Error(`GraphQL error ${res.status}`);
   let json: any = {};
-  try { json = JSON.parse(text); } catch {}
+  try { json = JSON.parse(text); } catch { }
   const node = json?.data?.tournament;
   const parsed = TournamentDetailSchema.safeParse(node);
   if (!parsed.success) return false;

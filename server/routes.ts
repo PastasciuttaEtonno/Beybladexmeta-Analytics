@@ -1767,6 +1767,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (u?.photoURL) userAvatar = u.photoURL;
       }
 
+      // Fallback: Check aliases if no avatar found yet and we have a linked user
+      if (!userAvatar) {
+        let userId = null;
+        if (cmPlayer) {
+          const u = await db.query.users.findFirst({ where: eq(users.challengerId, cmPlayer.id) });
+          if (u) userId = u.id;
+        }
+        if (!userId && challongePlayer) {
+          let u = await db.query.users.findFirst({ where: eq(users.challongeId, challongePlayer.id) });
+          if (!u) {
+            u = await db.query.users.findFirst({
+              where: sql`LOWER(${users.challongeUsername}) = LOWER(${nickname})`
+            });
+          }
+          if (u) userId = u.id;
+        }
+
+        if (userId) {
+          const aliases = await db.select().from(userAliases).where(eq(userAliases.userId, userId));
+          for (const alias of aliases) {
+            // Check Challonge for alias avatar
+            const aliasChallonge = await db.query.challongePlayers.findFirst({
+              where: eq(challongePlayers.nickname, alias.alias)
+            });
+            if (aliasChallonge?.avatar) {
+              userAvatar = aliasChallonge.avatar;
+              break;
+            }
+
+            // Check Challengermode for alias avatar
+            const aliasCm = await db.query.cmPlayers.findFirst({
+              where: eq(cmPlayers.nickname, alias.alias)
+            });
+            if (aliasCm?.avatar) {
+              userAvatar = aliasCm.avatar;
+              break;
+            }
+          }
+        }
+      }
+
       // Get platform stats for this player (with top-3 calculation)
       const platformStats = await db.select()
         .from(playerPlatformStats)
