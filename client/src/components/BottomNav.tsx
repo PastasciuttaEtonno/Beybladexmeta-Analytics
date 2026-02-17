@@ -17,11 +17,11 @@ export function BottomNav() {
   const visibleNavItems = navItems.filter(item => !item.adminOnly || user?.isAdmin);
 
   return (
-    <nav role="navigation" className="fixed bottom-0 left-0 right-0 bg-card border-t border-card-border z-50 safe-area-bottom">
+    <nav role="navigation" className="fixed bottom-0 left-0 right-0 bg-card border-t border-card-border z-50 safe-area-bottom md:hidden">
       <div className="flex items-center justify-around h-16 max-w-2xl mx-auto px-2">
         {visibleNavItems.map(({ path, icon: Icon, label }) => {
           const isActive = location === path;
-          
+
           return (
             <Link key={path} href={path}>
               <a

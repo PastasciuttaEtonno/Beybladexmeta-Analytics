@@ -27,6 +27,7 @@ import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
 import ImportTournament from "@/pages/admin/ImportTournament";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import { ResponsiveAppShell } from "@/components/layout/ResponsiveAppShell";
 
 function AppRoutes() {
   return (
@@ -114,16 +115,6 @@ function AppRoutes() {
   );
 }
 
-function AdsLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-center min-h-screen w-full">
-      <div className="flex-1 w-full max-w-2xl relative">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const [location] = useLocation();
   const [showIntro, setShowIntro] = useState(() => {
@@ -142,9 +133,9 @@ export default function App() {
       <TooltipProvider>
         <ThemeProvider>
           <AuthProvider>
-            <AdsLayout>
+            <ResponsiveAppShell>
               <AppRoutes />
-            </AdsLayout>
+            </ResponsiveAppShell>
             <Toaster />
             {/* <TournamentRegistrationNotice /> */}
             {showIntro && (
