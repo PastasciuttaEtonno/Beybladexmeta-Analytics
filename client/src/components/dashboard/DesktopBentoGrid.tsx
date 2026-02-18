@@ -70,7 +70,7 @@ export function DesktopBentoGrid({ selectedSeason, onSelectType }: DesktopBentoG
                                 {topBlade?.primiPosti || 0} Vittorie
                             </Badge>
                             <Badge variant="outline" className="px-3 py-1.5 text-sm border-border bg-background/50 backdrop-blur-sm text-foreground">
-                                Score: {topBlade?.punteggioTotale.toLocaleString() || 0}
+                                Punti: {topBlade?.punteggioTotale.toLocaleString() || 0}
                             </Badge>
                         </div>
                     </div>
