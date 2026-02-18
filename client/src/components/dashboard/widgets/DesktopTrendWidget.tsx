@@ -99,13 +99,22 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                             <XAxis dataKey="month" hide />
                             <YAxis hide domain={[0, 'dataMax + 10']} />
                             <ChartTooltip
-                                contentStyle={{
-                                    backgroundColor: 'rgba(23, 23, 23, 0.9)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '8px',
-                                    fontSize: '12px'
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        return (
+                                            <div className="bg-background/90 backdrop-blur-md border border-border p-3 rounded-lg shadow-xl">
+                                                <p className="text-xs text-muted-foreground font-medium mb-1">{label}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-2 h-2 rounded-full bg-primary" />
+                                                    <span className="text-sm font-bold text-foreground">
+                                                        {payload[0].value} Utilizzi
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
                                 }}
-                                itemStyle={{ color: '#fff' }}
                             />
                             <Area
                                 type="monotone"
