@@ -9,7 +9,7 @@ interface DesktopComboStatsProps {
 
 export function DesktopComboStatsSkeleton() {
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 py-3 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
                 <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50">
                     <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-3">
@@ -63,7 +63,7 @@ export function DesktopComboStats({ combo }: DesktopComboStatsProps) {
     ];
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 py-3 md:grid-cols-4 gap-4">
             {stats.map((stat) => (
                 <Card
                     key={stat.label}

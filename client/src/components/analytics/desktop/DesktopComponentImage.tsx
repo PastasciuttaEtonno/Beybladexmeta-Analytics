@@ -23,17 +23,20 @@ export function DesktopComponentImage({ folder, name, className }: { folder: str
     ], [name, folder]);
 
     const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+    const [isLoaded, setIsLoaded] = useState(false);
 
     const handleImageError = () => {
         if (attemptIndex < allAttempts.length - 1) {
             setAttemptIndex((prev) => prev + 1);
             setCurrentSrc(null);
+            setIsLoaded(false);
         }
     };
 
     useEffect(() => {
         if (!currentSrc && attemptIndex < allAttempts.length) {
             setCurrentSrc(allAttempts[attemptIndex]);
+            setIsLoaded(false);
         }
     }, [attemptIndex, allAttempts, currentSrc]);
 
@@ -45,8 +48,9 @@ export function DesktopComponentImage({ folder, name, className }: { folder: str
                 <img
                     src={currentSrc}
                     alt={name}
-                    className="w-full h-full object-contain filter drop-shadow-md transition-opacity duration-300"
+                    className={`w-full h-full object-contain filter drop-shadow-md transition-opacity duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                     onError={handleImageError}
+                    onLoad={() => setIsLoaded(true)}
                 />
             )}
         </div>
