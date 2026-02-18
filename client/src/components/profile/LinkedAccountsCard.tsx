@@ -52,7 +52,9 @@ export function LinkedAccountsCard({ user }: LinkedAccountsCardProps) {
             <SettingsRow
                 icon={Gamepad2}
                 label="Challonge"
-                value={(user as any)?.challongeUsername || (user?.challongeId ? "Connected" : "Not Connected")}
+                value={(user as any)?.challongeUsername || (user?.challongeId ? "Connected" : (
+                    <span className="w-2 h-2 rounded-full inline-block bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                ))}
                 action={
                     user?.challongeId ? (
                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
@@ -66,7 +68,9 @@ export function LinkedAccountsCard({ user }: LinkedAccountsCardProps) {
             <SettingsRow
                 icon={Gamepad2}
                 label="Challengermode"
-                value={(user as any)?.challengermodeUsername || (user?.challengerId ? "Connected" : "Not Connected")}
+                value={(user as any)?.challengermodeUsername || (user?.challengerId ? "Connected" : (
+                    <span className="w-2 h-2 rounded-full inline-block bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                ))}
                 action={
                     user?.challengerId ? (
                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />

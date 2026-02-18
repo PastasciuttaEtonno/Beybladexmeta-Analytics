@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { User } from "@shared/schema";
-import { Edit2, ShieldCheck, Gamepad2 } from "lucide-react";
+import { Edit2, Gamepad2 } from "lucide-react";
 import { Link } from "wouter";
 
 interface ProfileSidebarProps {
@@ -47,19 +47,7 @@ export function ProfileSidebar({ user }: ProfileSidebarProps) {
                         </span>
                     )}
                 </div>
-                {/* Status Badge - positioned absolute */}
-                <div className="absolute -bottom-1 -right-1 min-[1175px]:-bottom-2 min-[1175px]:-right-2">
-                    {user.challengerId ? (
-                        <Badge className="bg-green-500 hover:bg-green-600 border-2 border-background px-2 py-0.5 min-[1175px]:px-3 min-[1175px]:py-1 gap-1">
-                            <ShieldCheck className="w-3 h-3" />
-                            <span className="text-[10px] min-[1175px]:text-xs">Pro</span>
-                        </Badge>
-                    ) : (
-                        <Badge variant="secondary" className="border-2 border-background px-2 py-0.5 min-[1175px]:px-3 min-[1175px]:py-1 text-[10px] min-[1175px]:text-xs">
-                            Member
-                        </Badge>
-                    )}
-                </div>
+
             </div>
 
             {/* Identity Section */}
