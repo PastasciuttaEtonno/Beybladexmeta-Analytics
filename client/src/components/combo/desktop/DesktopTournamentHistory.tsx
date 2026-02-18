@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import type { TournamentEntry } from "@/hooks/useComboDetails";
@@ -46,10 +47,10 @@ export function DesktopTournamentHistory({
                     <div>
                         <CardTitle className="text-xl flex items-center gap-2">
                             <Trophy className="w-5 h-5 text-primary" />
-                            Tournament History
+                            Tornei recenti
                         </CardTitle>
                         <CardDescription>
-                            Recent performance in {totalTournaments} tournaments
+                            Ultime apparizioni in {totalTournaments} tornei
                         </CardDescription>
                     </div>
                 </div>
@@ -59,26 +60,26 @@ export function DesktopTournamentHistory({
                     <Table>
                         <TableHeader className="bg-muted/50">
                             <TableRow>
-                                <TableHead>Tournament</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Player</TableHead>
-                                <TableHead className="text-right">Placement</TableHead>
+                                <TableHead>Torneo</TableHead>
+                                <TableHead>Data</TableHead>
+                                <TableHead>Giocatore</TableHead>
+                                <TableHead className="text-right">Posizione</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 [...Array(5)].map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell><div className="h-4 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
-                                        <TableCell><div className="h-4 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
-                                        <TableCell><div className="h-4 w-20 bg-muted/50 rounded animate-pulse" /></TableCell>
-                                        <TableCell className="text-right"><div className="h-6 w-16 bg-muted/50 rounded animate-pulse ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                        <TableCell className="text-right flex justify-end"><Skeleton className="h-6 w-20" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : tournaments.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                        No tournament history found.
+                                        Nessun torneo recente trovato.
                                     </TableCell>
                                 </TableRow>
                             ) : (

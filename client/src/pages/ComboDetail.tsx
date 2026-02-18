@@ -21,12 +21,11 @@ import { Seo } from "@/components/Seo";
 import { format } from "date-fns";
 import { useComboDetails } from "@/hooks/useComboDetails";
 import { BeybladeImage } from "@/components/common/BeybladeImage";
-import { HeaderLogo } from "@/components/HeaderLogo";
-import { DesktopComboVisuals } from "@/components/combo/desktop/DesktopComboVisuals";
-import { DesktopComboStats } from "@/components/combo/desktop/DesktopComboStats";
+import { DesktopComboVisuals, DesktopComboVisualsSkeleton } from "@/components/combo/desktop/DesktopComboVisuals";
+import { DesktopComboStats, DesktopComboStatsSkeleton } from "@/components/combo/desktop/DesktopComboStats";
 import { DesktopTournamentHistory } from "@/components/combo/desktop/DesktopTournamentHistory";
 
-import { DesktopComboTrend } from "@/components/combo/desktop/DesktopComboTrend";
+import { DesktopComboTrend, DesktopComboTrendSkeleton } from "@/components/combo/desktop/DesktopComboTrend";
 
 export default function ComboDetail() {
   const {
@@ -36,6 +35,7 @@ export default function ComboDetail() {
     comboLoading,
     comboError,
     tournaments,
+    allTournaments,
     tourLoading,
     totalTournaments,
     currentPage,
@@ -71,12 +71,33 @@ export default function ComboDetail() {
   if (comboLoading) {
     return (
       <div className="min-h-screen bg-background p-4 pb-24">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-64 w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
+        <div className="max-w-[1400px] mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-44" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <DesktopComboVisualsSkeleton />
+              <DesktopComboStatsSkeleton />
+            </div>
+            <div className="space-y-6">
+              <DesktopComboTrendSkeleton />
+              <Card className="border-border/50 bg-card/30 backdrop-blur-md">
+                <CardHeader>
+                  <Skeleton className="h-7 w-48 mb-2" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
@@ -174,24 +195,29 @@ export default function ComboDetail() {
             Indietro
           </a>
         </Link>
-        <HeaderLogo />
-        <div className="hidden lg:flex items-center gap-3">
-          <Select
-            value={season || "All Time"}
-            onValueChange={handleSeasonChange}
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:block">
+            <Select
+              value={season || "All Time"}
+              onValueChange={handleSeasonChange}
+            >
+              <SelectTrigger className="w-[180px] bg-background">
+                <SelectValue placeholder="Seleziona Stagione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Time">All Time</SelectItem>
+                <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
+                <SelectItem value="Season 2026">Season 2026</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={handleShare}
+            variant="ghost"
+            className="gap-2 px-4 py-2 text-sm font-medium rounded-md min-w-[44px] min-h-[44px] h-auto hover:bg-accent hover:text-accent-foreground transition-colors"
           >
-            <SelectTrigger className="w-[180px] bg-background">
-              <SelectValue placeholder="Seleziona Stagione" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All Time">All Time</SelectItem>
-              <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
-              <SelectItem value="Season 2026">Season 2026</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleShare} variant="ghost" className="gap-2">
-            <Share2 className="w-4 h-4" />
-            Condividi
+            <Share2 className="w-4 h-4 text-primary" />
+            <span className="hidden sm:inline">Condividi</span>
           </Button>
         </div>
       </div>
@@ -203,7 +229,11 @@ export default function ComboDetail() {
           <div className="sticky top-24 space-y-6">
 
             <DesktopComboVisuals combo={combo} rank={rank} />
-            <DesktopComboTrend tournaments={tournaments} season={season} />
+            {tourLoading ? (
+              <DesktopComboTrendSkeleton />
+            ) : (
+              <DesktopComboTrend tournaments={allTournaments} season={season} />
+            )}
           </div>
         </div>
 
@@ -224,13 +254,6 @@ export default function ComboDetail() {
 
       {/* === MOBILE LAYOUT (< lg) - PRESERVED === */}
       <div className="lg:hidden max-w-2xl mx-auto space-y-6">
-        <div className="flex justify-end mb-4">
-          {/* Mobile Share Button */}
-          <Button onClick={handleShare} variant="ghost" className="gap-2">
-            <Share2 className="w-4 h-4" />
-            Condividi
-          </Button>
-        </div>
 
         <Card>
           <CardHeader>

@@ -3,10 +3,29 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { format, parseISO, isValid } from "date-fns";
 import { TrendingUp, AlertCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DesktopComboTrendProps {
     tournaments: any[];
     season?: string;
+}
+
+export function DesktopComboTrendSkeleton() {
+    return (
+        <Card className="w-full relative overflow-hidden border-border/50 bg-card/30 backdrop-blur-xl">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <Skeleton className="w-7 h-7 rounded-md" />
+                    <Skeleton className="h-5 w-40" />
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="h-[250px] w-full pt-4">
+                    <Skeleton className="w-full h-full rounded-lg" />
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
 
 export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProps) {

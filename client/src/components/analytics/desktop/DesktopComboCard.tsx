@@ -6,6 +6,7 @@ import { useState, useMemo, useEffect } from "react";
 
 const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { DesktopComponentImage } from "./DesktopComponentImage";
 
 interface DesktopComboCardProps {
@@ -88,11 +89,11 @@ export function DesktopComboCard({ combo, index, rank, onClick }: DesktopComboCa
                     {!hasRatchet ? (
                         /* Layout for Missing Ratchet: Side-by-Side */
                         <div className="flex flex-row items-center justify-center gap-4 w-full h-full">
-                            <div className="relative z-20 scale-100 group-hover:scale-110 transition-transform duration-500">
+                            <div className="relative z-20 scale-100 transition-transform duration-500">
                                 <DesktopComponentImage folder="blades" name={combo.blade} className="w-24 h-24" />
                             </div>
                             {hasBit && (
-                                <div className="relative z-10 scale-90 group-hover:scale-100 transition-transform duration-500">
+                                <div className="relative z-10 scale-90 transition-transform duration-500">
                                     <DesktopComponentImage folder="bits" name={combo.bit} className="w-20 h-20" />
                                 </div>
                             )}
@@ -101,18 +102,18 @@ export function DesktopComboCard({ combo, index, rank, onClick }: DesktopComboCa
                         /* Default Layout: Overlapping */
                         <div className="relative w-full h-full flex items-center justify-center">
                             {/* Ratchet (Background Left) */}
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-100 scale-75 group-hover:scale-90 group-hover:-translate-x-3 transition-transform duration-500 z-0">
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 opacity-100 scale-75 transition-transform duration-500 z-0">
                                 <DesktopComponentImage folder="ratchets" name={combo.ratchet} className="w-20 h-20" />
                             </div>
 
                             {/* Blade (Foreground Center) */}
-                            <div className="relative z-20 scale-100 group-hover:scale-110 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-500">
+                            <div className="relative z-20 scale-100 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-500">
                                 <DesktopComponentImage folder="blades" name={combo.blade} className="w-24 h-24" />
                             </div>
 
                             {/* Bit (Background Right) */}
                             {hasBit && (
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-100 scale-75 group-hover:scale-90 group-hover:translate-x-3 transition-transform duration-500 z-0">
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-100 scale-75 transition-transform duration-500 z-0">
                                     <DesktopComponentImage folder="bits" name={combo.bit} className="w-20 h-20" />
                                 </div>
                             )}
@@ -152,8 +153,50 @@ export function DesktopComboCard({ combo, index, rank, onClick }: DesktopComboCa
                 {/* Overlay Action (Visible on Hover) */}
                 <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <Badge className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 text-sm shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-200">
-                        View Details
+                        Vedi
                     </Badge>
+                </div>
+            </div>
+        </Card>
+    );
+}
+
+export function DesktopComboCardSkeleton() {
+    return (
+        <Card className="relative overflow-hidden border-border bg-card/40 backdrop-blur-md transition-all duration-300 h-full">
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                <Skeleton className="w-8 h-8 rounded-md" />
+                <Skeleton className="w-8 h-8 rounded-md" />
+                <Skeleton className="w-7 h-7 rounded-full" />
+            </div>
+
+            <div className="p-4 flex flex-col h-full relative z-0">
+                {/* Header Skeleton */}
+                <div className="mb-4 pr-8">
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                </div>
+
+                {/* Visuals Skeleton */}
+                <div className="flex items-center justify-center h-24 w-full relative mb-4">
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        <Skeleton className="absolute left-0 w-20 h-20 rounded-full opacity-50" />
+                        <Skeleton className="relative z-10 w-24 h-24 rounded-full" />
+                        <Skeleton className="absolute right-0 w-20 h-20 rounded-full opacity-50" />
+                    </div>
+                </div>
+
+                {/* Stats Grid Skeleton */}
+                <div className="flex items-stretch gap-2 mt-auto pt-3 border-t border-border">
+                    <Skeleton className="h-14 w-20 rounded-lg" />
+                    <div className="flex-1 grid grid-cols-4 gap-1 p-1 rounded-lg bg-muted/20">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="flex flex-col items-center justify-center gap-1">
+                                <Skeleton className="h-2 w-4" />
+                                <Skeleton className="h-3 w-6" />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </Card>

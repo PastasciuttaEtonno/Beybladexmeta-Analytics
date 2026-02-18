@@ -837,8 +837,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const seasonRaw = String((req.query.season ?? '') as string).trim();
       const seasonLower = seasonRaw.toLowerCase();
       const isAllTime = !seasonRaw || seasonLower === 'all' || seasonLower === 'all time' || seasonLower === 'all-time';
-      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
-      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 50;
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 200;
+      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 500)) : 200;
 
       const tournaments: any[] = [];
 

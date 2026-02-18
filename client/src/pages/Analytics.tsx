@@ -637,11 +637,12 @@ export default function Analytics() {
                   {/* Desktop Grid View (>= 768px) */}
                   <div className="hidden md:block">
                     <DesktopAnalyticsGrid
-                      combos={data.combos}
-                      currentPage={data.pagination?.page || 1}
-                      itemsPerPage={data.pagination?.limit || 20}
+                      combos={data?.combos || []}
+                      currentPage={data?.pagination?.page || 1}
+                      itemsPerPage={data?.pagination?.limit || 20}
                       getComboId={getComboId}
                       season={selectedSeason}
+                      isLoading={isLoading}
                     />
                   </div>
 

@@ -1,4 +1,4 @@
-import { DesktopComboCard } from "./DesktopComboCard";
+import { DesktopComboCard, DesktopComboCardSkeleton } from "./DesktopComboCard";
 import type { ComboStats } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -8,9 +8,27 @@ interface DesktopAnalyticsGridProps {
     itemsPerPage: number;
     getComboId: (combo: ComboStats) => string;
     season: string;
+    isLoading?: boolean;
 }
 
-export function DesktopAnalyticsGrid({ combos, currentPage, itemsPerPage, getComboId, season }: DesktopAnalyticsGridProps) {
+export function DesktopAnalyticsGrid({
+    combos,
+    currentPage,
+    itemsPerPage,
+    getComboId,
+    season,
+    isLoading
+}: DesktopAnalyticsGridProps) {
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                    <DesktopComboCardSkeleton key={i} />
+                ))}
+            </div>
+        );
+    }
+
     if (!combos || combos.length === 0) {
         return (
             <div className="py-20 text-center border border-dashed border-border rounded-xl bg-card/20">

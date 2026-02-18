@@ -1,11 +1,35 @@
 import { Card } from "@/components/ui/card";
 import { Trophy, Medal, Award } from "lucide-react";
 import { BeybladeImage } from "@/components/common/BeybladeImage";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ComboStats } from "@/hooks/useComboDetails";
 
 interface DesktopComboVisualsProps {
     combo: ComboStats;
     rank: number;
+}
+
+export function DesktopComboVisualsSkeleton() {
+    return (
+        <Card className="relative overflow-hidden border-border/50 bg-card/30 backdrop-blur-xl h-full min-h-[270px] flex flex-col items-center justify-center p-4">
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-3 bg-background/60 backdrop-blur-md rounded-full px-3 py-1.5 border border-white/10">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <Skeleton className="w-8 h-8 rounded-full" />
+            </div>
+
+            <div className="relative z-10 grid grid-cols-2 gap-x-8 gap-y-2 w-full max-w-sm mx-auto">
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex flex-col items-center gap-3">
+                        <Skeleton className="w-14 h-14 md:w-20 md:h-20 rounded-full" />
+                        <div className="text-center space-y-1">
+                            <Skeleton className="h-2 w-12 mx-auto" />
+                            <Skeleton className="h-4 w-20 mx-auto" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </Card>
+    );
 }
 
 export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
@@ -26,12 +50,12 @@ export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
     const lockChip = combo.lockChip && combo.lockChip.toLowerCase() !== "none" ? combo.lockChip : null;
 
     return (
-        <Card className="relative overflow-hidden border-border/50 bg-card/30 backdrop-blur-xl h-full min-h-[380px] flex flex-col items-center justify-center p-6 group">
+        <Card className="relative overflow-hidden border-border/50 bg-card/30 backdrop-blur-xl h-full min-h-[270px] flex flex-col items-center justify-center p-4 group">
             {/* Background Glow Effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-50 pointer-events-none" />
 
             {/* Rank & Lock Chip Indicator */}
-            <div className="absolute top-6 right-6 z-20 flex items-center gap-3 bg-background/60 backdrop-blur-md rounded-full px-4 py-2 shadow-lg border border-white/10 ring-1 ring-black/5">
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-3 bg-background/60 backdrop-blur-md rounded-full px-3 py-1.5 shadow-lg border border-white/10 ring-1 ring-black/5">
                 {lockChip && (
                     <div className="w-10 h-10 filter drop-shadow-sm">
                         <BeybladeImage
@@ -47,7 +71,7 @@ export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
             </div>
 
             {/* Exploded View Container */}
-            <div className={`relative z-10 grid grid-cols-2 gap-x-12 gap-y-6 w-full max-w-sm mx-auto perspective-[1000px] ${components.length === 3 ? "justify-items-center" : ""
+            <div className={`relative z-10 grid grid-cols-2 gap-x-8 gap-y-2 w-full max-w-sm mx-auto perspective-[1000px] ${components.length === 3 ? "justify-items-center" : ""
                 }`}>
                 {components.map((component, index) => (
                     <div
@@ -62,7 +86,7 @@ export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
                             {/* Component Glow */}
                             <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover/item:opacity-70 transition-opacity duration-500" />
 
-                            <div className="relative w-16 h-16 md:w-24 md:h-24 filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)] group-hover/item:drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all duration-300">
+                            <div className="relative w-14 h-14 md:w-20 md:h-20 filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)] group-hover/item:drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all duration-300">
                                 <BeybladeImage
                                     folder={component.folder}
                                     name={component.value}

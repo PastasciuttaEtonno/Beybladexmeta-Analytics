@@ -163,11 +163,63 @@ export function DesktopBentoGrid({ selectedSeason, onSelectType }: DesktopBentoG
 
 function DesktopBentoSkeleton() {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <Skeleton className="md:col-span-2 row-span-2 h-[70vh]" />
-            <Skeleton className="h-[35vh]" />
-            <Skeleton className="h-[35vh]" />
-            <Skeleton className="md:col-span-2 h-[35vh]" />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[minmax(35vh,auto)]">
+            {/* Hero Card Skeleton */}
+            <div className="md:col-span-2 lg:col-span-2 row-span-2">
+                <Card className="p-8 h-full flex flex-col justify-between border-border bg-card/40">
+                    <div className="flex items-center gap-3">
+                        <Skeleton className="w-10 h-10 rounded-lg" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-5 w-24" />
+                            <Skeleton className="h-4 w-16" />
+                        </div>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center py-12">
+                        <Skeleton className="w-48 h-48 rounded-full" />
+                    </div>
+                    <div className="space-y-4">
+                        <Skeleton className="h-12 w-3/4" />
+                        <div className="flex gap-3">
+                            <Skeleton className="h-8 w-24" />
+                            <Skeleton className="h-8 w-32" />
+                        </div>
+                    </div>
+                </Card>
+            </div>
+
+            {/* Medium Card Skeletons */}
+            {[1, 2].map((i) => (
+                <Card key={i} className="p-6 flex flex-col border-border bg-card/40">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Skeleton className="w-8 h-8 rounded-md" />
+                        <Skeleton className="h-5 w-20" />
+                    </div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <Skeleton className="w-24 h-24 rounded-full" />
+                    </div>
+                    <div className="mt-auto space-y-2 flex flex-col items-center">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-4 w-16" />
+                    </div>
+                </Card>
+            ))}
+
+            {/* Trend Widget Skeleton */}
+            <Card className="md:col-span-3 lg:col-span-2 p-6 border-border bg-card/40 flex flex-col">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="w-8 h-8 rounded-md" />
+                        <Skeleton className="h-5 w-32" />
+                    </div>
+                    <div className="flex gap-2">
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-8 w-32" />
+                    </div>
+                </div>
+                <div className="flex-1">
+                    <Skeleton className="w-full h-full rounded-lg" />
+                </div>
+            </Card>
         </div>
     )
 }

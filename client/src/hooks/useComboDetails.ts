@@ -53,8 +53,9 @@ export function useComboDetails() {
     const { data: tourData, isLoading: tourLoading } = useQuery<{ tournaments: TournamentEntry[] }>({
         queryKey: ['/api/stats/combos', decodedId, 'tournaments', season],
         queryFn: async () => {
-            const querySeason = season ? `?season=${encodeURIComponent(season)}` : '';
-            const resp = await fetch(`/api/stats/combos/${encodeURIComponent(decodedId!)}/tournaments${querySeason}`);
+            const querySeason = season ? `&season=${encodeURIComponent(season)}` : '';
+            // Request up to 500 tournaments to cover full history for the trend widget
+            const resp = await fetch(`/api/stats/combos/${encodeURIComponent(decodedId!)}/tournaments?limit=500${querySeason}`);
             if (!resp.ok) throw new Error('Failed to fetch combo tournaments');
             return resp.json();
         },
@@ -64,11 +65,12 @@ export function useComboDetails() {
     // Pagination Logic
     const [currentPage, setCurrentPage] = useState(1);
     const tournamentsPerPage = 5;
-    const totalTournaments = tourData?.tournaments?.length || 0;
+    const allTournaments = tourData?.tournaments || [];
+    const totalTournaments = allTournaments.length;
     const totalPages = Math.ceil(totalTournaments / tournamentsPerPage);
     const startIndex = (currentPage - 1) * tournamentsPerPage;
     const endIndex = startIndex + tournamentsPerPage;
-    const currentTournaments = (tourData?.tournaments || []).slice(startIndex, endIndex);
+    const paginatedTournaments = allTournaments.slice(startIndex, endIndex);
 
     const combo = comboData?.combo;
     const rank = comboData?.rank ?? 0;
@@ -129,19 +131,20 @@ export function useComboDetails() {
         comboError,
 
         // Tournaments
-        tournaments: currentTournaments,
+        tournaments: paginatedTournaments, // Keep paginated for the list
+        allTournaments, // New export for the Trend Widget
         tourLoading,
         totalTournaments,
         currentPage,
         totalPages,
         setCurrentPage,
-        tournamentsPerPage, // Export if needed for external pagination components
+        tournamentsPerPage,
 
         // Helpers
         getComboTitle,
         getCanonicalUrl,
         getOgImageUrl,
         handleShare,
-        season // Export season for UI to use
+        season
     };
 }

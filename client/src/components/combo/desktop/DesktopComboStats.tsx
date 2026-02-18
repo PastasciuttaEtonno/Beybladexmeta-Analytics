@@ -1,9 +1,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Star } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ComboStats } from "@/hooks/useComboDetails";
 
 interface DesktopComboStatsProps {
     combo: ComboStats;
+}
+
+export function DesktopComboStatsSkeleton() {
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50">
+                    <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-3">
+                        <Skeleton className="w-10 h-10 rounded-full" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-3 w-20 mx-auto" />
+                            <Skeleton className="h-7 w-16 mx-auto" />
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
 }
 
 export function DesktopComboStats({ combo }: DesktopComboStatsProps) {
