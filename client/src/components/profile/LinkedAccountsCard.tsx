@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { User } from "@shared/schema";
+import { Gamepad2, ChevronRight, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface LinkedAccountsCardProps {
     user: any;
@@ -8,43 +8,73 @@ interface LinkedAccountsCardProps {
 export function LinkedAccountsCard({ user }: LinkedAccountsCardProps) {
     if (!user) return null;
 
-    return (
-        <div className="space-y-6">
-            {/* Challengermode Section */}
-            <div className="space-y-2">
-                {user.challengerId ? (
-                    <div className="p-3 bg-green-500/10 text-green-700 dark:text-green-400 rounded-md text-sm border border-green-500/20">
-                        Challengermode: <strong>{(user as any).challengermodeUsername || user.challengerId}</strong>
+    const SettingsRow = ({
+        icon: Icon,
+        label,
+        value,
+        action,
+        onClick,
+        href
+    }: {
+        icon: any,
+        label: string,
+        value?: React.ReactNode,
+        action?: React.ReactNode,
+        onClick?: () => void,
+        href?: string
+    }) => {
+        return (
+            <div
+                className={`flex items-center justify-between p-3 rounded-lg transition-colors hover:bg-accent/50 ${onClick || href ? "cursor-pointer" : ""}`}
+                onClick={onClick}
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-muted text-muted-foreground">
+                        <Icon className="w-5 h-5" />
                     </div>
-                ) : (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full bg-[#171A21] text-white hover:bg-[#171A21]/90 border-0"
-                        onClick={() => { window.location.href = "/api/challenger/login"; }}
-                    >
-                        Collega account Challengermode
-                    </Button>
-                )}
+                    <div className="flex flex-col">
+                        <span className="font-medium text-sm text-foreground">
+                            {label}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    {value && <span className="text-xs text-muted-foreground">{value}</span>}
+                    {action}
+                </div>
             </div>
+        );
+    };
 
-            {/* Challonge Section */}
-            <div className="space-y-2">
-                {(user as any)?.challongeUsername || user.challongeId ? (
-                    <div className="p-3 bg-orange-500/10 text-orange-700 dark:text-orange-400 rounded-md text-sm border border-orange-500/20">
-                        Challonge: <strong>{(user as any).challongeUsername || "Challonge User"}</strong>
-                    </div>
-                ) : (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-orange-500 text-orange-500 hover:bg-orange-500/10"
-                        onClick={() => { window.location.href = "/api/challonge/login"; }}
-                    >
-                        Collega account Challonge
-                    </Button>
-                )}
-            </div>
+    return (
+        <div className="divide-y divide-border">
+            {/* Challonge */}
+            <SettingsRow
+                icon={Gamepad2}
+                label="Challonge"
+                value={(user as any)?.challongeUsername || (user?.challongeId ? "Connected" : "Not Connected")}
+                action={
+                    user?.challongeId ? (
+                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                    ) : (
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.location.href = "/api/challonge/login"}>Connect</Button>
+                    )
+                }
+            />
+
+            {/* Challengermode */}
+            <SettingsRow
+                icon={Gamepad2}
+                label="Challengermode"
+                value={(user as any)?.challengermodeUsername || (user?.challengerId ? "Connected" : "Not Connected")}
+                action={
+                    user?.challengerId ? (
+                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                    ) : (
+                        <Button variant="outline" size="sm" className="h-7 text-xs bg-[#171A21] text-white hover:bg-[#171A21]/90 border-0" onClick={() => window.location.href = "/api/challenger/login"}>Connect</Button>
+                    )
+                }
+            />
         </div>
     );
 }

@@ -74,7 +74,7 @@ export default function Home() {
       <div className="flex flex-col min-h-screen bg-background pb-20 md:hidden">
         <PageHeader title="Home" action={<HeaderLogo />} />
 
-        <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-6">
+        <main className="flex-1 px-4 py-4 max-w-2xl mx-auto w-full space-y-6">
           <Tabs
             value={activeTab}
             onValueChange={(val) => {

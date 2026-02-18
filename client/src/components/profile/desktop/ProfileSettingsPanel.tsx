@@ -141,7 +141,7 @@ export function ProfileSettingsPanel({ user, theme, toggleTheme, handleLogout, o
                 {user && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Integra  </h3>
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Integrazioni</h3>
                             {(!user?.challongeId || !user?.challengerId) && (
                                 <span className="text-xs text-amber-500 font-medium flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3" /> Azione Richiesta

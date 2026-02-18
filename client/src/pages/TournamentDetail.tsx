@@ -691,7 +691,7 @@ export default function TournamentDetail() {
       />
       <PageHeader title="Dettagli torneo" action={<HeaderLogo />} />
 
-      <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full space-y-6">
+      <main className="flex-1 px-4 py-4 max-w-3xl mx-auto w-full space-y-6">
         <Link href="/tournaments">
           <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]" data-testid="button-back">
             <ArrowLeft className="w-4 h-4" />

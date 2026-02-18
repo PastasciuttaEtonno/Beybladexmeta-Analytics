@@ -424,7 +424,7 @@ export default function Analytics() {
         action={<HeaderLogo />}
       />
 
-      <main className="flex-1 px-4 py-6 w-full max-w-[1400px] mx-auto space-y-6">
+      <main className="flex-1 px-4 py-4 w-full max-w-[1400px] mx-auto space-y-6">
         <Tabs value={activeView} onValueChange={setActiveView} defaultValue="leaderboard" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 md:hidden">
             <TabsTrigger value="leaderboard">Top Combos</TabsTrigger>

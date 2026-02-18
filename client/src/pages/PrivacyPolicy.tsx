@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
             />
             <PageHeader title="Privacy Policy" action={<HeaderLogo />} />
 
-            <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full space-y-6">
+            <main className="flex-1 px-4 py-4 max-w-3xl mx-auto w-full space-y-6">
                 <div className="flex justify-start">
                     <Link href="/profile">
                         <a className="no-underline">

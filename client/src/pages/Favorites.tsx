@@ -463,7 +463,7 @@ export default function Favorites() {
     return (
       <div className="flex flex-col min-h-screen bg-background pb-20">
         <PageHeader title="Preferiti" action={<HeaderLogo />} />
-        <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
+        <main className="flex-1 px-4 py-4 max-w-2xl mx-auto w-full">
           <Card className="p-6 mb-6 text-center">
             <p className="text-sm text-muted-foreground">Accedi per usare i Preferiti e salvare le tue combo preferite</p>
             <div className="mt-3">
@@ -500,7 +500,7 @@ export default function Favorites() {
           />
         </div>
 
-        <main className="flex-1 px-4 py-6 w-full mx-auto md:hidden">
+        <main className="flex-1 px-4 py-4 w-full mx-auto md:hidden">
           <Tabs defaultValue="combos" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6 lg:w-[400px]">
               <TabsTrigger value="combos" data-testid="tab-combos">
@@ -699,7 +699,7 @@ export default function Favorites() {
             <TabsContent value="decks" className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">Favorite Decks</h2>
+                  <h2 className="text-lg font-semibold">Decks Preferiti</h2>
                   {!decksLoading && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {totalDecks} / {MAX_DECKS} deck salvati

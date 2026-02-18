@@ -1,6 +1,7 @@
 import { useRoute, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
+import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -155,7 +156,7 @@ export default function PlayerDetail() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      <PageHeader title={profile ? profile.nickname : "Profilo Giocatore"} />
+      <PageHeader title={profile ? profile.nickname : "Profilo Giocatore"} action={<HeaderLogo />} />
       {profile && (
         <Seo
           title={`${profile.nickname} - Profilo Giocatore | Beyblade X Meta`}
@@ -180,7 +181,7 @@ export default function PlayerDetail() {
         />
       )}
 
-      <main className="flex-1 px-4 py-6 w-full mx-auto space-y-3">
+      <main className="flex-1 px-4 py-4 w-full mx-auto space-y-3">
         <Tabs
           value={"players"}
           onValueChange={(val) => {

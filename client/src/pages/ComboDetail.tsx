@@ -14,6 +14,7 @@ import { Seo } from "@/components/Seo";
 import { format } from "date-fns";
 import { useComboDetails } from "@/hooks/useComboDetails";
 import { BeybladeImage } from "@/components/common/BeybladeImage";
+import { HeaderLogo } from "@/components/HeaderLogo";
 import { DesktopComboVisuals } from "@/components/combo/desktop/DesktopComboVisuals";
 import { DesktopComboStats } from "@/components/combo/desktop/DesktopComboStats";
 import { DesktopTournamentHistory } from "@/components/combo/desktop/DesktopTournamentHistory";
@@ -150,6 +151,7 @@ export default function ComboDetail() {
             Indietro
           </a>
         </Link>
+        <HeaderLogo />
         <Button onClick={handleShare} variant="ghost" className="gap-2 hidden lg:flex">
           <Share2 className="w-4 h-4" />
           Condividi

@@ -907,7 +907,7 @@ export default function Tournaments() {
         action={<HeaderLogo />}
       />
 
-      <main className="flex-1 px-4 py-6 w-full mx-auto">
+      <main className="flex-1 px-4 py-4 w-full mx-auto">
         {/* Single list view; admins can edit combos from player dialog */}
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'list')} className="w-full">
 

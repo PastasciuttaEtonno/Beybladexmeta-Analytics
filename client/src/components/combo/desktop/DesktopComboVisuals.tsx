@@ -39,7 +39,7 @@ export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
                 {components.map((component, index) => (
                     <div
                         key={`${component.label}-${index}`}
-                        className="flex flex-col items-center gap-4 group/item hover:scale-110 transition-transform duration-500 ease-out"
+                        className="flex flex-col items-center gap-4 group/item"
                         style={{
                             animationDelay: `${index * 100}ms`
                         }}

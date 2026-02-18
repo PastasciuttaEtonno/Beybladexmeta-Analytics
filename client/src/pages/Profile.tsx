@@ -58,7 +58,7 @@ export default function Profile() {
   const MobileProfileView = () => (
     <div className="md:hidden flex flex-col min-h-screen bg-background pb-20">
       <PageHeader title="Profilo" action={<HeaderLogo />} />
-      <main className="flex-1 px-4 py-6 w-full mx-auto space-y-6">
+      <main className="flex-1 px-4 py-4 w-full mx-auto space-y-6">
 
         {/* User Card */}
         {user && (
@@ -88,7 +88,7 @@ export default function Profile() {
         {/* Linked Accounts */}
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">Account Collegati</h2>
-          <Card className="p-4">
+          <Card className="overflow-hidden">
             <LinkedAccountsCard user={user as any} />
           </Card>
         </div>
@@ -148,18 +148,20 @@ export default function Profile() {
         </div>
 
         {/* Logout */}
-        {user ? (
-          <Button variant="destructive" onClick={handleLogout} className="w-full h-12">
-            <LogOut className="w-5 h-5 mr-2" />
-            Log Out
-          </Button>
-        ) : (
-          <Link href="/login">
-            <a className="inline-flex items-center justify-center w-full h-12 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
-              Login / Register
-            </a>
-          </Link>
-        )}
+        <div className="mt-4">
+          {user ? (
+            <Button variant="destructive" onClick={handleLogout} className="w-full h-12">
+              <LogOut className="w-5 h-5 mr-2" />
+              Log Out
+            </Button>
+          ) : (
+            <Link href="/login">
+              <a className="inline-flex items-center justify-center w-full h-12 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
+                Login / Register
+              </a>
+            </Link>
+          )}
+        </div>
       </main>
     </div>
   );

@@ -33,7 +33,7 @@ export function DesktopComboStats({ combo }: DesktopComboStatsProps) {
             text: "text-amber-600",
         },
         {
-            label: "Total Score",
+            label: "Punteggio Totale",
             value: combo.punteggioTotale.toLocaleString(),
             icon: <Star className="w-5 h-5 text-primary" />,
             bg: "bg-primary/10",
@@ -48,7 +48,7 @@ export function DesktopComboStats({ combo }: DesktopComboStatsProps) {
             {stats.map((stat) => (
                 <Card
                     key={stat.label}
-                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${stat.border} bg-card/50 backdrop-blur-sm group`}
+                    className={`relative overflow-hidden transition-all duration-300 ${stat.border} bg-card/50 backdrop-blur-sm group`}
                 >
                     <div className={`absolute inset-0 ${stat.bg} opacity-20 group-hover:opacity-30 transition-opacity`} />
                     <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-2 relative z-10">
