@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { useRoute, useLocation, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import {
   Card,
   CardContent,
@@ -12,133 +10,41 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Trophy, Medal, Award, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { Seo } from "@/components/Seo";
 import { format } from "date-fns";
-
-type ComboStats = {
-  blade: string;
-  assistBlade: string;
-  ratchet: string;
-  bit: string;
-  lockChip: string;
-  primiPosti: number;
-  secondiPosti: number;
-  terziPosti: number;
-  quartiPosti: number;
-  punteggioTotale: number;
-  dataCreazione: string; // Assuming it's a string in ISO format
-};
-
-// Use the public MinIO URL like in Analytics.tsx
-const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
-
-if (!PUBLIC_MINIO_URL) {
-  console.error(
-    "VITE_PUBLIC_MINIO_URL is not set. Please set this environment variable in Coolify.",
-  );
-}
-
-function ComponentImage({ folder, name }: { folder: string; name: string }) {
-  const [attemptIndex, setAttemptIndex] = useState(0);
-
-  const getImageVariations = (name: string, format: "png" | "webp") => {
-    const variations = [
-      name.toLowerCase().replace(/\s+/g, ""),
-      name.toLowerCase().replace(/\s+/g, "-"),
-      name
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
-        .toLowerCase()
-        .replace(/\s+/g, "-"),
-    ];
-    // Build full URL to public MinIO bucket
-    return variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`);
-  };
-
-  const allAttempts = [
-    ...getImageVariations(name, "webp"),
-    ...getImageVariations(name, "png"),
-  ];
-
-  const handleImageError = () => {
-    if (attemptIndex < allAttempts.length - 1) {
-      setAttemptIndex(attemptIndex + 1);
-    }
-  };
-
-  return (
-    <div className="aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
-      {attemptIndex >= allAttempts.length ? (
-        <div className="text-center p-4">
-          <p className="text-sm text-muted-foreground">Image not available</p>
-        </div>
-      ) : (
-        <img
-          key={attemptIndex}
-          src={allAttempts[attemptIndex]}
-          alt={name}
-          className="w-full h-full object-contain"
-          onError={handleImageError}
-          data-testid={`img-${folder}`}
-        />
-      )}
-    </div>
-  );
-}
+import { useComboDetails } from "@/hooks/useComboDetails";
+import { BeybladeImage } from "@/components/common/BeybladeImage";
+import { DesktopComboVisuals } from "@/components/combo/desktop/DesktopComboVisuals";
+import { DesktopComboStats } from "@/components/combo/desktop/DesktopComboStats";
+import { DesktopTournamentHistory } from "@/components/combo/desktop/DesktopTournamentHistory";
 
 export default function ComboDetail() {
-  const [, params] = useRoute("/combo/:id");
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  const {
+    decodedId,
+    combo,
+    rank,
+    comboLoading,
+    comboError,
+    tournaments,
+    tourLoading,
+    totalTournaments,
+    currentPage,
+    totalPages,
+    setCurrentPage,
+    handleShare,
+    getComboTitle,
+    getCanonicalUrl,
+    getOgImageUrl
+  } = useComboDetails();
 
-  const comboId = params?.id;
-
-  const decodedId = params?.id ? decodeURIComponent(params.id) : null;
-
-  const { data, isLoading, error } = useQuery<{ combo: ComboStats; rank: number }>({
-    queryKey: ["/api/stats/combos/by-key", decodedId],
-    enabled: !!decodedId,
-    queryFn: async () => {
-      const resp = await fetch(`/api/stats/combos/by-key?key=${encodeURIComponent(decodedId!)}`);
-      if (!resp.ok) throw new Error("Failed to fetch combo");
-      return resp.json();
-    },
-  });
-
-  const { data: tourData, isLoading: tourLoading } = useQuery<{ tournaments: any[] }>({
-    queryKey: ['/api/stats/combos', decodedId, 'tournaments'],
-    queryFn: async () => {
-      const resp = await fetch(`/api/stats/combos/${encodeURIComponent(decodedId!)}/tournaments`);
-      if (!resp.ok) throw new Error('Failed to fetch combo tournaments');
-      return resp.json();
-    },
-    enabled: !!decodedId,
-  });
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const tournamentsPerPage = 5;
-  const totalTournaments = tourData?.tournaments?.length || 0;
-  const totalPages = Math.ceil(totalTournaments / tournamentsPerPage);
-  const startIndex = (currentPage - 1) * tournamentsPerPage;
-  const endIndex = startIndex + tournamentsPerPage;
-  const currentTournaments = (tourData?.tournaments || []).slice(startIndex, endIndex);
-
-  if (!comboId) {
-    return null;
-  }
-
-  const combo = data?.combo;
-
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="w-8 h-8 text-yellow-500" />;
-    if (rank === 2) return <Medal className="w-8 h-8 text-slate-400" />;
-    if (rank === 3) return <Award className="w-8 h-8 text-amber-700" />;
+  const getRankIcon = (r: number) => {
+    if (r === 1) return <Trophy className="w-8 h-8 text-yellow-500" />;
+    if (r === 2) return <Medal className="w-8 h-8 text-slate-400" />;
+    if (r === 3) return <Award className="w-8 h-8 text-amber-700" />;
     return null;
   };
 
-  const rank = data?.rank ?? 0;
-
-  if (isLoading) {
+  if (comboLoading) {
     return (
       <div className="min-h-screen bg-background p-4 pb-24">
         <div className="max-w-2xl mx-auto space-y-6">
@@ -153,7 +59,7 @@ export default function ComboDetail() {
     );
   }
 
-  if (!combo && !isLoading) {
+  if (!combo && !comboLoading) {
     return (
       <div className="min-h-screen bg-background p-4 pb-24">
         <div className="max-w-2xl mx-auto space-y-6">
@@ -169,7 +75,7 @@ export default function ComboDetail() {
           <Card>
             <CardContent className="p-6">
               <p className="text-center text-muted-foreground">
-                {error ? `Errore: ${error.message}` : "Combo non trovata"}
+                {comboError ? `Errore: ${comboError.message}` : "Combo non trovata"}
               </p>
               {decodedId && (
                 <p className="text-xs text-muted-foreground mt-2 text-center">
@@ -183,17 +89,11 @@ export default function ComboDetail() {
     );
   }
 
-  if (!combo) {
-    return null;
-  }
+  if (!combo) return null;
 
   const allComponents = [
     { label: "Blade", value: combo.blade, folder: "blades" },
-    {
-      label: "Assist Blade",
-      value: combo.assistBlade,
-      folder: "assist-blades",
-    },
+    { label: "Assist Blade", value: combo.assistBlade, folder: "assist-blades" },
     { label: "Ratchet", value: combo.ratchet, folder: "ratchets" },
     { label: "Bit", value: combo.bit, folder: "bits" },
     { label: "Lock Chip", value: combo.lockChip, folder: "chips" },
@@ -210,45 +110,9 @@ export default function ComboDetail() {
     );
   });
 
-  const comboTitle = [
-    combo.lockChip && combo.lockChip.toLowerCase() !== "none" ? combo.lockChip : "",
-    combo.blade,
-    combo.assistBlade && combo.assistBlade.toLowerCase() !== "none" ? combo.assistBlade : "",
-    combo.ratchet && combo.ratchet.toLowerCase() !== "none" ? combo.ratchet : "",
-    combo.bit,
-  ].filter(Boolean).join(" • ");
-  const canonical = `${window.location.origin}/combo/${encodeURIComponent(decodedId || "")}`;
-  const origin = window.location.origin;
-  const imageUrl = `${origin}/api/og/combo/${encodeURIComponent(decodedId || "")}`;
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${comboTitle} · Combo`,
-          text: `Check out this Beyblade X combo: ${comboTitle}`,
-          url: window.location.href,
-        });
-      } catch (err) {
-        console.error('Error sharing:', err);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        toast({
-          title: "Link copiato!",
-          description: "Il link della combo è stato copiato negli appunti.",
-        });
-      } catch (err) {
-        toast({
-          title: "Errore",
-          description: "Impossibile copiare il link.",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
+  const comboTitle = getComboTitle();
+  const canonical = getCanonicalUrl();
+  const imageUrl = getOgImageUrl();
 
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
@@ -274,17 +138,51 @@ export default function ComboDetail() {
           "image": imageUrl
         }}
       />
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <Link href="/analytics">
-            <a
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Indietro
-            </a>
-          </Link>
+
+      {/* Shared Back Button & Share */}
+      <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between">
+        <Link href="/analytics">
+          <a
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Indietro
+          </a>
+        </Link>
+        <Button onClick={handleShare} variant="ghost" className="gap-2 hidden lg:flex">
+          <Share2 className="w-4 h-4" />
+          Condividi
+        </Button>
+      </div>
+
+      {/* === DESKTOP LAYOUT (>= lg) === */}
+      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
+        {/* Left Column: Visuals */}
+        <div className="lg:col-span-5 h-full">
+          <div className="sticky top-24">
+            <DesktopComboVisuals combo={combo} rank={rank} />
+          </div>
+        </div>
+
+        {/* Right Column: Stats & History */}
+        <div className="lg:col-span-7 space-y-6">
+          <DesktopComboStats combo={combo} />
+          <DesktopTournamentHistory
+            tournaments={tournaments}
+            loading={tourLoading}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalTournaments={totalTournaments}
+          />
+        </div>
+      </div>
+
+      {/* === MOBILE LAYOUT (< lg) - PRESERVED === */}
+      <div className="lg:hidden max-w-2xl mx-auto space-y-6">
+        <div className="flex justify-end mb-4">
+          {/* Mobile Share Button */}
           <Button onClick={handleShare} variant="ghost" className="gap-2">
             <Share2 className="w-4 h-4" />
             Condividi
@@ -309,7 +207,7 @@ export default function ComboDetail() {
               {components.map((component) => (
                 <div key={component.label} className="flex flex-col items-center gap-2 group">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-muted/50 to-muted rounded-xl border shadow-sm flex items-center justify-center p-2 transition-transform group-hover:scale-105">
-                    <ComponentImage
+                    <BeybladeImage
                       folder={component.folder}
                       name={component.value}
                     />
@@ -406,7 +304,7 @@ export default function ComboDetail() {
                 ) : (
                   <>
                     <div className="space-y-2">
-                      {currentTournaments.map((t: any) => (
+                      {tournaments.map((t) => (
                         <Link
                           key={`${t.tournamentId}-${t.playerId}`}
                           href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}

@@ -44,9 +44,22 @@ export function DesktopComboCard({ combo, index, rank, onClick }: DesktopComboCa
             className="group relative overflow-hidden border-border bg-card/40 backdrop-blur-md hover:-translate-y-1 hover:shadow-xl hover:border-primary/20 transition-all duration-300 cursor-pointer h-full"
             onClick={onClick}
         >
-            {/* Absolute Rank Badge */}
-            <div className="absolute top-3 right-3 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-full w-7 h-7 shadow-sm border border-border">
-                {getRankIcon(rank)}
+            {/* Absolute Rank Badge & Lock Chip */}
+            {/* Absolute Rank Badge & Icons */}
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                {combo.lockChip && combo.lockChip.trim().toLowerCase() !== "none" && combo.lockChip !== "-" && (
+                    <div className="w-8 h-8 flex items-center justify-center drop-shadow-sm filter">
+                        <DesktopComponentImage folder="chips" name={combo.lockChip} className="w-full h-full" />
+                    </div>
+                )}
+                {combo.assistBlade && combo.assistBlade.trim().toLowerCase() !== "none" && combo.assistBlade !== "-" && (
+                    <div className="w-8 h-8 flex items-center justify-center drop-shadow-sm filter">
+                        <DesktopComponentImage folder="assist-blades" name={combo.assistBlade} className="w-full h-full" />
+                    </div>
+                )}
+                <div className="flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-full w-7 h-7 shadow-sm border border-border">
+                    {getRankIcon(rank)}
+                </div>
             </div>
 
             <div className="p-4 flex flex-col h-full relative z-0">

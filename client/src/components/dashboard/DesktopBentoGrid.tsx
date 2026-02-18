@@ -154,7 +154,7 @@ export function DesktopBentoGrid({ selectedSeason, onSelectType }: DesktopBentoG
             </Card>
 
             {/* Trend Analysis Widget */}
-            <Card className="md:col-span-2 lg:col-span-2 p-6 border-border bg-background/60 backdrop-blur-sm flex flex-col hover:border-green-500/20 transition-all h-full">
+            <Card className="md:col-span-3 lg:col-span-2 p-6 border-border bg-background/60 backdrop-blur-sm flex flex-col hover:border-green-500/20 transition-all h-full">
                 <DesktopTrendWidget selectedSeason={selectedSeason} />
             </Card>
         </div>

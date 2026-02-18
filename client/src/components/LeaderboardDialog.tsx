@@ -2,18 +2,10 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { MobileLeaderboardList } from "@/components/leaderboard/MobileLeaderboardList";
+import { DesktopLeaderboardTable } from "@/components/leaderboard/DesktopLeaderboardTable";
 
 type LeaderboardType = "blade" | "ratchet" | "bit";
-
-// Use the public MinIO URL like in Analytics.tsx
-const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
-
-if (!PUBLIC_MINIO_URL) {
-  console.error(
-    "VITE_PUBLIC_MINIO_URL is not set. Please set this environment variable in Coolify.",
-  );
-}
 
 export function LeaderboardDialog({
   type,
@@ -61,9 +53,9 @@ export function LeaderboardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:max-w-sm max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-sm md:max-w-3xl lg:max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="text-xl md:text-2xl font-bold">{title}</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
@@ -73,74 +65,14 @@ export function LeaderboardDialog({
             ))}
           </div>
         ) : items.length > 0 ? (
-          <div className="space-y-2">
-            {items.map((row, index) => (
-              <Card key={`${activeType}-${index}`} className="p-3 flex items-center gap-2">
-                <div className="w-10 text-center">
-                  <Badge variant="secondary" className="text-xs">
-                    {index + 1}
-                  </Badge>
-                </div>
-                <div className="w-12 h-12">
-                  <ComponentImage folder={folder} name={row[activeType]} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{row[activeType]}</p>
-                  <div className="mt-1 space-y-1">
-                    <div className="flex">
-                      <Badge variant="outline" className="text-xs">
-                        Score: {Number(row.punteggioTotale).toLocaleString()}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-1">
-                      <Badge variant="secondary" className="text-xs">1st: {row.primiPosti}</Badge>
-                      <Badge variant="secondary" className="text-xs">2nd: {row.secondiPosti}</Badge>
-                      <Badge variant="secondary" className="text-xs">3rd: {row.terziPosti}</Badge>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <>
+            <MobileLeaderboardList items={items} activeType={activeType} folder={folder} />
+            <DesktopLeaderboardTable items={items} activeType={activeType} folder={folder} />
+          </>
         ) : (
           <Card className="p-6 text-center">No data</Card>
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ComponentImage({ folder, name }: { folder: string; name: string }) {
-  const attempts = [
-    name?.toLowerCase()?.replace(/\s+/g, ""),
-    name?.toLowerCase()?.replace(/\s+/g, "-"),
-    name
-      ?.replace(/([a-z])([A-Z])/g, "$1-$2")
-      ?.toLowerCase()
-      ?.replace(/\s+/g, "-"),
-  ].filter(Boolean) as string[];
-  const sources = [
-    // Prefer PNG first, then fallback to WEBP
-    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.png`),
-    ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`),
-  ];
-
-  return (
-    <img
-      src={sources[0]}
-      data-current-index={0}
-      onError={(e) => {
-        const img = e.currentTarget;
-        const currentIndex = Number(img.getAttribute('data-current-index') || '0');
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < sources.length) {
-          img.setAttribute('data-current-index', String(nextIndex));
-          img.src = sources[nextIndex];
-        }
-      }}
-      alt={`${name} component image`}
-      loading="lazy"
-      className="w-12 h-12 object-contain"
-    />
   );
 }

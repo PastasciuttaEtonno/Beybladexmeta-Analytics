@@ -34,13 +34,13 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                     <div className="p-1.5 bg-green-500/10 rounded-md">
                         <TrendingUp className="w-4 h-4 text-green-400" />
                     </div>
-                    <span className="font-semibold text-sm">Trend Monitor</span>
+                    <span className="font-semibold text-sm lg:hidden xl:inline">Trend Monitor</span>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <HelpCircle className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[200px] text-xs">
-                            Visualizza l'andamento dell' utilizzo del componente selezionato nel tempo.
+                            Visualizza l'utilizzo del componente selezionato nel tempo.
                         </TooltipContent>
                     </Tooltip>
                 </div>
@@ -96,7 +96,7 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                                     <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <XAxis dataKey="name" hide />
+                            <XAxis dataKey="month" hide />
                             <YAxis hide domain={[0, 'dataMax + 10']} />
                             <ChartTooltip
                                 contentStyle={{
@@ -119,7 +119,7 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                     </ResponsiveContainer>
                 ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
-                        No trend data available
+                        Nessun dato disponibile
                     </div>
                 )}
             </div>
