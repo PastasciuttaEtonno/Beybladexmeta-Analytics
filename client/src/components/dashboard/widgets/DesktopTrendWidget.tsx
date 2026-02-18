@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DesktopComponentImage } from "@/components/analytics/desktop/DesktopComponentImage";
 
 interface DesktopTrendWidgetProps {
     selectedSeason: string;
@@ -45,7 +46,7 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                     </Tooltip>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                     {/* Component Type Selector - Compact */}
                     <Select value={selectedComponentType} onValueChange={setSelectedComponentType}>
                         <SelectTrigger className="h-7 w-[90px] text-xs bg-background/40 border-white/10">
@@ -82,13 +83,25 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                 </div>
             </div>
 
-            <div className="flex-1 w-full min-h-[100px] relative">
+            <div className="flex-1 w-full min-h-[100px] relative group">
+                {/* Background Image */}
+                {selectedName && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.25] pointer-events-none z-0 grayscale overflow-hidden">
+                        <DesktopComponentImage
+                            key={`${selectedComponentType}-${selectedName}`}
+                            folder={selectedComponentType === "blade" ? "blades" : selectedComponentType === "ratchet" ? "ratchets" : "bits"}
+                            name={selectedName}
+                            className="w-[80%] h-[80%] object-contain"
+                        />
+                    </div>
+                )}
+
                 {trendsLoading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center z-10">
                         <Skeleton className="w-full h-full" />
                     </div>
                 ) : chartData.length > 0 && selectedName ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" className="relative z-10">
                         <AreaChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
@@ -127,7 +140,7 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                         </AreaChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-xs z-10 relative">
                         Nessun dato disponibile
                     </div>
                 )}
