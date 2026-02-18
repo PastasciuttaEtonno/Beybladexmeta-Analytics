@@ -7,9 +7,10 @@ interface DesktopAnalyticsGridProps {
     currentPage: number;
     itemsPerPage: number;
     getComboId: (combo: ComboStats) => string;
+    season: string;
 }
 
-export function DesktopAnalyticsGrid({ combos, currentPage, itemsPerPage, getComboId }: DesktopAnalyticsGridProps) {
+export function DesktopAnalyticsGrid({ combos, currentPage, itemsPerPage, getComboId, season }: DesktopAnalyticsGridProps) {
     if (!combos || combos.length === 0) {
         return (
             <div className="py-20 text-center border border-dashed border-border rounded-xl bg-card/20">
@@ -25,7 +26,7 @@ export function DesktopAnalyticsGrid({ combos, currentPage, itemsPerPage, getCom
                 const comboId = getComboId(combo);
 
                 return (
-                    <Link key={comboId} href={`/combo/${comboId}`}>
+                    <Link key={comboId} href={`/combo/${comboId}?season=${encodeURIComponent(season)}`}>
                         <a className="block h-full no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl">
                             <DesktopComboCard
                                 combo={combo}

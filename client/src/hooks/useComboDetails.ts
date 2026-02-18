@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRoute } from "wouter";
+import { useRoute, useSearch } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,6 +30,9 @@ export type TournamentEntry = {
 
 export function useComboDetails() {
     const [, params] = useRoute("/combo/:id");
+    const searchString = useSearch();
+    const searchParams = new URLSearchParams(searchString);
+    const season = searchParams.get("season") || "";
     const { toast } = useToast();
 
     const comboId = params?.id;
@@ -48,9 +51,10 @@ export function useComboDetails() {
 
     // Fetch Tournament History
     const { data: tourData, isLoading: tourLoading } = useQuery<{ tournaments: TournamentEntry[] }>({
-        queryKey: ['/api/stats/combos', decodedId, 'tournaments'],
+        queryKey: ['/api/stats/combos', decodedId, 'tournaments', season],
         queryFn: async () => {
-            const resp = await fetch(`/api/stats/combos/${encodeURIComponent(decodedId!)}/tournaments`);
+            const querySeason = season ? `?season=${encodeURIComponent(season)}` : '';
+            const resp = await fetch(`/api/stats/combos/${encodeURIComponent(decodedId!)}/tournaments${querySeason}`);
             if (!resp.ok) throw new Error('Failed to fetch combo tournaments');
             return resp.json();
         },
@@ -137,6 +141,7 @@ export function useComboDetails() {
         getComboTitle,
         getCanonicalUrl,
         getOgImageUrl,
-        handleShare
+        handleShare,
+        season // Export season for UI to use
     };
 }

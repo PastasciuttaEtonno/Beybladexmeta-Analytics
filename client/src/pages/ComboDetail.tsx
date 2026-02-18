@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Card,
   CardContent,
@@ -6,6 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +25,8 @@ import { HeaderLogo } from "@/components/HeaderLogo";
 import { DesktopComboVisuals } from "@/components/combo/desktop/DesktopComboVisuals";
 import { DesktopComboStats } from "@/components/combo/desktop/DesktopComboStats";
 import { DesktopTournamentHistory } from "@/components/combo/desktop/DesktopTournamentHistory";
+
+import { DesktopComboTrend } from "@/components/combo/desktop/DesktopComboTrend";
 
 export default function ComboDetail() {
   const {
@@ -35,8 +44,22 @@ export default function ComboDetail() {
     handleShare,
     getComboTitle,
     getCanonicalUrl,
-    getOgImageUrl
+    getOgImageUrl,
+    season
   } = useComboDetails();
+
+  const [location, setLocation] = useLocation();
+
+  const handleSeasonChange = (newSeason: string) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (newSeason && newSeason !== "All Time") {
+      searchParams.set("season", newSeason);
+    } else {
+      searchParams.delete("season");
+    }
+    const newSearch = searchParams.toString();
+    setLocation(`${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`);
+  };
 
   const getRankIcon = (r: number) => {
     if (r === 1) return <Trophy className="w-8 h-8 text-yellow-500" />;
@@ -152,18 +175,35 @@ export default function ComboDetail() {
           </a>
         </Link>
         <HeaderLogo />
-        <Button onClick={handleShare} variant="ghost" className="gap-2 hidden lg:flex">
-          <Share2 className="w-4 h-4" />
-          Condividi
-        </Button>
+        <div className="hidden lg:flex items-center gap-3">
+          <Select
+            value={season || "All Time"}
+            onValueChange={handleSeasonChange}
+          >
+            <SelectTrigger className="w-[180px] bg-background">
+              <SelectValue placeholder="Seleziona Stagione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All Time">All Time</SelectItem>
+              <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
+              <SelectItem value="Season 2026">Season 2026</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={handleShare} variant="ghost" className="gap-2">
+            <Share2 className="w-4 h-4" />
+            Condividi
+          </Button>
+        </div>
       </div>
 
       {/* === DESKTOP LAYOUT (>= lg) === */}
       <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
         {/* Left Column: Visuals */}
         <div className="lg:col-span-5 h-full">
-          <div className="sticky top-24">
+          <div className="sticky top-24 space-y-6">
+
             <DesktopComboVisuals combo={combo} rank={rank} />
+            <DesktopComboTrend tournaments={tournaments} season={season} />
           </div>
         </div>
 
@@ -178,6 +218,7 @@ export default function ComboDetail() {
             onPageChange={setCurrentPage}
             totalTournaments={totalTournaments}
           />
+
         </div>
       </div>
 

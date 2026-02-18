@@ -835,6 +835,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [blade, assistBlade, ratchet, bit, lockChip] = parts;
 
       const seasonRaw = String((req.query.season ?? '') as string).trim();
+      const seasonLower = seasonRaw.toLowerCase();
+      const isAllTime = !seasonRaw || seasonLower === 'all' || seasonLower === 'all time' || seasonLower === 'all-time';
       const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
       const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 50;
 
@@ -883,7 +885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Query ChallengerMode data
-      const cmQuery = seasonRaw
+      const cmQuery = !isAllTime && seasonRaw
         ? sql`
           SELECT 
             epc.tournament_id,
@@ -991,7 +993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       tournaments.push(...cmTournaments);
 
       // Query Challonge data
-      const challongeQuery = seasonRaw
+      const challongeQuery = !isAllTime && seasonRaw
         ? sql`
           SELECT 
             crc.tournament_id,
@@ -1129,14 +1131,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analytics/meta', async (req, res) => {
     try {
       const seasonRaw = String(req.query.season || '').trim();
-      // If season param is missing or empty, default to "all" to match behavior if intended, or specific season.
-      // Based on previous logic, usually we want a specific season or all.
+      const seasonLower = seasonRaw.toLowerCase();
+      const isAllTime = !seasonRaw || seasonLower === 'all' || seasonLower === 'all time' || seasonLower === 'all-time';
       const platform = String(req.query.platform || 'all').trim().toLowerCase();
 
       let query = db.select().from(unifiedMetaView);
 
       const conditions = [];
-      if (seasonRaw && seasonRaw.toLowerCase() !== 'all') {
+      if (!isAllTime && seasonRaw) {
         conditions.push(eq(unifiedMetaView.date, seasonRaw as any)); // Wait, unifiedMetaView has `date` but we might need filtering by season string if view doesn't have it?
         // View has `date` column. `determineSeason` is a helper. We can't filter by determined season continuously easily in SQL without a function.
         // BUT the prompt says "Mantieni i filtri season...". The view `unified_meta_view` was modified by USER in Step 826/827 but I didn't see `season` column added, only `participantCount`. 
@@ -1170,7 +1172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!rank || rank > 4) continue;
 
         // Season Filter (in memory if needed)
-        if (seasonRaw && seasonRaw.toLowerCase() !== 'all') {
+        if (!isAllTime && seasonRaw) {
           const d = row.date ? new Date(row.date) : null;
           if (!d || determineSeason(d) !== seasonRaw) continue;
         }
@@ -1754,8 +1756,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nickname = String(req.params.nickname || '').trim();
       if (!nickname) return res.status(400).json({ error: 'Missing nickname' });
 
-      const seasonRaw = String((req.query.season ?? 'Off Season 2025') as string).trim();
-      const season = seasonRaw || 'Off Season 2025';
+      const seasonRaw = String((req.query.season ?? '') as string).trim();
+      // If season is empty or "All Time", we use empty string to indicate no filter (or manage logic below)
+      // Original logic defaulted to 'Off Season 2025' if null/undefined in some places, but for players lookup we might want all.
+      // However, typical usage for "By Nickname" might be profile view which defaults to current/latest season usually?
+      // Reverting to allow "All Time" or specific.
+      const season = seasonRaw === 'All Time' ? '' : seasonRaw || 'Off Season 2025';
 
       // Try to find player in both CM and Challonge
       const cmPlayerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.nickname, nickname)).limit(1);
@@ -2085,7 +2091,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!nickname) return res.status(400).json({ error: 'Missing nickname' });
 
       const seasonRaw = String((req.query.season ?? '') as string).trim();
-      const season = seasonRaw || '';
+      const seasonLower = seasonRaw.toLowerCase();
+      const isAllTime = !seasonRaw || seasonLower === 'all' || seasonLower === 'all time' || seasonLower === 'all-time';
+      const season = isAllTime ? '' : seasonRaw;
 
       // Helper function for Challonge Scoring (Tiering Dinamico) based on ANTIGRAVITY_WORKFLOW.md
       const calculateChallongePoints = (rank: number | null, total: number | null): number => {
@@ -5399,8 +5407,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const playerId = String(req.params.id || '').trim();
       if (!playerId) return res.status(400).json({ error: 'Missing player id' });
-      const seasonRaw = String((req.query.season ?? 'Off Season 2025') as string).trim();
-      const season = seasonRaw || 'Off Season 2025';
+      const seasonRaw = String((req.query.season ?? '') as string).trim();
+      const season = seasonRaw === 'All Time' ? '' : seasonRaw || 'Off Season 2025';
 
       const playerRows = await db.select().from(cmPlayers).where(eq(cmPlayers.id, playerId)).limit(1);
       const player = playerRows[0] || null;
