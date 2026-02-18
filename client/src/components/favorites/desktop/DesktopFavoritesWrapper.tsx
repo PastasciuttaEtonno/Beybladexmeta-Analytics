@@ -1,8 +1,9 @@
-
 import { Button } from "@/components/ui/button";
 import { Plus, Layers, Star, Info } from "lucide-react";
 import { DesktopDeckCard } from "./DesktopDeckCard";
 import { DesktopFavoriteComboCard } from "./DesktopFavoriteComboCard";
+import { DesktopDeckCardSkeleton } from "./DesktopDeckCardSkeleton";
+import { DesktopFavoriteComboCardSkeleton } from "./DesktopFavoriteComboCardSkeleton";
 import type { FavoriteCombo, FavoriteDeck, FavoriteDeckCombo } from "@shared/schema";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
@@ -20,6 +21,10 @@ interface DesktopFavoritesWrapperProps {
     onAddCombo: () => void;
     onAddDeck: () => void;
 
+    // Loading states
+    isDecksLoading?: boolean;
+    isCombosLoading?: boolean;
+
     // Limits for disabling buttons
     totalCombos: number;
     maxCombos: number;
@@ -35,6 +40,8 @@ export function DesktopFavoritesWrapper({
     onViewCombo,
     onAddCombo,
     onAddDeck,
+    isDecksLoading = false,
+    isCombosLoading = false,
     totalCombos,
     maxCombos,
     totalDecks,
@@ -63,7 +70,13 @@ export function DesktopFavoritesWrapper({
                 </div>
 
                 {/* Decks Horizontal List */}
-                {decks.length === 0 ? (
+                {isDecksLoading ? (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        {[1, 2].map((i) => (
+                            <DesktopDeckCardSkeleton key={i} />
+                        ))}
+                    </div>
+                ) : decks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border rounded-xl bg-card/20 text-center">
                         <Layers className="w-12 h-12 text-muted-foreground/50 mb-4" />
                         <h3 className="text-lg font-medium">Nessun deck salvato</h3>
@@ -118,7 +131,13 @@ export function DesktopFavoritesWrapper({
                 </div>
 
                 {/* Combos Grid */}
-                {combos.length === 0 ? (
+                {isCombosLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <DesktopFavoriteComboCardSkeleton key={i} />
+                        ))}
+                    </div>
+                ) : combos.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border rounded-xl bg-card/20 text-center">
                         <Star className="w-12 h-12 text-muted-foreground/50 mb-4" />
                         <h3 className="text-lg font-medium">Collezione Vuota</h3>

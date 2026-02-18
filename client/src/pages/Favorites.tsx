@@ -493,6 +493,8 @@ export default function Favorites() {
             onViewCombo={(combo) => handleViewCombo(combo)}
             onAddCombo={() => setComboModalOpen(true)}
             onAddDeck={() => setDeckModalOpen(true)}
+            isDecksLoading={decksLoading}
+            isCombosLoading={combosLoading}
             totalCombos={totalCombos}
             maxCombos={MAX_COMBOS}
             totalDecks={totalDecks}
