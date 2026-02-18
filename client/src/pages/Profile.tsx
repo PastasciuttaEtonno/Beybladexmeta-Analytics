@@ -196,7 +196,7 @@ export default function Profile() {
       <Dialog open={isAliasesDialogOpen} onOpenChange={setIsAliasesDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Manage Game Aliases</DialogTitle>
+            <DialogTitle>Gestisci Nickname / Alias</DialogTitle>
           </DialogHeader>
           <AliasManager user={user as any} />
           <div className="flex justify-end mt-4">
