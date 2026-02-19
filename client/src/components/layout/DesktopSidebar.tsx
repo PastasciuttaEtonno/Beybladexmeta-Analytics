@@ -7,6 +7,7 @@ import { useTheme } from "@/contexts/ThemeProvider";
 const navItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/players', icon: User, label: 'Giocatori' },
     { path: '/favorites', icon: Star, label: 'Preferiti' },
     { path: '/tournaments', icon: Trophy, label: 'Tornei' },
     { path: '/profile', icon: User, label: 'Profilo' },

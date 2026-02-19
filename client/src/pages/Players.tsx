@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Trophy, Medal, Award } from "lucide-react";
+import { DesktopSlimPlayersList } from "@/components/players/desktop/DesktopSlimPlayersList";
 
 type PlayerItem = {
   id: string;
@@ -196,13 +197,13 @@ export default function Players() {
           }}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 w-full mb-4 max-w-md mx-auto md:mx-0">
+          <TabsList className="grid grid-cols-2 w-full mb-4 max-w-md mx-auto md:hidden">
             <TabsTrigger value="components">Componenti</TabsTrigger>
             <TabsTrigger value="players">Giocatori</TabsTrigger>
           </TabsList>
 
           <TabsContent value="players" className="space-y-3">
-            <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-wrap items-end gap-2 md:hidden">
               <div className="flex-1 min-w-0 w-full sm:w-auto">
                 <Input
                   id="player-search"
@@ -225,16 +226,26 @@ export default function Players() {
                 </Select>
               </div>
             </div>
+
+            <DesktopSlimPlayersList
+              players={filteredPlayers}
+              isLoading={isLoading}
+              query={query}
+              onSearchChange={setQuery}
+              selectedPlatform={selectedPlatform}
+              onPlatformChange={setSelectedPlatform}
+              sanitizeImageUrl={sanitizeImageUrl}
+            />
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:hidden gap-4">
                 {Array.from({ length: 9 }).map((_, i) => (
                   <Card key={i} className="h-24 bg-muted/30 animate-pulse" />
                 ))}
               </div>
             ) : filteredPlayers.length === 0 ? (
-              <Card className="p-6 text-center">Nessun giocatore trovato</Card>
+              <Card className="p-6 text-center md:hidden">Nessun giocatore trovato</Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:hidden gap-4">
                 {pageItems.map((p, idx) => {
                   const globalRank = (page - 1) * perPage + idx;
 
