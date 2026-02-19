@@ -18,6 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Seo } from "@/components/Seo";
+import { DesktopPlayerHeader } from "@/components/players/desktop/DesktopPlayerHeader";
+import { DesktopPlatformStats } from "@/components/players/desktop/DesktopPlatformStats";
+import { DesktopPlayerTournaments } from "@/components/players/desktop/DesktopPlayerTournaments";
 
 type PlayerProfileResp = {
   player: { nickname: string; avatar: string | null; platforms: string[] };
@@ -182,167 +185,202 @@ export default function PlayerDetail() {
       )}
 
       <main className="flex-1 px-4 py-4 w-full mx-auto space-y-3">
-        <Tabs
-          value={"players"}
-          onValueChange={(val) => {
-            if (val === "components") setLocation("/");
-            else setLocation("/players");
-          }}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-2 w-full mb-4">
-            <TabsTrigger value="components">Componenti</TabsTrigger>
-            <TabsTrigger value="players">Giocatori</TabsTrigger>
-          </TabsList>
+        {/* DESKTOP LAYOUT */}
+        <div className="hidden md:block max-w-7xl mx-auto space-y-8">
           <div className="mb-4">
             <Link href="/players">
-              <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]">
+              <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline">
                 <ArrowLeft className="w-4 h-4" />
-                Indietro
+                Torna alla lista
               </a>
             </Link>
           </div>
 
-          <TabsContent value="players" className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-[180px]">
-                <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Stagione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {seasons.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* 1. Header */}
+          <DesktopPlayerHeader
+            nickname={profile?.nickname || nickname}
+            avatar={profile?.avatar || null}
+            totalPoints={stats?.totalPoints || 0}
+            tournamentsPlayed={tourData?.tournaments.length || 0}
+            sanitizeImageUrl={sanitizeImageUrl}
+          />
+
+          {/* 2. Platform Stats */}
+          <DesktopPlatformStats
+            platformStats={data?.platformStats || []}
+          />
+
+          {/* 3. Tournaments Table */}
+          <DesktopPlayerTournaments
+            tournaments={tourData?.tournaments || []}
+            isLoading={tourLoading}
+          />
+        </div>
+
+        {/* MOBILE LAYOUT (Preserved) */}
+        <div className="md:hidden">
+          <Tabs
+            value={"players"}
+            onValueChange={(val) => {
+              if (val === "components") setLocation("/");
+              else setLocation("/players");
+            }}
+            className="w-full"
+          >
+            <TabsList className="grid grid-cols-2 w-full mb-4">
+              <TabsTrigger value="components">Componenti</TabsTrigger>
+              <TabsTrigger value="players">Giocatori</TabsTrigger>
+            </TabsList>
+            <div className="mb-4">
+              <Link href="/players">
+                <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]">
+                  <ArrowLeft className="w-4 h-4" />
+                  Indietro
+                </a>
+              </Link>
             </div>
-            <Card className="p-4 flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                {(() => {
-                  const sanitizedAvatar = sanitizeImageUrl(profile?.avatar);
-                  return sanitizedAvatar ? (
-                    <img src={sanitizedAvatar} alt={profile?.nickname || ""} className="w-16 h-16 object-cover" />
+
+            <TabsContent value="players" className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-[180px]">
+                  <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Stagione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {seasons.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Card className="p-4 flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                  {(() => {
+                    const sanitizedAvatar = sanitizeImageUrl(profile?.avatar);
+                    return sanitizedAvatar ? (
+                      <img src={sanitizedAvatar} alt={profile?.nickname || ""} className="w-16 h-16 object-cover" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">N/A</span>
+                    );
+                  })()}
+                </div>
+                <div className="flex-1">
+                  <p className="text-lg font-semibold">{profile?.nickname || ""}</p>
+                  {stats && (
+                    <Badge variant="outline" className="text-xs mt-1">
+                      Punti totali: {Number(stats.totalPoints).toLocaleString()}
+                    </Badge>
+                  )}
+                </div>
+              </Card>
+
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-base">Statistiche</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-6 bg-muted/30 animate-pulse" />
+                      <div className="h-6 bg-muted/30 animate-pulse" />
+                      <div className="h-6 bg-muted/30 animate-pulse" />
+                    </div>
                   ) : (
-                    <span className="text-xs text-muted-foreground">N/A</span>
-                  );
-                })()}
-              </div>
-              <div className="flex-1">
-                <p className="text-lg font-semibold">{profile?.nickname || ""}</p>
-                {stats && (
-                  <Badge variant="outline" className="text-xs mt-1">
-                    Punti totali: {Number(stats.totalPoints).toLocaleString()}
-                  </Badge>
-                )}
-              </div>
-            </Card>
-
-            <Card>
-              <CardHeader className="py-3">
-                <CardTitle className="text-base">Statistiche</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {isLoading ? (
-                  <div className="space-y-2">
-                    <div className="h-6 bg-muted/30 animate-pulse" />
-                    <div className="h-6 bg-muted/30 animate-pulse" />
-                    <div className="h-6 bg-muted/30 animate-pulse" />
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium">Combo più usata</p>
-                      {stats?.mostUsedCombo ? (
-                        <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground font-medium truncate" title={formatComboTitle(stats.mostUsedCombo)}>
-                            {formatComboTitle(stats.mostUsedCombo)}
-                            <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.mostUsedCombo.count}</Badge>
-                          </div>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            {stats.mostUsedCombo.lockChip && stats.mostUsedCombo.lockChip.toLowerCase() !== 'none' && (
-                              <ComponentImage folder="chips" name={stats.mostUsedCombo.lockChip} />
-                            )}
-                            <ComponentImage folder="blades" name={stats.mostUsedCombo.blade} />
-                            {stats.mostUsedCombo.assistBlade && stats.mostUsedCombo.assistBlade.toLowerCase() !== 'none' && (
-                              <ComponentImage folder="assist-blades" name={stats.mostUsedCombo.assistBlade} />
-                            )}
-                            {stats.mostUsedCombo.ratchet && stats.mostUsedCombo.ratchet.toLowerCase() !== 'none' && (
-                              <ComponentImage folder="ratchets" name={stats.mostUsedCombo.ratchet} />
-                            )}
-                            <ComponentImage folder="bits" name={stats.mostUsedCombo.bit} />
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium">Blade preferita</p>
-                      {stats?.favoriteBlade ? (
-                        <div className="flex items-center gap-3">
-                          <ComponentImage folder="blades" name={stats.favoriteBlade.blade} />
-                          <div className="text-sm text-muted-foreground">
-                            {stats.favoriteBlade.blade}
-                            <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.favoriteBlade.count}</Badge>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="py-3">
-                <CardTitle className="text-base">Tornei partecipati</CardTitle>
-                <CardDescription className="text-xs">Clicca un torneo per vedere i dettagli</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {tourLoading ? (
-                  <div className="space-y-2">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-16 bg-muted/30 animate-pulse rounded" />
-                    ))}
-                  </div>
-                ) : (tourData?.tournaments || []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nessun torneo trovato</p>
-                ) : (
-                  <div className="space-y-2">
-                    {(tourData?.tournaments || []).map((t) => (
-                      <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
-                        <a className="block no-underline">
-                          <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {t.bestPlacement != null && (
-                                  <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
-                                )}
-                                <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
-                                {/* <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge> */}
-                              </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium">Combo più usata</p>
+                        {stats?.mostUsedCombo ? (
+                          <div className="space-y-1">
+                            <div className="text-sm text-muted-foreground font-medium truncate" title={formatComboTitle(stats.mostUsedCombo)}>
+                              {formatComboTitle(stats.mostUsedCombo)}
+                              <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.mostUsedCombo.count}</Badge>
                             </div>
-                          </Card>
-                        </a>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {stats.mostUsedCombo.lockChip && stats.mostUsedCombo.lockChip.toLowerCase() !== 'none' && (
+                                <ComponentImage folder="chips" name={stats.mostUsedCombo.lockChip} />
+                              )}
+                              <ComponentImage folder="blades" name={stats.mostUsedCombo.blade} />
+                              {stats.mostUsedCombo.assistBlade && stats.mostUsedCombo.assistBlade.toLowerCase() !== 'none' && (
+                                <ComponentImage folder="assist-blades" name={stats.mostUsedCombo.assistBlade} />
+                              )}
+                              {stats.mostUsedCombo.ratchet && stats.mostUsedCombo.ratchet.toLowerCase() !== 'none' && (
+                                <ComponentImage folder="ratchets" name={stats.mostUsedCombo.ratchet} />
+                              )}
+                              <ComponentImage folder="bits" name={stats.mostUsedCombo.bit} />
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium">Blade preferita</p>
+                        {stats?.favoriteBlade ? (
+                          <div className="flex items-center gap-3">
+                            <ComponentImage folder="blades" name={stats.favoriteBlade.blade} />
+                            <div className="text-sm text-muted-foreground">
+                              {stats.favoriteBlade.blade}
+                              <Badge variant="secondary" className="ml-2 text-xs">Usi: {stats.favoriteBlade.count}</Badge>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-base">Tornei partecipati</CardTitle>
+                  <CardDescription className="text-xs">Clicca un torneo per vedere i dettagli</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {tourLoading ? (
+                    <div className="space-y-2">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="h-16 bg-muted/30 animate-pulse rounded" />
+                      ))}
+                    </div>
+                  ) : (tourData?.tournaments || []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nessun torneo trovato</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {(tourData?.tournaments || []).map((t) => (
+                        <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+                          <a className="block no-underline">
+                            <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {t.bestPlacement != null && (
+                                    <Badge variant="secondary" className="text-xs">Best: {t.bestPlacement}</Badge>
+                                  )}
+                                  <Badge variant="outline" className="text-xs">Punti: {t.totalPoints}</Badge>
+                                  {/* <Badge variant="outline" className="text-xs">Combo: {t.comboCount}</Badge> */}
+                                </div>
+                              </div>
+                            </Card>
+                          </a>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </main>
     </div>
   );
