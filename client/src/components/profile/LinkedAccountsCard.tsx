@@ -59,7 +59,15 @@ export function LinkedAccountsCard({ user }: LinkedAccountsCardProps) {
                     user?.challongeId ? (
                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
                     ) : (
-                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.location.href = "/api/challonge/login"}>Connect</Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs opacity-50 cursor-not-allowed"
+                            disabled={true}
+                            title="Temporaneamente disabilitato per problemi tecnici"
+                        >
+                            Disabled
+                        </Button>
                     )
                 }
             />

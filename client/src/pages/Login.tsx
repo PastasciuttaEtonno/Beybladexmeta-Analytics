@@ -240,11 +240,12 @@ export default function Login() {
         <Button
           type="button"
           variant="outline"
-          className="w-full h-12 border-[#ff9100] text-[#ff9100] hover:bg-[#ff9100]/10 hover:text-[#ff9100]"
-          onClick={() => { window.location.href = "/api/challonge/login"; }}
+          className="w-full h-12 border-gray-400 text-gray-400 cursor-not-allowed opacity-50"
+          disabled={true}
+          title="Autenticazione temporaneamente disabilitata per problemi tecnici del provider"
           data-testid="button-login-challonge"
         >
-          Autenticati con Challonge
+          Autenticati con Challonge (Disabilitato)
         </Button>
 
         <div className="text-xs text-center text-muted-foreground">
