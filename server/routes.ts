@@ -3675,7 +3675,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check hasCombos
-      const rowsCombos = await db.execute(sql`SELECT DISTINCT tournament_id FROM cm_match_results UNION SELECT DISTINCT tournament_id FROM challonge_reported_combos`);
+      const rowsCombos = await db.execute(sql`
+        SELECT DISTINCT tournament_id FROM cm_match_results 
+        UNION 
+        SELECT DISTINCT tournament_id FROM challonge_reported_combos
+        UNION
+        SELECT DISTINCT tournament_id FROM external_player_combos
+      `);
       const idSet = new Set<string>((rowsCombos.rows as any[]).map((r) => String((r as any).tournament_id || (r as any).tournamentId)));
 
       // Fetch details only for CM (limitation of current fetchTournamentDetail) or unify?
