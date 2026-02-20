@@ -8,7 +8,7 @@ async function createViews() {
   try {
     console.log("\n🛠️ Creazione Architettura Classifica a due livelli...");
 
-    // 1. Drop existing
+    // 1. Drop existing to avoid conflicts
     await db.execute(sql`DROP VIEW IF EXISTS public.player_leaderboard`);
     await db.execute(sql`DROP MATERIALIZED VIEW IF EXISTS public.player_platform_stats`);
 
@@ -28,35 +28,22 @@ async function createViews() {
           p.id as player_id,
           p.nickname,
           'challengermode'::text as platform,
-<<<<<<< Updated upstream
-          p.avatar, -- Fallback to CM avatar if user not found (though CM avatar is usually null now if not synced)
-          COALESCE(u.photo_url, p.avatar) as resolved_avatar,
-=======
-          p.avatar,
->>>>>>> Stashed changes
+          COALESCE(u.photo_url, p.avatar) as avatar,
           SUM(m.punti_guadagnati)::float as total_points,
           COUNT(DISTINCT m.tournament_id)::int as tournaments_played,
           COUNT(DISTINCT CASE WHEN m.piazzamento = 1 THEN m.tournament_id END)::int as tournaments_won,
-          COUNT(DISTINCT CASE WHEN m.piazzamento <= 3 THEN m.tournament_id END)::int as top3_finishes
+          COUNT(DISTINCT CASE WHEN m.piazzamento <= 3 THEN m.tournament_id END)::int as top3_finishes,
+          COUNT(DISTINCT CASE WHEN m.piazzamento <= 4 THEN m.tournament_id END)::int as top4_finishes
         FROM public.cm_match_results m
         JOIN public.cm_players p ON m.player_id = p.id
-<<<<<<< Updated upstream
         LEFT JOIN public.users u ON u.challenger_id = p.id
         GROUP BY p.id, p.nickname, p.avatar, u.photo_url
-      ),
-      challonge_raw AS (
-        SELECT
-          COALESCE(s->'participant'->>'name', s->>'name') as raw_name,
-          COALESCE(s->'participant'->>'id', s->>'id', s->>'name') as challonge_player_id,
-          COALESCE(s->'participant'->>'user_id', s->>'user_id') as challonge_user_id,
-=======
-        GROUP BY p.id, p.nickname, p.avatar
       ),
       challonge_raw AS (
         SELECT 
           COALESCE(s->'participant'->>'name', s->>'name') as raw_name,
           COALESCE(s->'participant'->>'id', s->>'id', s->>'name') as challonge_player_id,
->>>>>>> Stashed changes
+          COALESCE(s->'participant'->>'user_id', s->>'user_id') as challonge_user_id,
           (s->>'rank')::int as rank,
           COALESCE(
             (c.data->>'participants_count')::int, 
@@ -72,10 +59,7 @@ async function createViews() {
         SELECT 
           raw_name,
           challonge_player_id,
-<<<<<<< Updated upstream
           challonge_user_id,
-=======
->>>>>>> Stashed changes
           avatar,
           tournament_id,
           rank,
@@ -170,30 +154,20 @@ async function createViews() {
       ),
       challonge_resolved AS (
         SELECT 
-<<<<<<< Updated upstream
           COALESCE(p.id, u.id, u_direct.id, u_name.id, LOWER(TRIM(cs.raw_name))) as final_player_id,
           COALESCE(p.nickname, u.display_name, u_direct.display_name, u_name.display_name, cs.raw_name) as final_nickname,
           'challonge'::text as platform,
           COALESCE(u_direct.photo_url, u_name.photo_url, u.photo_url, cp_auth.avatar, p.avatar, cs.avatar) as avatar,
-=======
-          COALESCE(p.id, u.id, LOWER(TRIM(cs.raw_name))) as final_player_id,
-          COALESCE(p.nickname, u.display_name, cs.raw_name) as final_nickname,
-          'challonge'::text as platform,
-          COALESCE(cp_auth.avatar, p.avatar, u.photo_url, cs.avatar) as avatar,
->>>>>>> Stashed changes
           cs.points,
           cs.tournament_id,
           cs.rank
         FROM challonge_scored cs
         LEFT JOIN public.user_aliases ua ON LOWER(TRIM(ua.alias)) = LOWER(TRIM(cs.raw_name)) AND ua.is_verified = true
         LEFT JOIN public.users u ON ua.user_id = u.id
-<<<<<<< Updated upstream
         LEFT JOIN public.users u_direct ON u_direct.challonge_id = cs.challonge_user_id
         LEFT JOIN public.users u_name ON LOWER(u_name.challonge_username) = LOWER(TRIM(cs.raw_name))
-=======
->>>>>>> Stashed changes
-        LEFT JOIN public.cm_players p ON u.challenger_id = p.id
-        LEFT JOIN public.challonge_players cp_auth ON u.challonge_id = cp_auth.id
+        LEFT JOIN public.cm_players p ON (u.challenger_id = p.id OR u_direct.challenger_id = p.id OR u_name.challenger_id = p.id)
+        LEFT JOIN public.challonge_players cp_auth ON (u.challonge_id = cp_auth.id OR u_direct.challonge_id = cp_auth.id)
       ),
       challonge_stats AS (
         SELECT 
@@ -204,29 +178,13 @@ async function createViews() {
           SUM(points)::float as total_points,
           COUNT(DISTINCT tournament_id)::int as tournaments_played,
           COUNT(DISTINCT CASE WHEN rank = 1 THEN tournament_id END)::int as tournaments_won,
-          COUNT(DISTINCT CASE WHEN rank <= 3 THEN tournament_id END)::int as top3_finishes
+          COUNT(DISTINCT CASE WHEN rank <= 3 THEN tournament_id END)::int as top3_finishes,
+          COUNT(DISTINCT CASE WHEN rank <= 4 THEN tournament_id END)::int as top4_finishes
         FROM challonge_resolved
         WHERE final_nickname IS NOT NULL
         GROUP BY final_player_id, final_nickname, platform
-<<<<<<< Updated upstream
-      ),
-      cm_reformatted AS (
-          SELECT 
-            player_id,
-            nickname,
-            platform,
-            resolved_avatar as avatar,
-            total_points,
-            tournaments_played,
-            tournaments_won,
-            top3_finishes
-          FROM cm_source
-       )
-      SELECT * FROM cm_reformatted
-=======
       )
       SELECT * FROM cm_source
->>>>>>> Stashed changes
       UNION ALL
       SELECT * FROM challonge_stats
       WITH DATA
@@ -251,7 +209,8 @@ async function createViews() {
         SUM(total_points)::float as total_points,
         SUM(tournaments_played)::int as tournaments_played,
         SUM(tournaments_won)::int as tournaments_won,
-        SUM(top3_finishes)::int as top3_finishes
+        SUM(top3_finishes)::int as top3_finishes,
+        SUM(top4_finishes)::int as top4_finishes
       FROM public.player_platform_stats
       GROUP BY nickname
       ORDER BY total_points DESC

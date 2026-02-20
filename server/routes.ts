@@ -2953,16 +2953,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      try {
-        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_leaderboard`);
-      } catch (refreshError2) {
-        console.warn('player_leaderboard concurrent refresh failed, falling back:', refreshError2);
-        try {
-          await db.execute(sql`REFRESH MATERIALIZED VIEW player_leaderboard`);
-        } catch (fallbackError2) {
-          console.error('Failed to refresh player_leaderboard:', fallbackError2);
-        }
-      }
+      // player_leaderboard is a standard VIEW (not materialized), no refresh needed.
+      // It reads live from player_platform_stats which is refreshed above.
 
       try {
         const { recalculateRegionalStatsForTournament } = await import('./lib/regionalScoring');
@@ -4469,11 +4461,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.execute(sql`REFRESH MATERIALIZED VIEW top_component_snapshot`);
       }
 
-      try {
-        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_leaderboard`);
-      } catch {
-        await db.execute(sql`REFRESH MATERIALIZED VIEW player_leaderboard`);
-      }
+      // player_leaderboard is a standard VIEW (not materialized), no refresh needed.
+      // It reads live from player_platform_stats which is refreshed above.
 
       try {
         const adminRow = await db.select({ email: users.email }).from(users).where(eq(users.id, req.session.userId!));
@@ -4916,6 +4905,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           placement,
           totalParticipants,
         });
+
+        // Refresh materialized view to update Analytics
+        try {
+          await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY top_component_snapshot`);
+        } catch {
+          await db.execute(sql`REFRESH MATERIALIZED VIEW top_component_snapshot`);
+        }
       }
 
       if (updated?.tournamentDate) {
@@ -5349,16 +5345,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        try {
-          await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY player_leaderboard`);
-        } catch (refreshError2) {
-          console.warn('player_leaderboard concurrent refresh failed, falling back:', refreshError2);
-          try {
-            await db.execute(sql`REFRESH MATERIALIZED VIEW player_leaderboard`);
-          } catch (fallbackError2) {
-            console.error('Failed to refresh player_leaderboard:', fallbackError2);
-          }
-        }
+        // player_leaderboard is a standard VIEW (not materialized), no refresh needed.
+        // It reads live from player_platform_stats which is refreshed above.
       }
 
       try {
@@ -5397,7 +5385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPoints: Number(r.totalPoints || 0),
         tournamentsPlayed: Number(r.tournamentsPlayed || 0),
         wins: Number(r.wins || 0),
-        top3Finishes: Number(r.top3Finishes || 0)
+        top3Finishes: Number(r.top3Finishes || 0),
+        top4Finishes: Number(r.top4Finishes || 0)
       }));
       res.json({ players });
     } catch (error) {

@@ -506,6 +506,7 @@ export const playerPlatformStats = pgView("player_platform_stats", {
   tournamentsPlayed: integer("tournaments_played").notNull(),
   wins: integer("tournaments_won").notNull(),
   top3Finishes: integer("top3_finishes").notNull(),
+  top4Finishes: integer("top4_finishes").notNull(),
 }).existing();
 
 // Standard view: Aggregated player leaderboard (sums across platforms)
@@ -517,6 +518,7 @@ export const playerLeaderboardView = pgView("player_leaderboard", {
   tournamentsPlayed: integer("tournaments_played").notNull(),
   wins: integer("tournaments_won").notNull(),
   top3Finishes: integer("top3_finishes").notNull(),
+  top4Finishes: integer("top4_finishes").notNull(),
 }).existing();
 
 export const topComponentSnapshot = pgView("top_component_snapshot", {
