@@ -11,7 +11,9 @@ import { BottomNav } from "@/components/BottomNav";
 import { TournamentRegistrationNotice } from "@/components/TournamentRegistrationNotice";
 import { IntroAnimation } from "@/components/IntroAnimation";
 import { useState } from "react";
+import { useServiceHealth } from "@/hooks/useServiceHealth";
 import Login from "@/pages/Login";
+import ServiceUnavailable from "@/pages/ServiceUnavailable";
 import Home from "@/pages/Home";
 import Analytics from "@/pages/Analytics";
 import Favorites from "@/pages/Favorites";
@@ -116,6 +118,7 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const serviceStatus = useServiceHealth();
   const [location] = useLocation();
   const [showIntro, setShowIntro] = useState(() => {
     // Only show on home page AND if not shown this session
@@ -127,6 +130,15 @@ export default function App() {
     setShowIntro(false);
     sessionStorage.setItem("intro_shown", "true");
   };
+
+  // Show fallback page when database is unreachable
+  if (serviceStatus === "unavailable") {
+    return (
+      <ThemeProvider>
+        <ServiceUnavailable />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

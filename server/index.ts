@@ -229,10 +229,42 @@ app.use((req, res, next) => {
   registerChallongeAuth(app);
   const server = await registerRoutes(app);
 
+  // Health check endpoint — used by the client fallback page
+  app.get('/api/health', async (_req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { sql } = await import('drizzle-orm');
+      await db.execute(sql`SELECT 1`);
+      res.json({ status: 'ok', db: 'ok' });
+    } catch {
+      res.status(503).json({ status: 'degraded', db: 'unavailable' });
+    }
+  });
+
+  // Global error handler — catches raw DB connection errors and returns clean 503
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const isDbError =
+      err?.code === 'ECONNREFUSED' ||
+      err?.code === 'ETIMEDOUT' ||
+      err?.code === 'ENOTFOUND' ||
+      err?.code === '57P01' || // PostgreSQL admin shutdown
+      err?.code === '08006' || // PostgreSQL connection failure
+      (typeof err?.message === 'string' && (
+        err.message.includes('ECONNREFUSED') ||
+        err.message.includes('connect ETIMEDOUT') ||
+        err.message.includes('terminating connection')
+      ));
+
+    if (isDbError) {
+      console.error('[DB] Connection error intercepted by global handler:', err?.code, err?.message);
+      if (!res.headersSent) {
+        res.status(503).json({ error: 'service_unavailable', message: 'Database connection failed' });
+      }
+      return;
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
     throw err;
   });
