@@ -284,12 +284,18 @@ export default function TournamentDetail() {
         return c ? c : { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
       });
       setEditCombos(filled);
-    } else if (editDialogOpen) {
-      setEditCombos([
-        { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
-        { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
-        { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
-      ]);
+    } else if (editDialogOpen && playerCombosResp) {
+      // Only reset to empty if we received a response but it's empty AND the form is currently blank
+      // This prevents overwriting combos pre-set by _directCombos or playerCombosById on click
+      setEditCombos((prev) => {
+        const alreadyHasData = prev.some((c) => c.blade && c.blade.trim() !== '');
+        if (alreadyHasData) return prev; // Don't overwrite combos already loaded
+        return [
+          { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+          { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+          { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+        ];
+      });
     }
   }, [playerCombosResp, editDialogOpen]);
 
@@ -556,15 +562,28 @@ export default function TournamentDetail() {
                           setEditRank(String(placement));
 
                           if (m._directCombos && m._directCombos.length > 0) {
-                            // Pad to 3
+                            // Pad to 3 — Challonge already knows the combos
                             const current = m._directCombos;
                             const filled = [0, 1, 2].map((k: number) => {
                               const c = current[k];
                               return c ? c : { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
                             });
                             setEditCombos(filled);
-                            // We also need to PREVENT the `useEffect` from overwriting it with empty data if query returns null.
-                            // But query key depends on `selectedPlayer`.
+                          } else if (memberId && playerCombosById[memberId] && playerCombosById[memberId].length > 0) {
+                            // Pre-seed from cache so fields are filled immediately while query re-fetches
+                            const current = playerCombosById[memberId];
+                            const filled = [0, 1, 2].map((k: number) => {
+                              const c = current[k];
+                              return c ? c : { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+                            });
+                            setEditCombos(filled);
+                          } else {
+                            // No data yet — show empty form, query will populate once resolved
+                            setEditCombos([
+                              { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+                              { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+                              { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+                            ]);
                           }
                           setEditDialogOpen(true);
                         }}>
