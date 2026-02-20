@@ -68,7 +68,7 @@ export function DesktopComboCard({ combo, index, rank, onClick }: DesktopComboCa
                 {/* Header: Combo Name & Components */}
                 <div className="mb-4 pr-8">
                     <h3 className="font-black text-lg tracking-tight leading-tight text-foreground/90 group-hover:text-primary transition-colors truncate"
-                        title={`${combo.lockChip && combo.lockChip.trim().toLowerCase() !== "none" && combo.lockChip !== "-" ? combo.lockChip + " " : ""}${combo.blade}`}>
+                        title={`${combo.lockChip && combo.lockChip.trim().toLowerCase() !== "none" && combo.lockChip !== "-" ? combo.lockChip + "" : ""}${combo.blade}`}>
                         {combo.lockChip && combo.lockChip.trim().toLowerCase() !== "none" && combo.lockChip !== "-" && (
                             <span className="opacity-90 mr-1">{combo.lockChip}</span>
                         )}
