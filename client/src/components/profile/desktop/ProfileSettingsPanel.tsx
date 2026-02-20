@@ -3,30 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import {
     ChevronRight,
-    Settings,
     LogOut,
     Shield,
     FileText,
-    Moon,
-    Sun,
     Gamepad2,
     Link as LinkIcon,
     AlertCircle
 } from "lucide-react";
-import { User } from "@shared/schema";
-import { Switch } from "@/components/ui/switch";
 import { ParticipationsList } from "@/components/profile/ParticipationsList";
-import { Trophy } from "lucide-react";
 
 interface ProfileSettingsPanelProps {
     user: any;
-    theme: string;
-    toggleTheme: () => void;
     handleLogout: () => void;
     onOpenAliases: () => void;
 }
 
-export function ProfileSettingsPanel({ user, theme, toggleTheme, handleLogout, onOpenAliases }: ProfileSettingsPanelProps) {
+export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases }: ProfileSettingsPanelProps) {
 
     // Reusable Row Component
     const SettingsRow = ({
@@ -91,53 +83,7 @@ export function ProfileSettingsPanel({ user, theme, toggleTheme, handleLogout, o
                     <p className="text-sm text-muted-foreground">Gestisci le tue preferenze e le tue integrazioni.</p>
                 </div>
 
-                {/* Section 1: General */}
-                {user && (
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider px-1">Generale</h3>
-                        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-
-                            {/* Theme Toggle */}
-                            <div className="flex items-center justify-between p-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-2 rounded-md bg-muted text-muted-foreground">
-                                        {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                                    </div>
-                                    <span className="font-medium text-sm">Tema</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-sm text-muted-foreground">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
-                                    <span className="hidden sm:block">
-                                        <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
-                                    </span>
-                                    <Button variant="ghost" size="icon" className="sm:hidden" onClick={toggleTheme}>
-                                        {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Theme Toggle for Guests (Move out of General if guest) */}
-                {!user && (
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider px-1">Tema</h3>
-                        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                            <div className="flex items-center justify-between p-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-2 rounded-md bg-muted text-muted-foreground">
-                                        {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                                    </div>
-                                    <span className="font-medium text-sm">Dark Mode</span>
-                                </div>
-                                <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Section 2: Integrations */}
+                {/* Section 1: Integrations */}
                 {user && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
@@ -189,7 +135,7 @@ export function ProfileSettingsPanel({ user, theme, toggleTheme, handleLogout, o
                     </div>
                 )}
 
-                {/* Section 2.5: Tournaments (Mobile Parity) */}
+                {/* Section 2: Tournaments */}
                 {user?.challengerId && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
@@ -224,7 +170,6 @@ export function ProfileSettingsPanel({ user, theme, toggleTheme, handleLogout, o
                         </div>
                     </div>
                 )}
-
             </div>
         </div>
     );

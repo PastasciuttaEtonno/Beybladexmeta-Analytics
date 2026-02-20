@@ -183,8 +183,6 @@ export default function Profile() {
           settingsPanel={
             <ProfileSettingsPanel
               user={user as any}
-              theme={theme}
-              toggleTheme={toggleTheme}
               handleLogout={handleLogout}
               onOpenAliases={() => setIsAliasesDialogOpen(true)}
             />
