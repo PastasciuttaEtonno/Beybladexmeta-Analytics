@@ -15,6 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Loader2, User, ChevronsUpDown, Pencil } from "lucide-react";
+import { DesktopTournamentHeader } from "@/components/tournaments/desktop/DesktopTournamentHeader";
+import { DesktopTournamentPodium } from "@/components/tournaments/desktop/DesktopTournamentPodium";
+import { DesktopTournamentStandings } from "@/components/tournaments/desktop/DesktopTournamentStandings";
+import { DesktopTournamentAuthPrompt } from "@/components/tournaments/desktop/DesktopTournamentAuthPrompt";
 
 type ComboForm = {
   blade: string;
@@ -710,7 +714,150 @@ export default function TournamentDetail() {
       />
       <PageHeader title="Dettagli torneo" action={<HeaderLogo />} />
 
-      <main className="flex-1 px-4 py-4 max-w-3xl mx-auto w-full space-y-6">
+      {/* === DESKTOP LAYOUT (>= lg) === */}
+      {(() => {
+        // Prepare sorted lineups for desktop components
+        const detail = detailResp?.detail;
+        let desktopLineups: any[] = [];
+
+        if (detail?.platform === 'challonge' && (detail as any).participants) {
+          const parts = (detail as any).participants || [];
+          const fetched = (detail as any).fetchedCombos || [];
+          desktopLineups = parts.map((p: any) => {
+            const rank = parseInt(p.placement, 10);
+            const matches = fetched.filter((c: any) => c.rank === rank).sort((a: any, b: any) => a.combo_number - b.combo_number);
+            let combos: ComboForm[] = [];
+            if (matches.length > 0) {
+              combos = matches.map((m: any) => ({
+                blade: m.blade,
+                assistBlade: m.assist_blade || m.assistBlade || 'None',
+                ratchet: m.ratchet,
+                bit: m.bit,
+                lockChip: m.lock_chip || m.lockChip || 'None'
+              }));
+            }
+            return {
+              placement: String(p.placement),
+              memberId: String(p.id),
+              username: p.username,
+              avatarUrl: sanitizeImageUrl(p.profilePicture?.url || null),
+              combos,
+              isSelf: !!p.isCurrentUser || (String(p.id).trim() === selfId),
+              canEdit: !!p.isCurrentUser || (String(p.id).trim() === selfId) || (!!user?.isAdmin && parseInt(p.placement, 10) <= 4),
+              _raw: p,
+            };
+          });
+        } else {
+          const rawLineups = detail?.attendance?.signups?.lineups || [];
+          desktopLineups = rawLineups.map((lu: any) => {
+            const placement = lu?.placement?.displayPlacement ?? '999';
+            const members = lu?.members || [];
+            const m = members[0];
+            const cmUser = m?.user || {};
+            const memberId = String(cmUser?.userId || '').trim();
+            const memberName = cmUser?.username || cmUser?.userId || 'Giocatore';
+            const pic = cmUser?.profilePicture || {};
+            const isSelf = (memberId && memberId === selfId) || (!!m?._isCurrentUser);
+            const canEdit = isSelf || (!!user?.isAdmin && parseInt(placement, 10) <= 4);
+            let combosList: ComboForm[] = m?._directCombos || [];
+            if (combosList.length === 0 && memberId && playerCombosById[memberId]) {
+              combosList = playerCombosById[memberId];
+            }
+            return {
+              placement: String(placement),
+              memberId,
+              username: String(memberName),
+              avatarUrl: sanitizeImageUrl(pic?.url || null),
+              combos: combosList,
+              isSelf,
+              canEdit,
+              _raw: m,
+            };
+          });
+        }
+
+        const sortedDesktop = desktopLineups.slice().sort((a, b) => {
+          return parseInt(a.placement, 10) - parseInt(b.placement, 10);
+        });
+        const podiumPlayers = sortedDesktop.filter(p => parseInt(p.placement, 10) <= 4);
+
+        const handleDesktopPlayerClick = (player: any) => {
+          if (!player.canEdit) return;
+          setSelectedPlayer({ id: player.memberId, username: player.username });
+          setEditRank(player.placement);
+          if (player.combos && player.combos.length > 0) {
+            const filled = [0, 1, 2].map((k: number) => {
+              const c = player.combos[k];
+              return c ? c : { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+            });
+            setEditCombos(filled);
+          } else if (player.memberId && playerCombosById[player.memberId] && playerCombosById[player.memberId].length > 0) {
+            const current = playerCombosById[player.memberId];
+            const filled = [0, 1, 2].map((k: number) => {
+              const c = current[k];
+              return c ? c : { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+            });
+            setEditCombos(filled);
+          } else {
+            setEditCombos([
+              { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+              { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+              { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" },
+            ]);
+          }
+          setEditDialogOpen(true);
+        };
+
+        const renderComboImage = (folder: string, name: string) => (
+          <ComponentImage folder={folder} name={name} />
+        );
+
+        return (
+          <main className="hidden lg:block flex-1 px-6 py-6 max-w-7xl mx-auto w-full space-y-6">
+            {detailLoading ? (
+              <div className="flex items-center justify-center py-32">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <DesktopTournamentHeader
+                  name={detailResp?.detail?.name || 'Dettagli torneo'}
+                  state={detailResp?.detail?.state || ''}
+                  platform={detailResp?.detail?.platform || 'challengermode'}
+                  startedAt={detailResp?.detail?.schedule?.startedAt || null}
+                  contactUrl={sanitizeImageUrl(detailResp?.detail?.contactUrl) || null}
+                  totalPlayers={totalPlayers}
+                  isOffSeason={isOffSeasonTournament}
+                  hasCombos={detailResp?.detail?.hasCombos}
+                  isAdmin={!!user?.isAdmin}
+                  resetting={resetting}
+                  onResetCombos={handleResetTournamentCombos}
+                  onSyncGhost={handleSyncGhostPlayers}
+                />
+
+                {/* Auth prompt for unauthenticated users */}
+                {((!user?.challengerId && detailResp?.detail?.platform === 'challengermode') ||
+                  (!user?.challongeId && detailResp?.detail?.platform === 'challonge')) && (
+                    <DesktopTournamentAuthPrompt
+                      platform={detailResp?.detail?.platform || 'challengermode'}
+                    />
+                  )}
+
+                <DesktopTournamentPodium
+                  players={podiumPlayers}
+                  onPlayerClick={handleDesktopPlayerClick}
+                  renderComboImage={renderComboImage}
+                />
+
+
+              </>
+            )}
+          </main>
+        );
+      })()}
+
+      {/* === MOBILE LAYOUT (< lg) - PRESERVED === */}
+      <main className="lg:hidden flex-1 px-4 py-4 max-w-3xl mx-auto w-full space-y-6">
         <Link href="/tournaments">
           <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]" data-testid="button-back">
             <ArrowLeft className="w-4 h-4" />
@@ -813,156 +960,155 @@ export default function TournamentDetail() {
             )}
           </CardContent>
         </Card>
+      </main>
 
-        {(
-          editDialogOpen
-        ) && (
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-              <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {detailResp?.detail?.platform === 'challonge'
-                      ? `Modifica combo: ${selectedPlayer?.username || 'Giocatore'}`
-                      : (selectedPlayer ? `Modifica combo: ${selectedPlayer.username}` : 'Modifica combo')}
-                  </DialogTitle>
-                  {(() => {
-                    if (!isLocked) {
-                      const times = editCombos.map(c => c.lockTime).filter(Boolean).map(t => new Date(t!).getTime());
-                      if (times.length === 0) return null;
-                      const latest = Math.max(...times);
-                      const deadline = latest + (48 * 60 * 60 * 1000); // 48 hours
-                      const now = Date.now();
-                      const diff = deadline - now;
-                      if (diff <= 0) return null; // Logic handled by isLocked, but just in case
+      {/* === SHARED DIALOG (both mobile & desktop) === */}
+      {editDialogOpen && (
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {detailResp?.detail?.platform === 'challonge'
+                  ? `Modifica combo: ${selectedPlayer?.username || 'Giocatore'}`
+                  : (selectedPlayer ? `Modifica combo: ${selectedPlayer.username}` : 'Modifica combo')}
+              </DialogTitle>
+              {(() => {
+                if (!isLocked) {
+                  const times = editCombos.map(c => c.lockTime).filter(Boolean).map(t => new Date(t!).getTime());
+                  if (times.length === 0) return null;
+                  const latest = Math.max(...times);
+                  const deadline = latest + (48 * 60 * 60 * 1000); // 48 hours
+                  const now = Date.now();
+                  const diff = deadline - now;
+                  if (diff <= 0) return null; // Logic handled by isLocked, but just in case
 
-                      const hours = Math.floor(diff / (1000 * 60 * 60));
-                      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                      return (
-                        <div className="mt-1 text-sm">
-                          <span className="text-muted-foreground">
-                            Tempo rimasto: <span className="font-semibold text-primary">{hours}h {minutes}m</span>
-                          </span>
-                        </div>
-                      );
-                    } else if (!user?.isAdmin && editCombos.some(c => c.lockTime)) {
-                      return (
-                        <div className="mt-1 text-sm">
-                          <span className="text-destructive font-semibold">Tempo per modifiche scaduto.</span>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </DialogHeader>
+                  const hours = Math.floor(diff / (1000 * 60 * 60));
+                  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                  return (
+                    <div className="mt-1 text-sm">
+                      <span className="text-muted-foreground">
+                        Tempo rimasto: <span className="font-semibold text-primary">{hours}h {minutes}m</span>
+                      </span>
+                    </div>
+                  );
+                } else if (!user?.isAdmin && editCombos.some(c => c.lockTime)) {
+                  return (
+                    <div className="mt-1 text-sm">
+                      <span className="text-destructive font-semibold">Tempo per modifiche scaduto.</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </DialogHeader>
 
-                {playerCombosLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {[0, 1, 2].map((idx) => (
-                      <div key={idx} className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
-                          {/* Delete button only for CM or if we implement granular delete for Challonge. For now hide for Challonge inside "Full Deck" form context */}
-                          {detailResp?.detail?.platform === 'challengermode' && selectedPlayer?.id && selectedPlayer.id === String(user?.challengerId || '').trim() && (
-                            <Button type="button" variant="outline" size="sm" onClick={async () => {
-                              try {
-                                await apiRequest("DELETE", `/api/tournaments/${tournamentId}/combos/${idx + 1}`);
-                                const next = editCombos.slice();
-                                next[idx] = { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
-                                setEditCombos(next);
-                                toast({ title: "Eliminata", description: `Combo ${idx + 1} rimossa` });
-                              } catch (e: any) {
-                                toast({ title: "Errore", description: e?.message || "Eliminazione fallita", variant: "destructive" });
-                              }
-                            }}>Elimina</Button>
-                          )}
-                        </div>
+            {playerCombosLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {[0, 1, 2].map((idx) => (
+                  <div key={idx} className="space-y-3 pb-6 border-b last:border-b-0 last:pb-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm text-muted-foreground">Combo {idx + 1}</h4>
+                      {/* Delete button only for CM or if we implement granular delete for Challonge. For now hide for Challonge inside "Full Deck" form context */}
+                      {detailResp?.detail?.platform === 'challengermode' && selectedPlayer?.id && selectedPlayer.id === String(user?.challengerId || '').trim() && (
+                        <Button type="button" variant="outline" size="sm" onClick={async () => {
+                          try {
+                            await apiRequest("DELETE", `/api/tournaments/${tournamentId}/combos/${idx + 1}`);
+                            const next = editCombos.slice();
+                            next[idx] = { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
+                            setEditCombos(next);
+                            toast({ title: "Eliminata", description: `Combo ${idx + 1} rimossa` });
+                          } catch (e: any) {
+                            toast({ title: "Errore", description: e?.message || "Eliminazione fallita", variant: "destructive" });
+                          }
+                        }}>Elimina</Button>
+                      )}
+                    </div>
 
-                        <div>
-                          <Label htmlFor={`edit-${idx}-blade`}>Blade</Label>
-                          <SearchableSelect
-                            id={`edit-${idx}-blade`}
-                            value={editCombos[idx]?.blade || ''}
-                            placeholder="Select blade"
-                            options={componentsData?.blades || []}
-                            onSelect={(val) => updateEditCombo(idx, 'blade', val)}
-                          />
-                        </div>
+                    <div>
+                      <Label htmlFor={`edit-${idx}-blade`}>Blade</Label>
+                      <SearchableSelect
+                        id={`edit-${idx}-blade`}
+                        value={editCombos[idx]?.blade || ''}
+                        placeholder="Select blade"
+                        options={componentsData?.blades || []}
+                        onSelect={(val) => updateEditCombo(idx, 'blade', val)}
+                      />
+                    </div>
 
-                        <div>
-                          <Label htmlFor={`edit-${idx}-assistBlade`}>Assist Blade</Label>
-                          <SearchableSelect
-                            id={`edit-${idx}-assistBlade`}
-                            value={editCombos[idx]?.assistBlade || ''}
-                            placeholder="Select assist blade"
-                            options={componentsData?.assistBlades || []}
-                            includeNone
-                            disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
-                            onSelect={(val) => updateEditCombo(idx, 'assistBlade', val)}
-                          />
-                          {!isSingleWordBlade(editCombos[idx]?.blade || '') && (
-                            <p className="text-xs text-muted-foreground mt-1">Non CX blades non supportano Assist Blades</p>
-                          )}
-                        </div>
+                    <div>
+                      <Label htmlFor={`edit-${idx}-assistBlade`}>Assist Blade</Label>
+                      <SearchableSelect
+                        id={`edit-${idx}-assistBlade`}
+                        value={editCombos[idx]?.assistBlade || ''}
+                        placeholder="Select assist blade"
+                        options={componentsData?.assistBlades || []}
+                        includeNone
+                        disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
+                        onSelect={(val) => updateEditCombo(idx, 'assistBlade', val)}
+                      />
+                      {!isSingleWordBlade(editCombos[idx]?.blade || '') && (
+                        <p className="text-xs text-muted-foreground mt-1">Non CX blades non supportano Assist Blades</p>
+                      )}
+                    </div>
 
-                        <div>
-                          <Label htmlFor={`edit-${idx}-ratchet`}>Ratchet</Label>
-                          <SearchableSelect
-                            id={`edit-${idx}-ratchet`}
-                            value={editCombos[idx]?.ratchet || ''}
-                            placeholder="Select ratchet"
-                            options={componentsData?.ratchets || []}
-                            onSelect={(val) => updateEditCombo(idx, 'ratchet', val)}
-                            disabled={!!(componentsData?.bits || []).find((b) => b.name === (editCombos[idx]?.bit || '') && b.isRatchetLess)}
-                          />
-                        </div>
+                    <div>
+                      <Label htmlFor={`edit-${idx}-ratchet`}>Ratchet</Label>
+                      <SearchableSelect
+                        id={`edit-${idx}-ratchet`}
+                        value={editCombos[idx]?.ratchet || ''}
+                        placeholder="Select ratchet"
+                        options={componentsData?.ratchets || []}
+                        onSelect={(val) => updateEditCombo(idx, 'ratchet', val)}
+                        disabled={!!(componentsData?.bits || []).find((b) => b.name === (editCombos[idx]?.bit || '') && b.isRatchetLess)}
+                      />
+                    </div>
 
-                        <div>
-                          <Label htmlFor={`edit-${idx}-bit`}>Bit</Label>
-                          <SearchableSelect
-                            id={`edit-${idx}-bit`}
-                            value={editCombos[idx]?.bit || ''}
-                            placeholder="Select bit"
-                            options={(componentsData?.bits || []).map((b) => b.name)}
-                            onSelect={(val) => updateEditCombo(idx, 'bit', val)}
-                          />
-                        </div>
+                    <div>
+                      <Label htmlFor={`edit-${idx}-bit`}>Bit</Label>
+                      <SearchableSelect
+                        id={`edit-${idx}-bit`}
+                        value={editCombos[idx]?.bit || ''}
+                        placeholder="Select bit"
+                        options={(componentsData?.bits || []).map((b) => b.name)}
+                        onSelect={(val) => updateEditCombo(idx, 'bit', val)}
+                      />
+                    </div>
 
-                        <div>
-                          <Label htmlFor={`edit-${idx}-lockChip`}>Lock Chip</Label>
-                          <SearchableSelect
-                            id={`edit-${idx}-lockChip`}
-                            value={editCombos[idx]?.lockChip || ''}
-                            placeholder="Select lock chip"
-                            options={componentsData?.lockChips || []}
-                            includeNone
-                            disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
-                            onSelect={(val) => updateEditCombo(idx, 'lockChip', val)}
-                          />
-                          {!isSingleWordBlade(editCombos[idx]?.blade || '') && (
-                            <p className="text-xs text-muted-foreground mt-1">Non CX blades non supportano Lock Chips</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                      <Button type="button" onClick={() => saveCombosMutation.mutate()} disabled={saveCombosMutation.isPending || isLocked}>
-                        {saveCombosMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : 'Save'}
-                      </Button>
+                    <div>
+                      <Label htmlFor={`edit-${idx}-lockChip`}>Lock Chip</Label>
+                      <SearchableSelect
+                        id={`edit-${idx}-lockChip`}
+                        value={editCombos[idx]?.lockChip || ''}
+                        placeholder="Select lock chip"
+                        options={componentsData?.lockChips || []}
+                        includeNone
+                        disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
+                        onSelect={(val) => updateEditCombo(idx, 'lockChip', val)}
+                      />
+                      {!isSingleWordBlade(editCombos[idx]?.blade || '') && (
+                        <p className="text-xs text-muted-foreground mt-1">Non CX blades non supportano Lock Chips</p>
+                      )}
                     </div>
                   </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          )}
-      </main>
+                ))}
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                  <Button type="button" onClick={() => saveCombosMutation.mutate()} disabled={saveCombosMutation.isPending || isLocked}>
+                    {saveCombosMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : 'Save'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div >
   );
 }
