@@ -1096,9 +1096,50 @@ export default function TournamentDetail() {
                   </div>
                 ))}
 
+                {/* Duplicate combo warning */}
+                {(() => {
+                  // Build combo keys for filled combos only
+                  const comboKey = (c: ComboForm) => {
+                    const b = (c.blade || '').trim().toLowerCase();
+                    if (!b) return null; // empty combo slot
+                    const ab = (c.assistBlade || 'none').trim().toLowerCase();
+                    const r = (c.ratchet || '').trim().toLowerCase();
+                    const bi = (c.bit || '').trim().toLowerCase();
+                    const lc = (c.lockChip || 'none').trim().toLowerCase();
+                    return `${b}|${ab}|${r}|${bi}|${lc}`;
+                  };
+                  const keys = editCombos.map(comboKey).filter(Boolean) as string[];
+                  const hasDuplicates = keys.length !== new Set(keys).size;
+                  return hasDuplicates ? (
+                    <p className="text-sm text-destructive font-medium">
+                      ⚠️ Le combo nel deck devono essere tutte diverse tra loro.
+                    </p>
+                  ) : null;
+                })()}
+
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                  <Button type="button" onClick={() => saveCombosMutation.mutate()} disabled={saveCombosMutation.isPending || isLocked}>
+                  <Button
+                    type="button"
+                    onClick={() => saveCombosMutation.mutate()}
+                    disabled={
+                      saveCombosMutation.isPending ||
+                      isLocked ||
+                      (() => {
+                        const comboKey = (c: ComboForm) => {
+                          const b = (c.blade || '').trim().toLowerCase();
+                          if (!b) return null;
+                          const ab = (c.assistBlade || 'none').trim().toLowerCase();
+                          const r = (c.ratchet || '').trim().toLowerCase();
+                          const bi = (c.bit || '').trim().toLowerCase();
+                          const lc = (c.lockChip || 'none').trim().toLowerCase();
+                          return `${b}|${ab}|${r}|${bi}|${lc}`;
+                        };
+                        const keys = editCombos.map(comboKey).filter(Boolean) as string[];
+                        return keys.length !== new Set(keys).size;
+                      })()
+                    }
+                  >
                     {saveCombosMutation.isPending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : 'Save'}
