@@ -2401,10 +2401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const preferNew = (!existing.name && t.name) ||
             (existing.name && t.name && (t.bestPlacement ?? 999) < (existing.bestPlacement ?? 999));
           if (preferNew) {
-            deduped.set(t.tournamentId, {
-              ...t,
-              totalPoints: Math.max(existing.totalPoints, t.totalPoints),
-            });
+            deduped.set(t.tournamentId, t);
           }
         }
       }
