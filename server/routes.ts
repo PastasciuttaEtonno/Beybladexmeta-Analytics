@@ -2390,14 +2390,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Deduplicate by tournamentId: prefer entries with a name, then best placement
+      const deduped = new Map<string, typeof tournaments[0]>();
+      for (const t of tournaments) {
+        const existing = deduped.get(t.tournamentId);
+        if (!existing) {
+          deduped.set(t.tournamentId, t);
+        } else {
+          // Pick the entry with a non-null name; if both have names keep the one with better placement
+          const preferNew = (!existing.name && t.name) ||
+            (existing.name && t.name && (t.bestPlacement ?? 999) < (existing.bestPlacement ?? 999));
+          if (preferNew) {
+            deduped.set(t.tournamentId, {
+              ...t,
+              totalPoints: Math.max(existing.totalPoints, t.totalPoints),
+            });
+          }
+        }
+      }
+      const uniqueTournaments = Array.from(deduped.values());
+
       // Sort all tournaments by date
-      tournaments.sort((a, b) => {
+      uniqueTournaments.sort((a, b) => {
         const dateA = a.date ? new Date(a.date).getTime() : 0;
         const dateB = b.date ? new Date(b.date).getTime() : 0;
         return dateB - dateA;
       });
 
-      res.json({ tournaments: tournaments.slice(0, 50) });
+      res.json({ tournaments: uniqueTournaments.slice(0, 50) });
     } catch (error) {
       console.error('Unified player tournaments error:', error);
       res.status(500).json({ error: 'Failed to fetch player tournaments' });
