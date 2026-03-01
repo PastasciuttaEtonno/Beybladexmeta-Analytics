@@ -2295,15 +2295,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 COUNT(DISTINCT c.id) AS combo_count,
                 'challonge' AS platform,
                 MAX(c.created_at) AS date,
-                COALESCE(
-                    NULLIF((m.data->>'participants_count')::int, 0),
-                    NULLIF((m.data->>'total_players')::int, 0),
-                    jsonb_array_length(m.data->'standings')
+                (
+                    SELECT COALESCE(
+                        NULLIF((m2.data->>'participants_count')::int, 0),
+                        NULLIF((m2.data->>'total_players')::int, 0),
+                        jsonb_array_length(m2.data->'standings')
+                    )
+                    FROM challonge_match_results m2
+                    WHERE m2.tournament_id = c.tournament_id
+                    LIMIT 1
                 ) as total_participants
                 FROM challonge_reported_combos c
-                LEFT JOIN challonge_match_results m ON c.tournament_id = m.tournament_id
                 WHERE c.user_id = ${user.id} AND c.season = ${season}
-                GROUP BY c.tournament_id, m.data
+                GROUP BY c.tournament_id
                 ORDER BY date DESC
                 LIMIT 25;
             `);
@@ -2316,15 +2320,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 COUNT(DISTINCT c.id) AS combo_count,
                 'challonge' AS platform,
                 MAX(c.created_at) AS date,
-                COALESCE(
-                    NULLIF((m.data->>'participants_count')::int, 0),
-                    NULLIF((m.data->>'total_players')::int, 0),
-                    jsonb_array_length(m.data->'standings')
+                (
+                    SELECT COALESCE(
+                        NULLIF((m2.data->>'participants_count')::int, 0),
+                        NULLIF((m2.data->>'total_players')::int, 0),
+                        jsonb_array_length(m2.data->'standings')
+                    )
+                    FROM challonge_match_results m2
+                    WHERE m2.tournament_id = c.tournament_id
+                    LIMIT 1
                 ) as total_participants
                 FROM challonge_reported_combos c
-                LEFT JOIN challonge_match_results m ON c.tournament_id = m.tournament_id
                 WHERE c.user_id = ${user.id}
-                GROUP BY c.tournament_id, m.data
+                GROUP BY c.tournament_id
                 ORDER BY date DESC
                 LIMIT 25;
             `);

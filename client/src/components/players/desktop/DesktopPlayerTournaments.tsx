@@ -54,7 +54,7 @@ export function DesktopPlayerTournaments({ tournaments, isLoading }: DesktopPlay
             <div className="bg-muted/30 px-6 py-4 border-b border-border">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-primary" />
-                    Storico Tornei
+                    Storico Tornei in top
                 </h3>
             </div>
             <Table>
