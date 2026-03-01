@@ -32,24 +32,29 @@ export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProp
     const chartData = useMemo(() => {
         if (!tournaments || tournaments.length === 0) return [];
 
-        // 1. Sort and Group by Month
-        const monthlyCounts: Record<string, { date: Date; count: number }> = {};
+        // 1. Group by ISO Week
+        const weeklyCounts: Record<string, { date: Date; count: number }> = {};
 
         tournaments.forEach((t) => {
             if (!t.date) return;
             const date = typeof t.date === 'string' ? parseISO(t.date) : new Date(t.date);
             if (!isValid(date)) return;
 
-            const key = format(date, "MMM yyyy"); // e.g., "Oct 2025"
+            // Week-of-month: W01–W04, resets each month
+            const weekOfMonth = Math.ceil(date.getDate() / 7);
+            const monthKey = format(date, "MMM yyyy");
+            const key = `W${String(weekOfMonth).padStart(2, '0')} ${monthKey}`;
+            // Anchor date = first day of that week-of-month bucket
+            const anchorDate = new Date(date.getFullYear(), date.getMonth(), (weekOfMonth - 1) * 7 + 1);
 
-            if (!monthlyCounts[key]) {
-                monthlyCounts[key] = { date, count: 0 };
+            if (!weeklyCounts[key]) {
+                weeklyCounts[key] = { date: anchorDate, count: 0 };
             }
-            monthlyCounts[key].count += 1;
+            weeklyCounts[key].count += 1;
         });
 
         // 2. Convert to Array and Sort by Date
-        const result = Object.entries(monthlyCounts).map(([key, value]) => ({
+        const result = Object.entries(weeklyCounts).map(([key, value]) => ({
             name: key,
             date: value.date,
             count: value.count
@@ -138,7 +143,7 @@ export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProp
                         <div className="text-center text-muted-foreground flex flex-col items-center gap-2">
                             <AlertCircle className="w-8 h-8 opacity-50" />
                             <p>Dati insufficienti per mostrare il trend</p>
-                            <p className="text-xs opacity-50">Servono dati di almeno 1 mese</p>
+                            <p className="text-xs opacity-50">Servono dati di almeno 1 settimana</p>
                         </div>
                     )}
                 </div>

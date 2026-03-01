@@ -1684,8 +1684,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/stats/leaderboard', async (req, res) => {
     try {
       const platform = req.query.platform as string | undefined;
-      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
-      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 50;
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 200;
+      const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 500)) : 200;
 
       if (platform && platform !== 'challengermode' && platform !== 'challonge') {
         return res.status(400).json({ error: 'Invalid platform. Use challengermode or challonge.' });
