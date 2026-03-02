@@ -37,6 +37,8 @@ async function createViews() {
         FROM public.cm_match_results m
         JOIN public.cm_players p ON m.player_id = p.id
         LEFT JOIN public.users u ON u.challenger_id = p.id
+        -- Escludi tornei che esistono anche su Challonge (inserimenti errati cross-platform)
+        WHERE m.tournament_id NOT IN (SELECT tournament_id FROM public.challonge_match_results)
         GROUP BY p.id, p.nickname, p.avatar, u.photo_url
       ),
       challonge_raw AS (
