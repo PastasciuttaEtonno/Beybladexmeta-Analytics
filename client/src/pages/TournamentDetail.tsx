@@ -369,9 +369,14 @@ export default function TournamentDetail() {
   const saveCombosMutation = useMutation({
     mutationFn: async () => {
       const rawSelfId = String(user?.challengerId || '').trim();
-      // const selfId = String(new URLSearchParams(window.location.search || '').get('fakeSelf') || rawSelfId).trim();
       const selfId = rawSelfId;
-      if (selectedPlayer?.id && selfId && selectedPlayer.id === selfId) {
+      const isChallonge = detailResp?.detail?.platform === 'challonge';
+      const isSelfEdit = !!(selectedPlayer?.id && selfId && selectedPlayer.id === selfId);
+
+      // For Challonge tournaments, always use the Challonge-specific endpoints
+      // regardless of whether the player matches selfId. The PUT /combos/:num endpoint
+      // is CM-only and requires a pre-existing row in external_player_combos.
+      if (isSelfEdit && !isChallonge) {
         await Promise.all([0, 1, 2].map(async (idx) => {
           const c = editCombos[idx] || { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
           await apiRequest("PUT", `/api/tournaments/${tournamentId}/combos/${idx + 1}`, {
@@ -383,35 +388,28 @@ export default function TournamentDetail() {
           });
         }));
         return { ok: true } as any;
-      } else {
-        const payload = {
-          combos: editCombos,
-          rank: editRank ? parseInt(editRank, 10) : undefined,
-          platform: detailResp?.detail?.platform || 'challengermode'
-        };
-
-        if (payload.rank && (payload.rank < 1 || payload.rank > 4)) {
-          throw new Error("Rank must be between 1 and 4");
-        }
-        // Use the new generic claim endpoint for Deck Submission (Challonge or CM)
-        // Note: For CM user, we used to use generic claim? No, CM editing was implicit via PUT combos/:num.
-        // Wait, the claim logic (POST /claim) was for INITIAL claim.
-        // Here we are in "Edit" dialog.
-        // If it's Challonge, "Claim" and "Edit" are arguably the same action (Update Deck).
-        // Since we don't have per-combo endpoint for Challonge combos yet (we might want to add UPDATE support to POST /claim or separate PUT).
-        // The implementation of POST /claim handles full replace.
-        // So for Challonge, ALL updates go through POST /claim.
-
-        if (detailResp?.detail?.platform === 'challonge') {
-          if (user?.isAdmin) {
-            return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
-          }
-          return apiRequest("POST", `/api/tournaments/${tournamentId}/claim`, payload);
-        }
-
-        // For CM (or fallback admin action)
-        return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
       }
+
+      const payload = {
+        combos: editCombos,
+        rank: editRank ? parseInt(editRank, 10) : undefined,
+        platform: detailResp?.detail?.platform || 'challengermode'
+      };
+
+      if (payload.rank && (payload.rank < 1 || payload.rank > 4)) {
+        throw new Error("Rank must be between 1 and 4");
+      }
+
+      if (isChallonge) {
+        if (user?.isAdmin) {
+          return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
+        }
+        // For Challonge users (including self-edit): POST /claim handles both insert and replace
+        return apiRequest("POST", `/api/tournaments/${tournamentId}/claim`, payload);
+      }
+
+      // For CM (or fallback admin action)
+      return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
     },
     onSuccess: () => {
       toast({ title: "Saved", description: "Player combos updated" });
