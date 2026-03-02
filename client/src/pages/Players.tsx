@@ -73,7 +73,7 @@ export default function Players() {
     if (q !== null || ssQ !== null) setQuery((q ?? ssQ ?? "") as string);
     if (season !== null || ssSeason !== null) setSelectedSeason((season ?? ssSeason ?? "Off Season 2025") as string);
 
-    // Validate Platform
+    // Validate Platform — URL param has priority over sessionStorage
     const rawPlatform = platform ?? ssPlatform;
     if (rawPlatform === "challengermode" || rawPlatform === "challonge") {
       setSelectedPlatform(rawPlatform);
@@ -82,6 +82,7 @@ export default function Players() {
     }
 
     setIsInitialized(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -106,9 +107,9 @@ export default function Players() {
     const newSearch = params.toString();
     const currentSearch = window.location.search.replace(/^\?/, "");
     if (newSearch !== currentSearch) {
-      setLocation(`${location}?${newSearch}`, { replace: true });
+      setLocation(`${window.location.pathname}?${newSearch}`, { replace: true });
     }
-  }, [query, selectedSeason, selectedPlatform, location, setLocation, isInitialized]);
+  }, [query, selectedSeason, selectedPlatform, setLocation, isInitialized]);
 
   const { data: seasonsData } = useQuery<{ seasons: string[] }>({
     queryKey: ["/api/seasons"],
@@ -155,9 +156,11 @@ export default function Players() {
   const perPage = 20;
   const filteredPlayers = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return players;
-    return players.filter((p) => p.nickname.toLowerCase().includes(q));
-  }, [players, query]);
+    // Filtro client-side aggiuntivo per platform: difesa extra nel caso l'API ritorni dati misti
+    const byPlatform = players.filter((p) => !p.platform || p.platform === selectedPlatform);
+    if (!q) return byPlatform;
+    return byPlatform.filter((p) => p.nickname.toLowerCase().includes(q));
+  }, [players, query, selectedPlatform]);
   const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / perPage));
   const pageItems = useMemo(() => {
     const start = (page - 1) * perPage;
