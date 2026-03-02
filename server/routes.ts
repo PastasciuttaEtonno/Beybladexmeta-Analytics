@@ -4597,6 +4597,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       validUserNames = aliasesRes.rows.map((r: any) => r.alias);
       if (user.challongeUsername) validUserNames.push(user.challongeUsername);
 
+      // Early check: if user has no Challonge identity at all, give a clear error
+      if (validUserNames.length === 0 && !req.user!.isAdmin) {
+        return res.status(403).json({ error: 'Per registrare combo su tornei Challonge devi collegare il tuo account Challonge.' });
+      }
+
       const standings = data.standings || [];
       const participant = standings.find((p: any) => {
         const pName = p.name || p.username || '';
@@ -4867,13 +4872,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.getUser(req.session.userId!);
       const challengerId = (user as any)?.challengerId as string | undefined;
-      if (!challengerId) return res.status(403).json({ error: 'Operazione consentita solo agli utenti Challengermode' });
+      if (!challengerId) return res.status(403).json({ error: 'Per registrare combo su tornei Challengermode devi collegare il tuo account Challengermode.' });
 
       const rows = await db.select().from(externalPlayerCombos)
         .where(and(eq(externalPlayerCombos.tournamentId, tournamentId), eq(externalPlayerCombos.playerId, challengerId), eq(externalPlayerCombos.comboNumber, comboNumber)))
         .limit(1);
       const existing = rows[0];
-      if (!existing) return res.status(404).json({ error: 'Combo non trovata o non di tua proprietà' });
+
+      if (!existing) {
+        // --- UPSERT: First-time combo insert ---
+        // Fetch placement from CM API to verify user is top-4
+        let cmPlacement: number | null = null;
+        let cmTotalParticipants: number | null = null;
+        let cmTournamentDate: Date | null = null;
+        try {
+          const detail = await fetchTournamentDetail(tournamentId);
+          const lineups = detail?.attendance?.signups?.lineups || [];
+          for (const lineup of lineups) {
+            const disp = lineup?.placement?.displayPlacement ?? '';
+            const rankMatch = String(disp).match(/\d+/);
+            const rank = rankMatch ? parseInt(rankMatch[0], 10) : null;
+            const members = lineup?.members || [];
+            if (members.some((m: any) => (m?.user?.userId || '') === challengerId)) {
+              cmPlacement = rank;
+              break;
+            }
+          }
+          const userCount = detail?.attendance?.signups?.userCount;
+          cmTotalParticipants = typeof userCount === 'number' && userCount > 0 ? userCount : null;
+          const startedAtStr = detail?.schedule?.startedAt as string | undefined;
+          if (startedAtStr) {
+            const dateOnly = String(startedAtStr).slice(0, 10);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+              cmTournamentDate = new Date(dateOnly);
+            }
+          }
+        } catch (e: any) {
+          console.warn('Failed to fetch CM tournament detail for upsert:', e?.message || e);
+          return res.status(404).json({ error: 'Impossibile verificare il piazzamento nel torneo.' });
+        }
+
+        if (!cmPlacement || cmPlacement > 4) {
+          return res.status(403).json({ error: 'Solo i primi 4 classificati possono registrare le combo.' });
+        }
+
+        const seasonVal = cmTournamentDate ? determineSeason(cmTournamentDate) : determineSeason(new Date());
+
+        // Ensure cm_players row exists
+        await db.insert(cmPlayers).values({ id: challengerId, nickname: challengerId, avatar: null as any })
+          .onConflictDoNothing();
+
+        // Insert new combo row
+        const insertedRows = await db.insert(externalPlayerCombos).values({
+          tournamentId,
+          playerId: challengerId,
+          comboNumber,
+          blade: newCombo.blade,
+          assistBlade: newCombo.assistBlade,
+          ratchet: newCombo.ratchet,
+          bit: newCombo.bit,
+          lockChip: newCombo.lockChip,
+          placement: cmPlacement,
+          totalParticipants: cmTotalParticipants,
+          tournamentDate: cmTournamentDate,
+          season: seasonVal,
+          platform: 'challengermode',
+        }).returning();
+        const inserted = insertedRows[0];
+
+        // Process stats
+        if (cmPlacement > 0 && cmTotalParticipants && cmTotalParticipants > 0) {
+          await processExternalCombo({
+            blade: newCombo.blade,
+            assistBlade: newCombo.assistBlade,
+            ratchet: newCombo.ratchet,
+            bit: newCombo.bit,
+            lockChip: newCombo.lockChip,
+            season: seasonVal,
+            placement: cmPlacement,
+            totalParticipants: cmTotalParticipants,
+          });
+
+          try {
+            await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY top_component_snapshot`);
+          } catch {
+            await db.execute(sql`REFRESH MATERIALIZED VIEW top_component_snapshot`);
+          }
+        }
+
+        // Upsert into cm_match_results
+        if (cmTournamentDate) {
+          await db.insert(cmMatchResults).values({
+            tournamentId,
+            playerId: challengerId,
+            comboNumber,
+            blade: newCombo.blade,
+            assistBlade: newCombo.assistBlade,
+            ratchet: newCombo.ratchet,
+            bit: newCombo.bit,
+            lockChip: newCombo.lockChip,
+            piazzamento: cmPlacement,
+            numeroPartecipanti: cmTotalParticipants || 0,
+            dataTorneo: cmTournamentDate,
+            puntiGuadagnati: cmPlacement && cmTotalParticipants ? calcExternalPoints(cmPlacement, cmTotalParticipants) : 0,
+            updatedAt: sql`now()`,
+          } as any).onConflictDoUpdate({
+            target: [cmMatchResults.tournamentId, cmMatchResults.playerId, cmMatchResults.comboNumber] as any,
+            set: {
+              blade: sql`excluded.blade`,
+              assistBlade: sql`excluded.assist_blade`,
+              ratchet: sql`excluded.ratchet`,
+              bit: sql`excluded.bit`,
+              lockChip: sql`excluded.lock_chip`,
+              piazzamento: sql`excluded.piazzamento`,
+              numeroPartecipanti: sql`excluded.numero_partecipanti`,
+              dataTorneo: sql`excluded.data_torneo`,
+              puntiGuadagnati: sql`excluded.punti_guadagnati`,
+              updatedAt: sql`now()`,
+            },
+          });
+        }
+
+        try {
+          await db.insert(adminAuditLogs).values({
+            adminUserId: req.session.userId!,
+            email: (user as any)?.email || '',
+            action: 'user_insert_combo',
+            tournamentId,
+            playerId: challengerId,
+            payload: {
+              comboNumber,
+              combo: {
+                blade: newCombo.blade,
+                assistBlade: newCombo.assistBlade,
+                ratchet: newCombo.ratchet,
+                bit: newCombo.bit,
+                lockChip: newCombo.lockChip,
+              },
+            },
+          } as any);
+        } catch { }
+
+        return res.json({
+          success: true, combo: {
+            tournamentId,
+            comboNumber,
+            blade: newCombo.blade,
+            assistBlade: newCombo.assistBlade,
+            ratchet: newCombo.ratchet,
+            bit: newCombo.bit,
+            lockChip: newCombo.lockChip,
+          }
+        });
+      }
+
+      // --- Existing row: UPDATE path ---
 
       // Check 48h edit window for non-admins (Challengermode)
       if (!req.user!.isAdmin) {

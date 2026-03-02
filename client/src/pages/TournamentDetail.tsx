@@ -373,9 +373,13 @@ export default function TournamentDetail() {
       const isChallonge = detailResp?.detail?.platform === 'challonge';
       const isSelfEdit = !!(selectedPlayer?.id && selfId && selectedPlayer.id === selfId);
 
-      // For Challonge tournaments, always use the Challonge-specific endpoints
-      // regardless of whether the player matches selfId. The PUT /combos/:num endpoint
-      // is CM-only and requires a pre-existing row in external_player_combos.
+      // Platform-specific auth check: CM tournaments require a linked Challengermode account
+      // (Challonge auth is validated server-side via name/alias matching in POST /claim)
+      if (!isChallonge && !user?.challengerId && !user?.isAdmin) {
+        throw new Error('Per registrare combo su tornei Challengermode devi collegare il tuo account Challengermode.');
+      }
+
+      // For CM tournaments when user is self-editing with a valid challengerId
       if (isSelfEdit && !isChallonge) {
         await Promise.all([0, 1, 2].map(async (idx) => {
           const c = editCombos[idx] || { blade: "", assistBlade: "None", ratchet: "", bit: "", lockChip: "None" };
