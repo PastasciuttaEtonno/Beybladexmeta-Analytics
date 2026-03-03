@@ -21,9 +21,11 @@ export function DesktopAnalyticsGrid({
 }: DesktopAnalyticsGridProps) {
     if (isLoading) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-5 max-w-6xl mx-auto">
                 {[...Array(6)].map((_, i) => (
-                    <DesktopComboCardSkeleton key={i} />
+                    <div key={i} className="w-full sm:w-[330px]">
+                        <DesktopComboCardSkeleton />
+                    </div>
                 ))}
             </div>
         );
@@ -38,14 +40,14 @@ export function DesktopAnalyticsGrid({
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-5 animate-in fade-in zoom-in-95 duration-500 max-w-6xl mx-auto">
             {combos.map((combo, index) => {
                 const overallRank = (currentPage - 1) * itemsPerPage + index + 1;
                 const comboId = getComboId(combo);
 
                 return (
                     <Link key={comboId} href={`/combo/${comboId}?season=${encodeURIComponent(season)}`}>
-                        <a className="block h-full no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl">
+                        <a className="block w-full sm:w-[330px] h-full no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl shrink-0">
                             <DesktopComboCard
                                 combo={combo}
                                 index={index}
