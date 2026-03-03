@@ -28,6 +28,14 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
 
     const chartData = getChartData(selectedName);
 
+    // Calculate max value manually because YAxis function domains are unsupported in this Recharts version
+    const maxValue = chartData.reduce((max: number, item: any) => {
+        const val = selectedName ? item[selectedName] : 0;
+        const numVal = Number(val);
+        return Math.max(max, isNaN(numVal) ? 0 : numVal);
+    }, 0);
+    const yAxisMax = Math.ceil(maxValue * 1.3) + 10;
+
     return (
         <div className="flex flex-col h-full w-full">
             <div className="flex items-center justify-between mb-4">
@@ -110,7 +118,7 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                                 </linearGradient>
                             </defs>
                             <XAxis dataKey="month" hide />
-                            <YAxis hide domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2) + 10]} />
+                            <YAxis hide domain={[0, yAxisMax]} />
                             <ChartTooltip
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
