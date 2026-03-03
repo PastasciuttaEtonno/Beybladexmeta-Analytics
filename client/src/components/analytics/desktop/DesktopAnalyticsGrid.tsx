@@ -21,9 +21,9 @@ export function DesktopAnalyticsGrid({
 }: DesktopAnalyticsGridProps) {
     if (isLoading) {
         return (
-            <div className="flex flex-wrap justify-center gap-4 md:gap-5 max-w-6xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full mx-auto">
                 {[...Array(6)].map((_, i) => (
-                    <div key={i} className="w-full sm:w-[330px]">
+                    <div key={i} className="w-full sm:w-[375px]">
                         <DesktopComboCardSkeleton />
                     </div>
                 ))}
@@ -40,14 +40,14 @@ export function DesktopAnalyticsGrid({
     }
 
     return (
-        <div className="flex flex-wrap justify-center gap-4 md:gap-5 animate-in fade-in zoom-in-95 duration-500 max-w-6xl mx-auto">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-5 animate-in fade-in zoom-in-95 duration-500 w-full mx-auto">
             {combos.map((combo, index) => {
                 const overallRank = (currentPage - 1) * itemsPerPage + index + 1;
                 const comboId = getComboId(combo);
 
                 return (
                     <Link key={comboId} href={`/combo/${comboId}?season=${encodeURIComponent(season)}`}>
-                        <a className="block w-full sm:w-[330px] h-full no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl shrink-0">
+                        <a className="block w-full sm:w-[375px] h-full no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl shrink-0">
                             <DesktopComboCard
                                 combo={combo}
                                 index={index}
