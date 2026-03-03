@@ -10,8 +10,7 @@ interface DesktopFavoriteComboCardProps {
     onView: (combo: FavoriteCombo) => void;
 }
 
-export function DesktopFavoriteComboCard({ combo, onDelete, onView }: DesktopFavoriteComboCardProps) {
-    // Helper per verificare se un componente è valido (non None, non null, non "-")
+export function DesktopFavoriteComboCard({ combo, onDelete, onView }: DesktopFavoriteComboCardProps) {    // Helper per verificare se un componente è valido (non None, non null, non "-")
     const isValidPart = (part: string | null | undefined) => {
         return part && part.toLowerCase() !== "none" && part !== "-";
     };
@@ -30,7 +29,7 @@ export function DesktopFavoriteComboCard({ combo, onDelete, onView }: DesktopFav
 
     return (
         <Card
-            className="relative overflow-hidden border-border bg-card/40 backdrop-blur-md cursor-pointer h-full flex flex-col"
+            className="relative overflow-hidden border-border bg-card/40 backdrop-blur-md cursor-pointer h-full flex flex-col hover:bg-muted/20 hover:border-primary/30 transition-colors duration-200"
             onClick={() => onView(combo)}
         >
             <div className="p-4 flex-1 flex flex-col items-center justify-center relative z-10">
@@ -43,7 +42,7 @@ export function DesktopFavoriteComboCard({ combo, onDelete, onView }: DesktopFav
                     </div>
 
                     {/* Right: Stacked Ratchet & Bit */}
-                    <div className="flex flex-col items-center justify-center -space-y-1 shrink-0">
+                    <div className="flex flex-col items-center justify-center gap-1 shrink-0">
                         {isValidPart(combo.ratchet) && (
                             <DesktopComponentImage folder="ratchets" name={combo.ratchet} className="w-12 h-12 drop-shadow-sm z-10" />
                         )}
