@@ -42,7 +42,7 @@ export function DesktopComboCard({ combo, index, rank, onClick }: DesktopComboCa
 
     return (
         <Card
-            className="group relative overflow-hidden border-border bg-card/40 backdrop-blur-md hover:-translate-y-1 hover:shadow-xl hover:border-primary/20 transition-all duration-300 cursor-pointer h-full max-w-[360px] mx-auto w-full"
+            className="group relative overflow-hidden border-border bg-card/40 backdrop-blur-md hover:-translate-y-1 hover:shadow-xl hover:border-primary/20 transition-all duration-300 cursor-pointer h-full max-w-[375px] mx-auto w-full"
             onClick={onClick}
         >
             {/* Absolute Rank Badge & Lock Chip */}
