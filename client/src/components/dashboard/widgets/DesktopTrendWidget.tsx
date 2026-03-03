@@ -110,7 +110,7 @@ export function DesktopTrendWidget({ selectedSeason }: DesktopTrendWidgetProps) 
                                 </linearGradient>
                             </defs>
                             <XAxis dataKey="month" hide />
-                            <YAxis hide domain={[0, 'dataMax + 10']} />
+                            <YAxis hide domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2) || 10]} />
                             <ChartTooltip
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
