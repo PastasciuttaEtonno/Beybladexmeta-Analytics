@@ -57,7 +57,7 @@
     "@radix-ui/react-tooltip": "^1.2.0",
     "@tanstack/react-query": "^5.60.5",
     "@types/pg": "^8.15.6",
-    "axios": "^1.13.5",
+    "axios": "^1.15.0",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
