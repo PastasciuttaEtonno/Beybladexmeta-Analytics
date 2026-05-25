@@ -6,9 +6,12 @@ vite.config.ts.*
 *.tar.gz
 .local
 database_data
+
+# Claude Code project files
+.claude/
+
 # Environment secrets
 .env
-.env.local
 .env.*
 
 # Logs
