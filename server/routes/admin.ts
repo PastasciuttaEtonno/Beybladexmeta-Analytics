@@ -73,6 +73,7 @@ async function syncGhostPlayersFromData(data: any): Promise<number> {
   }
 
   return count;
+  
 }
 
 export function registerAdminRoutes(app: Express): void {
