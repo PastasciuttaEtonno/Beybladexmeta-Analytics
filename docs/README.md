@@ -1,5 +1,7 @@
 # Beyblade X Meta Analytics — Technical Documentation
 
+> Disclaimer: this repository is no longer maintained. The documentation and code may be outdated, and some integrations or deployment instructions may no longer be current.
+
 ## Table of Contents
 
 - [Application Overview](#application-overview)
