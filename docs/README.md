@@ -1,6 +1,8 @@
 # Beyblade X Meta Analytics — Technical Documentation
 
 > Disclaimer: this repository is no longer maintained. The documentation and code may be outdated, and some integrations or deployment instructions may no longer be current.
+>
+> This webapp was built using AI agents, including Claude Code, Gemini, and several IDE AI tools such as Antigravity, Cursor, and Trae.
 
 ## Table of Contents
 
