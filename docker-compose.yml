@@ -6,10 +6,12 @@ services:
     image: postgres:18  # Puoi scegliere la versione di Postgres che preferisci
     container_name: postgres_db
     restart: always
+    env_file:
+      - ./.env.docker
     environment:
-      POSTGRES_USER: admin           # Scegli il tuo nome utente
-      POSTGRES_PASSWORD: "Ciaone123"        # Scegli la tua password
-      POSTGRES_DB: mydatabase        # Scegli il nome del tuo database
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
     ports:
       - "5432:5432"  # Mappa la porta del container alla tua macchina host
     volumes:
@@ -22,9 +24,11 @@ services:
     image: dpage/pgadmin4:latest
     container_name: pgadmin4
     restart: always
+    env_file:
+      - ./.env.docker
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com  # Email per il login a pgAdmin
-      PGADMIN_DEFAULT_PASSWORD: "Ciaone123"             # Password per il login a pgAdmin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}  # Email per il login a pgAdmin
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change-me}  # Password per il login a pgAdmin
     ports:
       - "5050:80"  # Accedi a pgAdmin su http://localhost:5050
     depends_on:
@@ -37,9 +41,11 @@ services:
     image: minio/minio:latest
     container_name: minio
     restart: always
+    env_file:
+      - ./.env.docker
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: "Ciaone123"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me}
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"   # S3 API
@@ -54,9 +60,11 @@ services:
     image: minio/mc:latest
     depends_on:
       - minio
+    env_file:
+      - ./.env.docker
     entrypoint: ["/bin/sh","-c"]
     command: >
-      "mc alias set local http://minio:9000 admin Ciaone123 && \
+      "mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-change-me} && \
        mc mb --ignore-existing local/app-public && \
        mc mb --ignore-existing local/app-private && \
        mc anonymous set download local/app-public && \

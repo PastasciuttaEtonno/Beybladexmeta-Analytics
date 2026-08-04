@@ -13,6 +13,30 @@ database_data
 # Environment secrets
 .env
 .env.*
+!.env.example
+!.env.docker.example
+
+# Local/hidden config files that may contain secrets
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+.env.docker
+.env.coolify
+.claude/settings.local.json
+*.local.json
+*.local.yaml
+*.local.yml
+
+# Secret or sensitive runtime artifacts
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
+# Keep local-only tooling files out of the repo
+secrets/
 
 # Logs
 npm-debug.log*
