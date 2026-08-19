@@ -1,5 +1,10 @@
 # Beyblade X Meta Analytics — Technical Documentation
 
+> **Out of date on structure.** The app has since been split into two independent
+> services, `frontend/` and `backend/` — see the root `README.md`. The endpoint,
+> business-logic and schema references under `docs/backend/` are still accurate;
+> only the paths and the build/run instructions below have moved.
+
 > Disclaimer: this repository is no longer maintained. The documentation and code may be outdated, and some integrations or deployment instructions may no longer be current.
 >
 > This webapp was built using AI agents, including Claude Code, Gemini, and several IDE AI tools such as Antigravity, Cursor, and Trae.

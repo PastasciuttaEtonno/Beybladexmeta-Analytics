@@ -1,0 +1,96 @@
+# Beybladexmeta Analytics
+
+Two independent services behind one public origin:
+
+| | | |
+|---|---|---|
+| `frontend/` | React 18 + Vite + wouter + TanStack Query | served by nginx |
+| `backend/`  | Express + Drizzle + Postgres | Node, being migrated to FastAPI |
+| `backend-py/` | FastAPI *(phase 2, not started)* | takes over routes one group at a time |
+
+The frontend does **not** import anything from the backend. It calls the API with
+relative URLs and declares the response shapes itself in
+`frontend/src/types/api.ts`, so replacing the Express backend with a Python one
+is invisible to it.
+
+## Local setup
+
+Prerequisites: Node 20+, Docker, and a copy of the production dump at
+`docker/initdb/10-beyblade.sql.gz` (see [Getting the data](#getting-the-data)).
+
+```bash
+npm run install:all      # installs frontend/ and backend/ separately
+npm run db:up            # Postgres on :5433, seeded from the dump on first start
+cp backend/.env.example  backend/.env    # then fill in
+cp frontend/.env.example frontend/.env   # then fill in
+npm run dev              # backend :5000 + frontend :5173
+```
+
+Open <http://localhost:5173>. The Vite dev server proxies `/api` and
+`/sitemap.xml` to the backend, so the browser sees a single origin and the
+session cookie behaves exactly as it does in production.
+
+Other root scripts: `npm run build`, `npm run check` (typecheck),
+`npm run db:psql`, `npm run db:reset` (wipes the volume and re-seeds).
+
+### Getting the data
+
+The local database is a replica of production. The dump is **not** committed —
+it contains real emails and password hashes.
+
+To take a fresh one from the VPS (Coolify Postgres container, see
+`docs/` for the current container id):
+
+```bash
+# 1. On the VPS: dump the database out of the Coolify Postgres container
+ssh -i ~/Desktop/oracle/ssh-key-2026-08-19.key ubuntu@92.4.170.189
+CID=$(sudo docker ps --filter "ancestor=postgres:18-alpine" --format '{{.ID}}' | head -1)
+sudo docker exec "$CID" pg_dump -U postgres -d beyblade_tracker --no-owner --no-privileges \
+  | gzip > ~/beyblade_tracker.sql.gz
+exit
+
+# 2. On your machine: pull it into the seed directory
+scp -i ~/Desktop/oracle/ssh-key-2026-08-19.key \
+    ubuntu@92.4.170.189:~/beyblade_tracker.sql.gz \
+    docker/initdb/10-beyblade.sql.gz
+
+# 3. Recreate the local database from it
+npm run db:reset
+```
+
+`db:reset` destroys the local volume, so the dump is re-applied from scratch;
+without it, an existing volume means the seed scripts are skipped entirely.
+
+## Environment variables
+
+`VITE_*` variables are **baked into the JS bundle at build time** — changing one
+requires a rebuild, not a restart. Everything else is read by the backend at
+runtime. Each service has its own `.env`; see the two `.env.example` files.
+
+Two that are new to the split:
+
+- `FRONTEND_ORIGIN` (backend) — where to fetch `index.html` from in order to
+  inject OG tags on `/combo/:id`.
+- `CORS_ORIGINS` (backend) — leave **empty** for the single-origin deployment.
+  Set it only if the frontend ever moves to its own domain, and note the session
+  cookie would then need `SameSite=None; Secure`.
+
+## Deployment
+
+`docker-compose.prod.yml` builds both images. Traefik/Coolify terminates TLS and
+routes the domain to `frontend`; nginx there serves the SPA and reverse-proxies
+`/api`, `/sitemap.xml` and `/combo` to `backend`.
+
+Keeping one origin is deliberate: authentication is a cookie session
+(`express-session` + `connect-pg-simple`), and a second origin would mean CORS
+with credentials plus relaxed cookie flags for no real benefit.
+
+## Documentation
+
+`docs/backend/api-endpoints.md` documents all ~70 endpoints with their auth
+level and payloads — it is the contract the FastAPI port has to reproduce.
+`docs/backend/business-logic.md` and `docs/backend/database-schema.md` cover
+scoring and the data model.
+
+> Note: `docs/README.md` still describes the pre-split single-package layout
+> (`client/`, `server/`, `shared/`).
