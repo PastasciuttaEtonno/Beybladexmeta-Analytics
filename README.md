@@ -116,7 +116,42 @@ session problem is suspected.
 
 ### Migrated so far
 
-`/api/health`, `/api/components`, `/api/seasons`.
+| Group | Routes |
+|---|---|
+| System | `/api/health`, `/api/components`, `/api/seasons` |
+| Combo stats | `/api/stats/combos`, `/api/stats/combos/by-key`, `/api/stats/combos/by-slug` |
+| Component stats | `/api/stats/top/{blade,ratchet,bit,components}`, `/api/stats/leaderboard/{blade,ratchet,bit}` |
+| Analytics | `/api/analytics/meta`, `/api/trends`, `/api/synergy` |
+
+Still on Express, and deliberately not caught by the rules above:
+
+- `/api/stats/combos/:comboKey/tournaments` — calls the ChallengerMode API
+  through `server/challengermode.ts`; it moves with that client, not with the
+  rest of the stats group.
+- `/api/stats/leaderboard` and `/api/stats/player/:nickname` — despite the path,
+  these live in the players module and move with it. This is why the routing
+  rules are exact matches rather than an `/api/stats/` prefix.
+
+### Quirks preserved on purpose
+
+Parity means copying the behaviour that is actually shipped, not the behaviour
+that was intended. Two cases are reproduced deliberately and should be fixed in
+both backends at once, or in neither:
+
+- `/api/stats/combos` **ignores `search` whenever `season` is set.** The Express
+  handler calls `.where()` twice and Drizzle keeps only the last condition.
+- The SQL that builds combo slugs lowercases *after* stripping non-lowercase
+  characters, so `WizardRod` becomes `izardod`, not `wizardrod`. `by-slug` and
+  the sitemap use that SQL; the `by-key` fallback uses a JS helper that
+  lowercases first, so the two disagree on what a slug is.
+
+Also worth knowing when porting: endpoints built with the Drizzle query builder
+return timestamps as ISO strings (`2026-01-14T13:25:19.053Z`), while endpoints
+built on raw `db.execute` return the unparsed Postgres text
+(`2026-01-14 13:25:19.053603+00`). Aggregates over integer columns (`SUM`,
+`COUNT`) arrive as bigint, which node-postgres renders as a **string**, while
+sums over `double precision` arrive as numbers. `app/serialization.py` exists to
+reproduce all four cases.
 
 ## Documentation
 
