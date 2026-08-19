@@ -1,0 +1,40 @@
+# Local development stack for the FE/BE split + FastAPI migration.
+# Usage:  docker compose -f docker-compose.dev.yml up -d
+# Postgres is seeded on FIRST start from docker/initdb/*.sql.gz (prod snapshot).
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: beyblade-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: beyblade_tracker
+    ports:
+      - "5433:5432"
+    volumes:
+      - beyblade_dev_pgdata:/var/lib/postgresql
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+      # Applied after the snapshot: a view the deployed DB is missing.
+      - ./backend/migrations/0007_unified_meta_view.sql:/docker-entrypoint-initdb.d/20-unified-meta-view.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d beyblade_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  adminer:
+    image: adminer:latest
+    container_name: beyblade-dev-adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  beyblade_dev_pgdata:
