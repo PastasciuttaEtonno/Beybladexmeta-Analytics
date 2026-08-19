@@ -44,7 +44,7 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
       n.toLowerCase().replace(/\s+/g, "-"),
       n.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().replace(/\s+/g, "-"),
     ];
-    return variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`);
+    return variations.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.${format}`);
   };
   // Try PNG first; if not found, fall back to WEBP
   const allAttempts = [...getImageVariations(name, "png"), ...getImageVariations(name, "webp")];

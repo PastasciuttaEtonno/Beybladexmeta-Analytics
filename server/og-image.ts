@@ -103,7 +103,7 @@ export async function generateComboImage(combo: any): Promise<Buffer> {
         // Priority 1: Try all WebP variations
         for (const filename of variations) {
             try {
-                return await loadImage(`${baseUrl}/beyblades/${folder}/${filename}.webp`);
+                return await loadImage(`${baseUrl}/${folder}/${filename}.webp`);
             } catch (e) {
                 // Continue
             }
@@ -112,7 +112,7 @@ export async function generateComboImage(combo: any): Promise<Buffer> {
         // Priority 2: Try all PNG variations
         for (const filename of variations) {
             try {
-                return await loadImage(`${baseUrl}/beyblades/${folder}/${filename}.png`);
+                return await loadImage(`${baseUrl}/${folder}/${filename}.png`);
             } catch (e) {
                 // Continue
             }

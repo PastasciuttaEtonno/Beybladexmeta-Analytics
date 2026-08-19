@@ -37,10 +37,10 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
   // Example: https://minio.vasquezlisciotto.dev/beyblades/blades/cobaltdragoon.webp
   const sources = [
     ...attempts.map(
-      (v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`,
+      (v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.webp`,
     ),
     ...attempts.map(
-      (v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.png`,
+      (v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.png`,
     ),
   ];
 
@@ -98,7 +98,7 @@ export default function ComponentLeaderboard() {
   const folder = folderMap[type] || "blades";
   const firstName = items[0]?.[type] ? String(items[0][type]) : "";
   const imageUrl = firstName
-    ? `${PUBLIC_MINIO_URL}/beyblades/${folder}/${firstName.toLowerCase().replace(/\s+/g, "-")}.webp`
+    ? `${PUBLIC_MINIO_URL}/${folder}/${firstName.toLowerCase().replace(/\s+/g, "-")}.webp`
     : `${window.location.origin}/meta%20logo.svg`;
 
   return (

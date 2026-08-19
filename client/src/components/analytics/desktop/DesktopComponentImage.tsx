@@ -14,7 +14,7 @@ export function DesktopComponentImage({ folder, name, className }: { folder: str
             name.toLowerCase().replace(/\s+/g, "-"),
             name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().replace(/\s+/g, "-"),
         ];
-        return variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`);
+        return variations.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.${format}`);
     };
 
     const allAttempts = useMemo(() => [

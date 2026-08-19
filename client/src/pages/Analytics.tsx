@@ -90,7 +90,7 @@ function ComponentImage({ folder, name, priority = false }: { folder: string; na
         .replace(/\s+/g, "-"),
     ];
     return variations.map(
-      (v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`,
+      (v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.${format}`,
     );
   };
 

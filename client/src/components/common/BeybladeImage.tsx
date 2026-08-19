@@ -32,7 +32,7 @@ export function BeybladeImage({ folder, name, className, "data-testid": testId }
                 .replace(/\s+/g, "-"),
         ];
         // Build full URL to public MinIO bucket
-        return variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`);
+        return variations.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.${format}`);
     };
 
     const allAttempts = [

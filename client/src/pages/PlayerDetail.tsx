@@ -115,8 +115,8 @@ export default function PlayerDetail() {
       name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().replace(/\s+/g, "-"),
     ];
     const attempts = [
-      ...variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.png`),
-      ...variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`),
+      ...variations.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.png`),
+      ...variations.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.webp`),
     ];
     const onError = () => { if (attemptIndex < attempts.length - 1) setAttemptIndex(attemptIndex + 1); };
     return (

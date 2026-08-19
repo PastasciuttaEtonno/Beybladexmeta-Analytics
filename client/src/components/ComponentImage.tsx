@@ -19,8 +19,8 @@ export const getImageUrls = (component: string, folder: string): string[] => {
             .replace(/\s+/g, '-') // CobaltDragoon -> cobalt-dragoon
     ];
     return [
-        ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.webp`),
-        ...attempts.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.png`),
+        ...attempts.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.webp`),
+        ...attempts.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.png`),
     ];
 };
 

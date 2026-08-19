@@ -84,7 +84,7 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
         .replace(/\s+/g, "-"),
     ];
     // Build full URL to public MinIO bucket
-    return variations.map((v) => `${PUBLIC_MINIO_URL}/beyblades/${folder}/${v}.${format}`);
+    return variations.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.${format}`);
   };
 
   const allAttempts = [
