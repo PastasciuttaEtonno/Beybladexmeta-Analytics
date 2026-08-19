@@ -46,6 +46,23 @@ services:
       - app
       - coolify
 
+  # Takes over routes from `backend` one group at a time; nginx decides which
+  # service answers, driven by strangler-routes.json.
+  backend-py:
+    build:
+      context: ./backend-py
+    restart: unless-stopped
+    environment:
+      # Must be the SAME database and the SAME session secret as `backend`,
+      # otherwise a user logged in via Express looks logged out here.
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      PORT: 8000
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    networks:
+      - app
+      - coolify
+
   frontend:
     build:
       context: ./frontend
@@ -58,10 +75,12 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_UPSTREAM: http://backend:5000
+      PY_UPSTREAM: http://backend-py:8000
       # Added to the CSP connect-src so the browser may talk to Garage.
       PUBLIC_STORAGE_ORIGIN: ${VITE_PUBLIC_MINIO_URL}
     depends_on:
       - backend
+      - backend-py
     networks:
       - app
       - coolify

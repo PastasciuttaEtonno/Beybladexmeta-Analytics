@@ -6,7 +6,7 @@ Two independent services behind one public origin:
 |---|---|---|
 | `frontend/` | React 18 + Vite + wouter + TanStack Query | served by nginx |
 | `backend/`  | Express + Drizzle + Postgres | Node, being migrated to FastAPI |
-| `backend-py/` | FastAPI *(phase 2, not started)* | takes over routes one group at a time |
+| `backend-py/` | FastAPI + SQLAlchemy | takes over routes one group at a time |
 
 The frontend does **not** import anything from the backend. It calls the API with
 relative URLs and declares the response shapes itself in
@@ -23,7 +23,7 @@ npm run install:all      # installs frontend/ and backend/ separately
 npm run db:up            # Postgres on :5433, seeded from the dump on first start
 cp backend/.env.example  backend/.env    # then fill in
 cp frontend/.env.example frontend/.env   # then fill in
-npm run dev              # backend :5000 + frontend :5173
+npm run dev              # express :5000 + fastapi :8000 + frontend :5173
 ```
 
 Open <http://localhost:5173>. The Vite dev server proxies `/api` and
@@ -84,6 +84,39 @@ routes the domain to `frontend`; nginx there serves the SPA and reverse-proxies
 Keeping one origin is deliberate: authentication is a cookie session
 (`express-session` + `connect-pg-simple`), and a second origin would mean CORS
 with credentials plus relaxed cookie flags for no real benefit.
+
+## Migrating to FastAPI (strangler fig)
+
+`backend-py/` takes routes over from `backend/` a few at a time. Both services
+run side by side against the same database, and **`strangler-routes.json` is the
+single source of truth** for who answers what: nginx routes a listed path to
+FastAPI and everything else to Express.
+
+Sessions are shared, so a user logged in through Express is logged in on the
+FastAPI routes too: `backend-py/app/auth.py` verifies the same signed
+`connect.sid` cookie and reads the same `session` table. Both services therefore
+need the **same `SESSION_SECRET` and the same `DATABASE_URL`**.
+
+To move a route across:
+
+1. Implement it in `backend-py/`, matching the response exactly — including
+   error bodies, which are `{"error": "..."}`, not FastAPI's `{"detail": ...}`.
+2. Add it to `strangler-routes.json` (with `samples` for any query-string
+   variants worth checking).
+3. `npm run strangler:sync` — regenerates the nginx location blocks. The Vite
+   dev server reads the JSON directly and needs no regeneration.
+4. `npm run strangler:parity` — calls both backends and diffs every response.
+   It exits non-zero on any difference, so it can gate a deploy.
+5. Once green, delete the Express implementation.
+
+`X-Served-By: fastapi` is set on every FastAPI response, so you can always tell
+which backend answered. `GET /api/_py/whoami` (reachable only on the service
+port, never through nginx) reports who FastAPI thinks you are — useful when a
+session problem is suspected.
+
+### Migrated so far
+
+`/api/health`, `/api/components`, `/api/seasons`.
 
 ## Documentation
 

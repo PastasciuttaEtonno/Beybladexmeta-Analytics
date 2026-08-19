@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "Single source of truth for the Express -> FastAPI migration.",
+    "A route listed here is served by FastAPI; everything else still goes to Express.",
+    "",
+    "After editing: run `npm run strangler:sync` to regenerate the nginx location",
+    "blocks, then `npm run strangler:parity` to prove both backends still agree.",
+    "The Vite dev server reads this file directly, so it needs no regeneration.",
+    "",
+    "match: 'exact' -> one URL only; 'prefix' -> that path and everything under it.",
+    "samples: extra URLs (with query strings) the parity check should compare."
+  ],
+  "migrated": [
+    { "path": "/api/health", "match": "exact" },
+    { "path": "/api/components", "match": "exact" },
+    { "path": "/api/seasons", "match": "exact" }
+  ]
+}

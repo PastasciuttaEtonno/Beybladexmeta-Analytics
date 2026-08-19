@@ -25,6 +25,7 @@ FROM nginx:1.27-alpine AS runner
 # nginx:alpine renders /etc/nginx/templates/*.template through envsubst on
 # startup, so the backend upstream stays runtime-configurable.
 ENV BACKEND_UPSTREAM=http://backend:5000 \
+    PY_UPSTREAM=http://backend-py:8000 \
     PUBLIC_STORAGE_ORIGIN=""
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template

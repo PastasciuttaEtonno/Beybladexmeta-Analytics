@@ -71,3 +71,10 @@ REGIONAL_SCORING.md
 docker/initdb/*.sql
 docker/initdb/*.sql.gz
 docker/initdb/*.dump
+
+# Python (backend-py)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
