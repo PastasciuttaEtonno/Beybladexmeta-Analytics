@@ -84,6 +84,23 @@ export function registerTournamentsRoutes(app: Express): void {
         if (disp) { const p = parseInt(String(disp), 10); if (!Number.isNaN(p)) placement = p; }
       } catch { }
 
+      // Take back what a previous registration contributed before recording the
+      // new one. Without this, registering the same deck twice counted it twice:
+      // the rows below were replaced, but the points they had already added to
+      // combo_stats and the five component tables stayed. Pressing "register"
+      // repeatedly inflated a combo's standing. (PUT /combos/:num has always
+      // reverted first; only this path did not.)
+      const previousCombos = await db.select().from(externalPlayerCombos)
+        .where(and(eq(externalPlayerCombos.tournamentId, parsed.tournamentId), eq(externalPlayerCombos.playerId, challengerId)));
+      for (const prev of previousCombos) {
+        const prevPlacement = Number(prev.placement ?? 0);
+        const prevParticipants = Number(prev.totalParticipants ?? 0);
+        if (prevPlacement > 0 && prevParticipants > 0) {
+          const prevSeason = prev.season || (prev.tournamentDate ? determineSeason(new Date(prev.tournamentDate as any)) : determineSeason(new Date()));
+          await revertExternalCombo({ blade: prev.blade, assistBlade: prev.assistBlade, ratchet: prev.ratchet, bit: prev.bit, lockChip: prev.lockChip, season: prevSeason, placement: prevPlacement, totalParticipants: prevParticipants });
+        }
+      }
+
       await db.delete(externalPlayerCombos).where(and(eq(externalPlayerCombos.tournamentId, parsed.tournamentId), eq(externalPlayerCombos.playerId, challengerId)));
 
       const seasonVal = tournamentDate ? determineSeason(tournamentDate) : determineSeason(new Date());

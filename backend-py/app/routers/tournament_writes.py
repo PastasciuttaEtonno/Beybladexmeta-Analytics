@@ -253,6 +253,38 @@ async def claim_tournament(
         except Exception:
             pass
 
+        # Take back what a previous registration contributed before recording the
+        # new one. Without this, registering the same deck twice counted it
+        # twice: the rows below were replaced, but the points they had already
+        # added to combo_stats and the five component tables stayed. Pressing
+        # "register" repeatedly inflated a combo's standing. (PUT /combos/:num
+        # has always reverted first; only this path did not.)
+        previous = (
+            await db.execute(
+                text(
+                    "SELECT blade, assist_blade, ratchet, bit, lock_chip, placement, "
+                    "total_participants, tournament_date, season "
+                    "FROM external_player_combos "
+                    "WHERE tournament_id = :tid AND player_id = :pid"
+                ),
+                {"tid": tournament_id, "pid": challenger_id},
+            )
+        ).all()
+
+        for prev in previous:
+            prev_placement = int(prev.placement or 0)
+            prev_participants = int(prev.total_participants or 0)
+            if prev_placement > 0 and prev_participants > 0:
+                await revert_external_combo(
+                    db,
+                    ComboResult(
+                        blade=prev.blade, assist_blade=prev.assist_blade,
+                        ratchet=prev.ratchet, bit=prev.bit, lock_chip=prev.lock_chip,
+                        season=_season_of(prev.season, prev.tournament_date),
+                        placement=prev_placement, total_participants=prev_participants,
+                    ),
+                )
+
         await db.execute(
             text(
                 "DELETE FROM external_player_combos "

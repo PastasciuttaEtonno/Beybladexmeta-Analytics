@@ -155,7 +155,7 @@ def describe(changes: dict) -> str:
 
 def compare(label: str, express: str, fastapi: str, method: str, path: str,
             cookie: str, body: Any = None, prepare: str | None = None,
-            known_body_difference: str | None = None) -> None:
+            known_body_difference: str | None = None, warmup: bool = False) -> None:
     """`prepare` is SQL run after the restore and before the call, identically
     for both backends — used to put the database into the state a case needs."""
     global failures, checks
@@ -164,6 +164,10 @@ def compare(label: str, express: str, fastapi: str, method: str, path: str,
     restore()
     if prepare:
         psql(prepare)
+    if warmup:
+        # Fire the request once and only measure the SECOND one, so the case
+        # tests what a repeat does rather than what the first call does.
+        call(express, method, path, cookie, body)
     before = contents()
     express_status, express_body = call(express, method, path, cookie, body)
     express_diff = diff_against(before)
@@ -171,6 +175,8 @@ def compare(label: str, express: str, fastapi: str, method: str, path: str,
     restore()
     if prepare:
         psql(prepare)
+    if warmup:
+        call(fastapi, method, path, cookie, body)
     before = contents()
     fastapi_status, fastapi_body = call(fastapi, method, path, cookie, body)
     fastapi_diff = diff_against(before)
@@ -273,12 +279,20 @@ def main() -> int:
                 ))
 
         print("\n--- registering a full deck (calls the live ChallengerMode API) ---")
+        deck = {"tournamentId": tid,
+                "combos": [combo, other,
+                           {"blade": "WizardRod", "assistBlade": "None", "ratchet": "1-60",
+                            "bit": "Hexa", "lockChip": "None"}]}
+
         compare("POST claim, three combos", args.express, args.fastapi,
-                "POST", "/api/tournaments/claim", args.cookie,
-                {"tournamentId": tid,
-                 "combos": [combo, other,
-                            {"blade": "WizardRod", "assistBlade": "None", "ratchet": "1-60",
-                             "bit": "Hexa", "lockChip": "None"}]})
+                "POST", "/api/tournaments/claim", args.cookie, deck)
+
+        # Registering the same deck again must land in exactly the same place.
+        # It used to add the points a second time: the replaced combos were
+        # deleted without their contribution being taken back.
+        compare("POST claim again, same deck (must add nothing)", args.express,
+                args.fastapi, "POST", "/api/tournaments/claim", args.cookie, deck,
+                warmup=True)
     finally:
         restore()
         drop_snapshot()
