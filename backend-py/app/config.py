@@ -47,6 +47,16 @@ class Settings(BaseSettings):
     recaptcha_secret_key: str = ""
     resend_api_key: str = ""
     app_base_url: str = ""
+    frontend_origin: str = ""
+
+    # Public base URL of the object storage (Garage), used by the OG image
+    # renderer to fetch component pictures. Named VITE_* for historical
+    # reasons: the frontend bakes the same value into its bundle.
+    vite_public_minio_url: str = ""
+
+    @property
+    def public_storage_url(self) -> str:
+        return self.vite_public_minio_url
 
     @property
     def cors_origin_list(self) -> list[str]:

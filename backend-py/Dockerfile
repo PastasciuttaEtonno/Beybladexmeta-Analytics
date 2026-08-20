@@ -13,6 +13,11 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 FROM python:3.12-slim AS runner
 
+# DejaVu is what the OG image renderer draws with. The Node original asks for
+# "Arial", which no Linux container has either, so both sides fall back to a
+# substitute — this just makes the substitute explicit and stable.
+RUN apt-get update  && apt-get install -y --no-install-recommends fonts-dejavu-core  && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

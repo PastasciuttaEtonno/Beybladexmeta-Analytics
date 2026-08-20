@@ -229,6 +229,28 @@
     },
 
     {
+      "match": "regex",
+      "pattern": "^/api/og/combo/.+$",
+      "_skip_parity": true,
+      "_note": "Returns a rendered PNG. @napi-rs/canvas and Pillow do not produce identical pixels, so this is compared visually, not by bytes."
+    },
+    {
+      "path": "/sitemap.xml",
+      "match": "exact",
+      "_note": "Compared as raw text by parity.py."
+    },
+    {
+      "match": "regex",
+      "pattern": "^/combo/.+$",
+      "_note": "The SPA shell with the og:image tags rewritten.",
+      "samples": [
+        "/combo/WizardRod%7CNone%7C1-60%7CHexa%7CNone",
+        "/combo/izardod-1-60-exa",
+        "/combo/anything-at-all"
+      ]
+    },
+
+    {
       "path": "/api/auth/me",
       "match": "exact",
       "_note": "The frontend calls this on every page; parity.py compares it both anonymous and signed in."

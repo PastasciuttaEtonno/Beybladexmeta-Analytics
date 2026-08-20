@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
+from app.main_helpers import raw_path
 from app.db import dispose_engine, get_engine
 from app.routers import (
     aliases,
@@ -16,6 +17,7 @@ from app.routers import (
     favorites,
     health,
     internal,
+    og,
     players,
     seasons,
     stats,
@@ -84,7 +86,7 @@ async def not_found_handler(request: Request, _exc):
     proxy happened to route it to.
     """
     return JSONResponse(
-        status_code=404, content={"error": "not_found", "path": request.url.path}
+        status_code=404, content={"error": "not_found", "path": raw_path(request)}
     )
 
 
@@ -110,6 +112,7 @@ app.include_router(players.router)
 app.include_router(favorites.router)
 app.include_router(aliases.router)
 app.include_router(auth_routes.router)
+app.include_router(og.router)
 app.include_router(tournament_history.router)
 app.include_router(tournaments.router)
 app.include_router(tournament_writes.router)

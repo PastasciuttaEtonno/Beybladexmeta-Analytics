@@ -88,11 +88,21 @@ def main() -> int:
     config = json.loads(ROUTES_FILE.read_text(encoding="utf-8"))
 
     urls: list[str] = []
+    skipped: list[str] = []
     for route in config["migrated"]:
+        if route.get("_skip_parity"):
+            # Rendered images cannot be compared byte for byte: the two
+            # backends use different rasterisers. Named here so the exclusion
+            # is visible rather than silent.
+            skipped.append(route.get("path") or route.get("pattern", "?"))
+            continue
         # A regex route has no single URL of its own; its samples cover it.
         if "path" in route:
             urls.append(route["path"])
         urls.extend(route.get("samples", []))
+
+    for name in skipped:
+        print(f"skip  {name}  (not byte-comparable; checked by eye)")
 
     failures = 0
     for url in urls:
