@@ -23,6 +23,21 @@ class Settings(BaseSettings):
     port: int = 8000
     cors_origins: str = ""
 
+    # --- ChallengerMode ---
+    # Read through Settings, never os.environ: configuration comes from a .env
+    # file that pydantic-settings parses itself and does NOT export to the
+    # process environment, so os.environ.get would silently see nothing.
+    challengermode_refresh_key: str = ""
+    challengermode_api_key: str = ""
+    challengermode_auth_url: str = ""
+    challengermode_graphql_url: str = ""
+    challengermode_token_cache_path: str = ""
+
+    # How long a cached API response stays usable. Set this very high locally so
+    # both backends read the same external_api_cache rows and neither calls the
+    # live API, which is what makes the parity checks deterministic.
+    challengermode_cache_ttl_minutes: float = 1440.0
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

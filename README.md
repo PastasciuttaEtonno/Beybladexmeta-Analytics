@@ -143,18 +143,24 @@ session problem is suspected.
 | Players | `/api/stats/leaderboard`, `/api/stats/player/:nickname`, `/api/player-rankings`, `/api/players/:id`, `/api/players/by-nickname/:nickname`, `/api/leaderboard/regional` |
 | Favourites | `/api/favorites/combos`, `/api/favorites/decks` (GET, POST and DELETE) |
 | Aliases | `/api/user/aliases` (GET, POST and DELETE) |
+| Tournament history | `/api/stats/combos/:comboKey/tournaments`, `/api/players/:id/tournaments`, `/api/players/by-nickname/:nickname/tournaments` |
 
-Still on Express, and deliberately not caught by the rules above — all three
-call the ChallengerMode API through `server/challengermode.ts` and move when
-that client does:
+Routing rules are exact matches and anchored regexes rather than prefixes, so
+that a migrated route never swallows an unmigrated sibling —
+`^/api/players/[^/]+$` claims the profile without touching anything below it.
 
-- `/api/stats/combos/:comboKey/tournaments`
-- `/api/players/:id/tournaments`
-- `/api/players/by-nickname/:nickname/tournaments`
+### Talking to ChallengerMode
 
-This is why the rules are exact matches and anchored regexes rather than
-prefixes: `^/api/players/[^/]+$` claims the profile but leaves the `/tournaments`
-route below it on Express.
+Tournament names and schedules live in ChallengerMode's API, not our database.
+`backend-py/app/lib/challengermode.py` mirrors the TypeScript client, including
+the `external_api_cache` table and its `cache_key` format, so whichever backend
+fetches first fills the cache for both.
+
+For a parity run this matters: if the cache is cold, both backends call the live
+API and can legitimately get different answers. Set
+`CHALLENGERMODE_CACHE_TTL_MINUTES` very high on **both** so they read the same
+cached rows and neither reaches the network. Both services also need the same
+`CHALLENGERMODE_REFRESH_KEY`.
 
 ### Quirks preserved on purpose
 

@@ -18,6 +18,7 @@ from app.routers import (
     players,
     seasons,
     stats,
+    tournament_history,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [fastapi] %(message)s")
@@ -89,3 +90,4 @@ app.include_router(analytics.router)
 app.include_router(players.router)
 app.include_router(favorites.router)
 app.include_router(aliases.router)
+app.include_router(tournament_history.router)

@@ -74,8 +74,11 @@ def describe_difference(left: Any, right: Any, trail: str = "") -> str | None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--express", default="http://localhost:5000")
-    parser.add_argument("--fastapi", default="http://localhost:8000")
+    # 127.0.0.1, not "localhost". On Windows localhost resolves to ::1 first,
+    # the backends listen on IPv4 only, and urllib waits ~2s per request before
+    # falling back — which turns a 30-second run into several minutes.
+    parser.add_argument("--express", default="http://127.0.0.1:5000")
+    parser.add_argument("--fastapi", default="http://127.0.0.1:8000")
     parser.add_argument(
         "--cookie",
         help="connect.sid cookie, to also compare routes that need a session",

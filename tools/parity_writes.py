@@ -159,8 +159,11 @@ def compare_rejection(express: str, fastapi: str, method: str, path: str, body: 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--express", default="http://localhost:5000")
-    parser.add_argument("--fastapi", default="http://localhost:8000")
+    # 127.0.0.1, not "localhost". On Windows localhost resolves to ::1 first,
+    # the backends listen on IPv4 only, and urllib waits ~2s per request before
+    # falling back — which turns a 30-second run into several minutes.
+    parser.add_argument("--express", default="http://127.0.0.1:5000")
+    parser.add_argument("--fastapi", default="http://127.0.0.1:8000")
     parser.add_argument("--cookie", required=True, help="connect.sid=... from tools/dev_session.py")
     parser.add_argument(
         "--challonge-cookie",

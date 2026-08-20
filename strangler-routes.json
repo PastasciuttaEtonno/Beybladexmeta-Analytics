@@ -135,6 +135,39 @@
       ]
     },
     {
+      "match": "regex",
+      "pattern": "^/api/stats/combos/[^/]+/tournaments$",
+      "samples": [
+        "/api/stats/combos/WizardRod%7CNone%7C1-60%7CHexa%7CNone/tournaments",
+        "/api/stats/combos/WizardRod%7CNone%7C1-60%7CHexa%7CNone/tournaments?limit=3",
+        "/api/stats/combos/WizardRod%7CNone%7C1-60%7CHexa%7CNone/tournaments?season=Off%20Season%202025",
+        "/api/stats/combos/WizardRod%7CNone%7C1-60%7CHexa%7CNone/tournaments?season=All%20Time",
+        "/api/stats/combos/SilverWolf%7CNone%7C9-60%7CFreeBall%7CNone/tournaments",
+        "/api/stats/combos/no-such-combo/tournaments",
+        "/api/stats/combos/A%7CB%7CC%7CD%7CE/tournaments"
+      ]
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/players/by-nickname/[^/]+/tournaments$",
+      "samples": [
+        "/api/players/by-nickname/yori99/tournaments",
+        "/api/players/by-nickname/yori99/tournaments?season=Off%20Season%202025",
+        "/api/players/by-nickname/yori99/tournaments?season=All%20Time",
+        "/api/players/by-nickname/il%20Cuggio/tournaments",
+        "/api/players/by-nickname/nobody-by-this-name/tournaments"
+      ]
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/players/[^/]+/tournaments$",
+      "samples": [
+        "/api/players/52af5e3d-7923-4c50-96b1-b4ffae064824/tournaments",
+        "/api/players/4adf798d-cf50-48f7-821f-bca57219f4cf/tournaments",
+        "/api/players/no-such-player/tournaments"
+      ]
+    },
+    {
       "path": "/api/leaderboard/regional",
       "match": "exact",
       "samples": [
