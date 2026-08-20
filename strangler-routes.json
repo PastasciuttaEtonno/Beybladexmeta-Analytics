@@ -210,6 +210,16 @@
       ]
     },
     {
+      "path": "/api/tournaments/claim",
+      "match": "exact",
+      "_note": "POST only. Writes: verified by tools/parity_tournament_writes.py, not by parity.py."
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/tournaments/[^/]+/combos/[^/]+$",
+      "_note": "PUT and DELETE of a single combo slot. NOT /api/tournaments/:id/claim, which is the Challonge path and stays on Express."
+    },
+    {
       "match": "regex",
       "pattern": "^/api/tournaments/[^/]+/players/[^/]+/combos$",
       "samples": [

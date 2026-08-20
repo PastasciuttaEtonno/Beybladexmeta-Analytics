@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     # live API, which is what makes the parity checks deterministic.
     challengermode_cache_ttl_minutes: float = 1440.0
 
+    # Separate OAuth client credentials, used only to verify that a user
+    # really placed top-four before letting them register combos.
+    cm_client_id: str = ""
+    cm_client_secret: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -144,7 +144,8 @@ session problem is suspected.
 | Favourites | `/api/favorites/combos`, `/api/favorites/decks` (GET, POST and DELETE) |
 | Aliases | `/api/user/aliases` (GET, POST and DELETE) |
 | Tournament history | `/api/stats/combos/:comboKey/tournaments`, `/api/players/:id/tournaments`, `/api/players/by-nickname/:nickname/tournaments` |
-| Tournaments | `/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/players/:playerId/combos`, `/api/challengermode/tournaments` (reads only) |
+| Tournaments | `/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/players/:playerId/combos`, `/api/challengermode/tournaments` |
+| Tournament writes | `POST /api/tournaments/claim`, `PUT`/`DELETE /api/tournaments/:id/combos/:num` |
 
 Routing rules are exact matches and anchored regexes rather than prefixes, so
 that a migrated route never swallows an unmigrated sibling —

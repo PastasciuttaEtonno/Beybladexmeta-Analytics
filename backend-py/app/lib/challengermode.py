@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import tempfile
 import time
 from dataclasses import dataclass
@@ -318,3 +319,53 @@ async def fetch_tournament_detail(db: AsyncSession, tournament_id: str) -> dict:
 
     await put_cached(db, key, node)
     return node
+
+
+# --- Placement verification -------------------------------------------------
+#
+# The gate that stops one player registering combos in another player's name.
+#
+# This used to request its own token from challengermode.com/oauth/token with
+# the client_credentials grant. That endpoint answers
+#
+#     {"error": "unsupported_grant_type"}
+#
+# so it never produced a token and every claim failed with "OAuth token error
+# 400" — the gate rejected everyone, legitimate winners included. It now reuses
+# fetch_tournament_detail, which authenticates with the refresh key that does
+# work, already returns the lineups and their placements, and caches its answers
+# in external_api_cache (so this is deterministic and offline-testable too).
+
+_PLACEMENT_WORDS = {"1st": 1, "2nd": 2, "3rd": 3, "4th": 4}
+
+
+def parse_placement(display: str | None) -> int | None:
+    """'2nd', '2', '3 - 4' -> 2, 2, 3. None when there is no number to find.
+
+    Shared placements are written as ranges; the first number is the best
+    position that lineup reached.
+    """
+    if not display:
+        return None
+    match = re.search(r"\d+", str(display))
+    if match:
+        return int(match.group())
+    return _PLACEMENT_WORDS.get(str(display))
+
+
+async def check_tournament_placement(
+    db: AsyncSession, tournament_id: str, user_id: str
+) -> bool:
+    """True when this ChallengerMode user really finished in the top four."""
+    detail = await fetch_tournament_detail(db, tournament_id)
+    lineups = ((detail or {}).get("attendance") or {}).get("signups", {}).get("lineups") or []
+
+    for lineup in lineups:
+        placement = parse_placement((lineup.get("placement") or {}).get("displayPlacement"))
+        if not placement or not (1 <= placement <= 4):
+            continue
+        for member in lineup.get("members") or []:
+            if ((member.get("user") or {}).get("userId") or "") == user_id:
+                return True
+
+    return False

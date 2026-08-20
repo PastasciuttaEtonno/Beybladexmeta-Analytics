@@ -19,6 +19,7 @@ from app.routers import (
     seasons,
     stats,
     tournament_history,
+    tournament_writes,
     tournaments,
 )
 
@@ -93,3 +94,4 @@ app.include_router(favorites.router)
 app.include_router(aliases.router)
 app.include_router(tournament_history.router)
 app.include_router(tournaments.router)
+app.include_router(tournament_writes.router)
