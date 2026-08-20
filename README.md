@@ -107,7 +107,25 @@ To move a route across:
    dev server reads the JSON directly and needs no regeneration.
 4. `npm run strangler:parity` — calls both backends and diffs every response.
    It exits non-zero on any difference, so it can gate a deploy.
-5. Once green, delete the Express implementation.
+5. If the route **writes**, also run the write checks (below).
+6. Once green, delete the Express implementation.
+
+### Checking routes that write
+
+`parity.py` cannot send a write to both backends — the effect would happen
+twice. `tools/parity_writes.py` instead performs each write on ONE backend and
+reads it back from the OTHER, in both directions, then deletes what it made.
+That also proves the two really do share a session and a database. Requests that
+get rejected change nothing, so those are sent to both and compared directly.
+
+```bash
+npm run strangler:session          # mints a signed connect.sid for an admin
+npm run strangler:parity-writes -- --cookie 'connect.sid=...'
+```
+
+`strangler:session` writes a real session row and signs the cookie the way
+express-session would, which is the only practical way in: the login form
+requires reCAPTCHA.
 
 `X-Served-By: fastapi` is set on every FastAPI response, so you can always tell
 which backend answered. `GET /api/_py/whoami` (reachable only on the service
@@ -123,6 +141,7 @@ session problem is suspected.
 | Component stats | `/api/stats/top/{blade,ratchet,bit,components}`, `/api/stats/leaderboard/{blade,ratchet,bit}` |
 | Analytics | `/api/analytics/meta`, `/api/trends`, `/api/synergy` |
 | Players | `/api/stats/leaderboard`, `/api/stats/player/:nickname`, `/api/player-rankings`, `/api/players/:id`, `/api/players/by-nickname/:nickname`, `/api/leaderboard/regional` |
+| Favourites | `/api/favorites/combos`, `/api/favorites/decks` (GET, POST and DELETE) |
 
 Still on Express, and deliberately not caught by the rules above — all three
 call the ChallengerMode API through `server/challengermode.ts` and move when

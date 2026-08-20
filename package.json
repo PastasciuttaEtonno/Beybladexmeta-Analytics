@@ -14,6 +14,8 @@
     "check": "npm --prefix backend run check && npm --prefix frontend run check",
     "strangler:sync": "node tools/sync-routing.mjs",
     "strangler:parity": "python tools/parity.py",
+    "strangler:parity-writes": "python tools/parity_writes.py",
+    "strangler:session": "python tools/dev_session.py",
     "db:up": "docker compose -f docker-compose.dev.yml up -d",
     "db:down": "docker compose -f docker-compose.dev.yml down",
     "db:reset": "docker compose -f docker-compose.dev.yml down -v && docker compose -f docker-compose.dev.yml up -d",

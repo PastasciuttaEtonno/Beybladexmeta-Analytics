@@ -8,7 +8,16 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.db import dispose_engine, get_engine
-from app.routers import analytics, components, health, internal, players, seasons, stats
+from app.routers import (
+    analytics,
+    components,
+    favorites,
+    health,
+    internal,
+    players,
+    seasons,
+    stats,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [fastapi] %(message)s")
 log = logging.getLogger(__name__)
@@ -77,3 +86,4 @@ app.include_router(internal.router)
 app.include_router(stats.router)
 app.include_router(analytics.router)
 app.include_router(players.router)
+app.include_router(favorites.router)

@@ -150,6 +150,23 @@
     },
 
     {
+      "path": "/api/favorites/combos",
+      "match": "exact",
+      "_note": "Reads only. The POST/DELETE side is covered by tools/parity_writes.py, which cannot be run twice against two backends without doubling the effect."
+    },
+    { "path": "/api/favorites/decks", "match": "exact" },
+    {
+      "match": "regex",
+      "pattern": "^/api/favorites/combos/[^/]+$",
+      "_note": "DELETE /api/favorites/combos/:id"
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/favorites/decks/[^/]+$",
+      "_note": "DELETE /api/favorites/decks/:id"
+    },
+
+    {
       "path": "/api/analytics/meta",
       "match": "exact",
       "samples": [
