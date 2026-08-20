@@ -146,6 +146,7 @@ session problem is suspected.
 | Tournament history | `/api/stats/combos/:comboKey/tournaments`, `/api/players/:id/tournaments`, `/api/players/by-nickname/:nickname/tournaments` |
 | Tournaments | `/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/players/:playerId/combos`, `/api/challengermode/tournaments` |
 | Tournament writes | `POST /api/tournaments/claim`, `PUT`/`DELETE /api/tournaments/:id/combos/:num` |
+| Authentication | `/api/auth/{register,login,logout,me,verify,profile}`, `/api/user/link-{challonge,challengermode}` |
 
 Routing rules are exact matches and anchored regexes rather than prefixes, so
 that a migrated route never swallows an unmigrated sibling —

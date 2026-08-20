@@ -10,6 +10,8 @@ dependencies = [
     "asyncpg>=0.30",
     "pydantic-settings>=2.7",
     "httpx>=0.28",
+    "bcrypt>=4.2",
+    "email-validator>=2.2",
 ]
 
 [dependency-groups]

@@ -17,6 +17,7 @@
     "strangler:parity-writes": "python tools/parity_writes.py",
     "strangler:parity-scoring": "python tools/parity_scoring.py",
     "strangler:parity-tournaments": "python tools/parity_tournament_writes.py",
+    "strangler:parity-auth": "uv run --directory backend-py python ../tools/parity_auth.py",
     "strangler:session": "python tools/dev_session.py",
     "db:up": "docker compose -f docker-compose.dev.yml up -d",
     "db:down": "docker compose -f docker-compose.dev.yml down",

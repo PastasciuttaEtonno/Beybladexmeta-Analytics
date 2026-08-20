@@ -229,6 +229,23 @@
     },
 
     {
+      "path": "/api/auth/me",
+      "match": "exact",
+      "_note": "The frontend calls this on every page; parity.py compares it both anonymous and signed in."
+    },
+    { "path": "/api/auth/login", "match": "exact" },
+    { "path": "/api/auth/logout", "match": "exact" },
+    { "path": "/api/auth/register", "match": "exact" },
+    {
+      "path": "/api/auth/verify",
+      "match": "exact",
+      "samples": ["/api/auth/verify", "/api/auth/verify?token=not-a-real-token"]
+    },
+    { "path": "/api/auth/profile", "match": "exact" },
+    { "path": "/api/user/link-challonge", "match": "exact" },
+    { "path": "/api/user/link-challengermode", "match": "exact" },
+
+    {
       "path": "/api/favorites/combos",
       "match": "exact",
       "_note": "Reads only. The POST/DELETE side is covered by tools/parity_writes.py, which cannot be run twice against two backends without doubling the effect."

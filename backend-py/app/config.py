@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     cm_client_id: str = ""
     cm_client_secret: str = ""
 
+    # --- Registration and login ---
+    recaptcha_secret_key: str = ""
+    resend_api_key: str = ""
+    app_base_url: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

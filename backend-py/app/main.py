@@ -10,6 +10,7 @@ from app.config import get_settings
 from app.db import dispose_engine, get_engine
 from app.routers import (
     aliases,
+    auth_routes,
     analytics,
     components,
     favorites,
@@ -71,6 +72,22 @@ async def tag_responses(request: Request, call_next):
     return response
 
 
+@app.exception_handler(404)
+@app.exception_handler(405)
+async def not_found_handler(request: Request, _exc):
+    """Answers unknown paths AND wrong methods the way Express does.
+
+    Express has no notion of 405: a POST-only route reached with GET simply
+    falls through to the catch-all, which returns this shape. FastAPI would
+    reply 405 {"detail": "Method Not Allowed"} instead, so a client using the
+    wrong method would get a different answer depending on which backend the
+    proxy happened to route it to.
+    """
+    return JSONResponse(
+        status_code=404, content={"error": "not_found", "path": request.url.path}
+    )
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_request: Request, exc: HTTPException):
     """Returns the Express error shape.
@@ -92,6 +109,7 @@ app.include_router(analytics.router)
 app.include_router(players.router)
 app.include_router(favorites.router)
 app.include_router(aliases.router)
+app.include_router(auth_routes.router)
 app.include_router(tournament_history.router)
 app.include_router(tournaments.router)
 app.include_router(tournament_writes.router)
