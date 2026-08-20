@@ -183,6 +183,24 @@ built on raw `db.execute` return the unparsed Postgres text
 sums over `double precision` arrive as numbers. `app/serialization.py` exists to
 reproduce all four cases.
 
+## Component images
+
+Images live in the Garage bucket `beyblades`, under `blades/`, `ratchets/`,
+`bits/`, `assist-blades/` and `chips/`. The frontend asks for `<name>.webp`
+first and falls back to `<name>.png`, trying three name spellings for each — so
+a missing WebP costs three failed requests before the fallback lands.
+
+`tools/convert-images-to-webp.py` adds a WebP next to every PNG that lacks one.
+It never deletes anything, so it is safe to re-run:
+
+```bash
+uv run tools/convert-images-to-webp.py           # report what is missing
+uv run tools/convert-images-to-webp.py --apply   # convert and upload
+```
+
+It reads `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` from `backend/.env`.
+The first run converted 96 images and took the set from 63.6 MB to 6.3 MB.
+
 ## Documentation
 
 `docs/backend/api-endpoints.md` documents all ~70 endpoints with their auth

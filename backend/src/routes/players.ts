@@ -7,6 +7,7 @@ import {
 import { desc, eq, sql, and, inArray, or } from "drizzle-orm";
 import { fetchTournamentDetail } from "../challengermode";
 import { calculateChallongePoints } from "../lib/challongePoints";
+import { seasonFromDateSql } from "../lib/seasons";
 
 export function registerPlayersRoutes(app: Express): void {
   app.get('/api/stats/leaderboard', async (req, res) => {
@@ -188,7 +189,7 @@ export function registerPlayersRoutes(app: Express): void {
 
       if (cmPlayer) {
         const cmTournamentsQuery = season
-          ? await db.execute(sql`SELECT tournament_id, MAX(data_torneo) AS date, MIN(piazzamento) AS best_placement, SUM(punti_guadagnati) AS total_points, COUNT(*) AS combo_count, 'challengermode' AS platform FROM cm_match_results WHERE player_id = ${cmPlayer.id} AND season = ${season} GROUP BY tournament_id ORDER BY date DESC LIMIT 25`)
+          ? await db.execute(sql`SELECT tournament_id, MAX(data_torneo) AS date, MIN(piazzamento) AS best_placement, SUM(punti_guadagnati) AS total_points, COUNT(*) AS combo_count, 'challengermode' AS platform FROM cm_match_results WHERE player_id = ${cmPlayer.id} AND ${sql.raw(seasonFromDateSql('data_torneo'))} = ${season} GROUP BY tournament_id ORDER BY date DESC LIMIT 25`)
           : await db.execute(sql`SELECT tournament_id, MAX(data_torneo) AS date, MIN(piazzamento) AS best_placement, SUM(punti_guadagnati) AS total_points, COUNT(*) AS combo_count, 'challengermode' AS platform FROM cm_match_results WHERE player_id = ${cmPlayer.id} GROUP BY tournament_id ORDER BY date DESC LIMIT 25`);
 
         const cmTournaments = await Promise.all((cmTournamentsQuery.rows || []).map(async (r: any) => {

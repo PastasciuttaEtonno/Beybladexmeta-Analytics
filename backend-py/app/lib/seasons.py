@@ -27,3 +27,19 @@ def determine_season(value: datetime | date) -> str:
     if year == 2025:
         return "Season 2025"
     return f"Season {year}"
+
+
+def season_from_date_sql(column: str) -> str:
+    """SQL deriving the season name from a date column, mirroring determine_season.
+
+    `cm_match_results` has no `season` column — only `external_player_combos`
+    does — so anything filtering ChallengerMode results by season has to compute
+    it from `data_torneo`. Kept identical to the TypeScript seasonFromDateSql so
+    both backends agree.
+    """
+    return f"""CASE
+    WHEN {column} >= DATE '2025-10-01' AND {column} <= DATE '2026-01-31' THEN 'Off Season 2025'
+    WHEN EXTRACT(YEAR FROM {column}) = 2026 AND EXTRACT(MONTH FROM {column}) >= 2 THEN 'Season 2026'
+    WHEN EXTRACT(YEAR FROM {column}) = 2025 THEN 'Season 2025'
+    ELSE 'Season ' || EXTRACT(YEAR FROM {column})::text
+  END"""

@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_session
 from app.lib.challengermode import fetch_tournament_detail
 from app.lib.challonge_points import calculate_challonge_points
+from app.lib.seasons import season_from_date_sql
 from app.routers.stats import _clamp, _is_all_time
 from app.serialization import number
 
@@ -212,7 +213,8 @@ async def player_tournaments_by_nickname(
             args: dict = {"id": cm_player_id}
             season_clause = ""
             if season:
-                season_clause = " AND season = :season"
+                # cm_match_results has no season column; derive it from the date.
+                season_clause = f" AND {season_from_date_sql('data_torneo')} = :season"
                 args["season"] = season
 
             rows = (
