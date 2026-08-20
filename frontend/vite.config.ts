@@ -3,7 +3,9 @@ import path from "path";
 import { defineConfig, loadEnv, type ProxyOptions } from "vite";
 import react from "@vitejs/plugin-react";
 
-type StranglerRoute = { path: string; match: "exact" | "prefix" };
+type StranglerRoute =
+  | { path: string; match: "exact" | "prefix"; pattern?: undefined }
+  | { path?: undefined; match: "regex"; pattern: string };
 
 // Escapes the characters that are special inside a regular expression.
 const REGEX_METACHARACTERS = /[.*+?^${}()|[\]\\]/g;
@@ -39,7 +41,14 @@ function devProxy(expressUrl: string, fastapiUrl: string): Record<string, ProxyO
   // Most specific first: Vite tries the keys in insertion order, so the
   // migrated routes must be registered before the catch-all /api entry.
   for (const route of migratedRoutes()) {
-    const key = route.match === "exact" ? toExactPattern(route.path) : route.path;
+    // Vite reads a key starting with '^' as a regular expression and anything
+    // else as a prefix, which lines up with the three match modes.
+    const key =
+      route.match === "regex"
+        ? route.pattern
+        : route.match === "exact"
+          ? toExactPattern(route.path)
+          : route.path;
     proxy[key] = { target: fastapiUrl, changeOrigin: false };
   }
 

@@ -92,6 +92,64 @@
     },
 
     {
+      "path": "/api/stats/leaderboard",
+      "match": "exact",
+      "samples": [
+        "/api/stats/leaderboard?limit=3",
+        "/api/stats/leaderboard?limit=9999",
+        "/api/stats/leaderboard?platform=challengermode",
+        "/api/stats/leaderboard?platform=challonge",
+        "/api/stats/leaderboard?platform=bogus"
+      ]
+    },
+    { "path": "/api/player-rankings", "match": "exact" },
+    {
+      "match": "regex",
+      "pattern": "^/api/stats/player/[^/]+$",
+      "samples": [
+        "/api/stats/player/yori99",
+        "/api/stats/player/il%20Cuggio",
+        "/api/stats/player/nobody-by-this-name"
+      ]
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/players/by-nickname/[^/]+$",
+      "samples": [
+        "/api/players/by-nickname/yori99",
+        "/api/players/by-nickname/yori99?season=All%20Time",
+        "/api/players/by-nickname/yori99?season=Off%20Season%202025",
+        "/api/players/by-nickname/il%20Cuggio",
+        "/api/players/by-nickname/nobody-by-this-name"
+      ]
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/players/[^/]+$",
+      "samples": [
+        "/api/players/52af5e3d-7923-4c50-96b1-b4ffae064824",
+        "/api/players/4adf798d-cf50-48f7-821f-bca57219f4cf?season=All%20Time",
+        "/api/players/e1c7fad1-8a22-4c15-984c-ce0cd3edc731?season=Off%20Season%202025",
+        "/api/players/no-such-player",
+        "/api/players/by-nickname"
+      ]
+    },
+    {
+      "path": "/api/leaderboard/regional",
+      "match": "exact",
+      "samples": [
+        "/api/leaderboard/regional?region=Campania",
+        "/api/leaderboard/regional?region=Umbria",
+        "/api/leaderboard/regional?season=Off%20Season%202025",
+        "/api/leaderboard/regional?season=Off%20Season%202025&region=Campania",
+        "/api/leaderboard/regional?season=Off%20Season%202025&platform=challengermode",
+        "/api/leaderboard/regional?season=Season%202026",
+        "/api/leaderboard/regional?season=Season%202026&region=Campania",
+        "/api/leaderboard/regional?season=All%20Time&platform=challonge"
+      ]
+    },
+
+    {
       "path": "/api/analytics/meta",
       "match": "exact",
       "samples": [

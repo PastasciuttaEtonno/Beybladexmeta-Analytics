@@ -122,15 +122,19 @@ session problem is suspected.
 | Combo stats | `/api/stats/combos`, `/api/stats/combos/by-key`, `/api/stats/combos/by-slug` |
 | Component stats | `/api/stats/top/{blade,ratchet,bit,components}`, `/api/stats/leaderboard/{blade,ratchet,bit}` |
 | Analytics | `/api/analytics/meta`, `/api/trends`, `/api/synergy` |
+| Players | `/api/stats/leaderboard`, `/api/stats/player/:nickname`, `/api/player-rankings`, `/api/players/:id`, `/api/players/by-nickname/:nickname`, `/api/leaderboard/regional` |
 
-Still on Express, and deliberately not caught by the rules above:
+Still on Express, and deliberately not caught by the rules above — all three
+call the ChallengerMode API through `server/challengermode.ts` and move when
+that client does:
 
-- `/api/stats/combos/:comboKey/tournaments` — calls the ChallengerMode API
-  through `server/challengermode.ts`; it moves with that client, not with the
-  rest of the stats group.
-- `/api/stats/leaderboard` and `/api/stats/player/:nickname` — despite the path,
-  these live in the players module and move with it. This is why the routing
-  rules are exact matches rather than an `/api/stats/` prefix.
+- `/api/stats/combos/:comboKey/tournaments`
+- `/api/players/:id/tournaments`
+- `/api/players/by-nickname/:nickname/tournaments`
+
+This is why the rules are exact matches and anchored regexes rather than
+prefixes: `^/api/players/[^/]+$` claims the profile but leaves the `/tournaments`
+route below it on Express.
 
 ### Quirks preserved on purpose
 

@@ -24,10 +24,18 @@ const proxyBody = `        proxy_pass \${PY_UPSTREAM};
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;`;
 
-const blocks = routes.migrated.map(({ path, match }) => {
-  const selector = match === "exact" ? `= ${path}` : `${path.replace(/\/?$/, "/")}`;
-  return `    location ${selector} {\n${proxyBody}\n    }`;
-});
+// nginx resolves an exact `=` match first, then regexes in the order they
+// appear, then the longest plain prefix — so any of these beats the generic
+// /api/ block below them.
+const selectorFor = ({ path, match, pattern }) => {
+  if (match === "exact") return `= ${path}`;
+  if (match === "regex") return `~ ${pattern}`;
+  return path.replace(/\/?$/, "/");
+};
+
+const blocks = routes.migrated.map(
+  (route) => `    location ${selectorFor(route)} {\n${proxyBody}\n    }`,
+);
 
 const generated = [
   BEGIN,

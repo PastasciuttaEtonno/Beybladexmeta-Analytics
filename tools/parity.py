@@ -86,7 +86,9 @@ def main() -> int:
 
     urls: list[str] = []
     for route in config["migrated"]:
-        urls.append(route["path"])
+        # A regex route has no single URL of its own; its samples cover it.
+        if "path" in route:
+            urls.append(route["path"])
         urls.extend(route.get("samples", []))
 
     failures = 0
