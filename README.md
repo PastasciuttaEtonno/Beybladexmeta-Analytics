@@ -144,10 +144,17 @@ session problem is suspected.
 | Favourites | `/api/favorites/combos`, `/api/favorites/decks` (GET, POST and DELETE) |
 | Aliases | `/api/user/aliases` (GET, POST and DELETE) |
 | Tournament history | `/api/stats/combos/:comboKey/tournaments`, `/api/players/:id/tournaments`, `/api/players/by-nickname/:nickname/tournaments` |
+| Tournaments | `/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/players/:playerId/combos`, `/api/challengermode/tournaments` (reads only) |
 
 Routing rules are exact matches and anchored regexes rather than prefixes, so
 that a migrated route never swallows an unmigrated sibling —
 `^/api/players/[^/]+$` claims the profile without touching anything below it.
+
+nginx cannot route on HTTP method, so a path that is migrated for GET but not
+for POST needs the exclusion written into the pattern itself. That is why the
+tournament detail rule reads `^/api/tournaments/(?!claim$)[^/]+$`: without the
+lookahead it would also capture `POST /api/tournaments/claim`, which is still
+served by Express.
 
 ### Talking to ChallengerMode
 

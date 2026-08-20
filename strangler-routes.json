@@ -186,6 +186,39 @@
     },
 
     {
+      "path": "/api/tournaments",
+      "match": "exact",
+      "samples": [
+        "/api/tournaments?after=2024-01-01T00%3A00%3A00Z",
+        "/api/tournaments?after=2026-01-01T00%3A00%3A00Z",
+        "/api/tournaments?platform=challonge",
+        "/api/tournaments?platform=challengermode",
+        "/api/tournaments?season=Off%20Season%202025",
+        "/api/tournaments?region=Campania",
+        "/api/tournaments?region=Umbria&platform=all"
+      ]
+    },
+    { "path": "/api/challengermode/tournaments", "match": "exact" },
+    {
+      "match": "regex",
+      "pattern": "^/api/tournaments/(?!claim$)[^/]+$",
+      "_note": "GET /api/tournaments/:id. The lookahead keeps POST /api/tournaments/claim on Express — nginx locations cannot match on method.",
+      "samples": [
+        "/api/tournaments/1f7cbc95-723a-49cb-d84c-08deeae4d0a1",
+        "/api/tournaments/95ddef78-f74b-4ae6-7a0e-08de356b8cf5",
+        "/api/tournaments/no-such-tournament"
+      ]
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/tournaments/[^/]+/players/[^/]+/combos$",
+      "samples": [
+        "/api/tournaments/95ddef78-f74b-4ae6-7a0e-08de356b8cf5/players/52af5e3d-7923-4c50-96b1-b4ffae064824/combos",
+        "/api/tournaments/no-such/players/no-such/combos"
+      ]
+    },
+
+    {
       "path": "/api/favorites/combos",
       "match": "exact",
       "_note": "Reads only. The POST/DELETE side is covered by tools/parity_writes.py, which cannot be run twice against two backends without doubling the effect."
