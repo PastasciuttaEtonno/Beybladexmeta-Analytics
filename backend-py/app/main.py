@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from app.config import get_settings
 from app.db import dispose_engine, get_engine
 from app.routers import (
+    aliases,
     analytics,
     components,
     favorites,
@@ -87,3 +88,4 @@ app.include_router(stats.router)
 app.include_router(analytics.router)
 app.include_router(players.router)
 app.include_router(favorites.router)
+app.include_router(aliases.router)

@@ -120,7 +120,7 @@ get rejected change nothing, so those are sent to both and compared directly.
 
 ```bash
 npm run strangler:session          # mints a signed connect.sid for an admin
-npm run strangler:parity-writes -- --cookie 'connect.sid=...'
+npm run strangler:parity-writes -- --cookie 'connect.sid=...' \n    --challonge-cookie 'connect.sid=...'   # optional; unlocks the alias checks
 ```
 
 `strangler:session` writes a real session row and signs the cookie the way
@@ -142,6 +142,7 @@ session problem is suspected.
 | Analytics | `/api/analytics/meta`, `/api/trends`, `/api/synergy` |
 | Players | `/api/stats/leaderboard`, `/api/stats/player/:nickname`, `/api/player-rankings`, `/api/players/:id`, `/api/players/by-nickname/:nickname`, `/api/leaderboard/regional` |
 | Favourites | `/api/favorites/combos`, `/api/favorites/decks` (GET, POST and DELETE) |
+| Aliases | `/api/user/aliases` (GET, POST and DELETE) |
 
 Still on Express, and deliberately not caught by the rules above — all three
 call the ChallengerMode API through `server/challengermode.ts` and move when

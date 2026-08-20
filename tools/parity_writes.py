@@ -162,6 +162,10 @@ def main() -> int:
     parser.add_argument("--express", default="http://localhost:5000")
     parser.add_argument("--fastapi", default="http://localhost:8000")
     parser.add_argument("--cookie", required=True, help="connect.sid=... from tools/dev_session.py")
+    parser.add_argument(
+        "--challonge-cookie",
+        help="a second cookie for an account linked to Challonge; without it the alias checks are skipped",
+    )
     args = parser.parse_args()
 
     express, fastapi, cookie = args.express, args.fastapi, args.cookie
@@ -218,8 +222,67 @@ def main() -> int:
         None, cookie, "DELETE a combo that does not exist",
     )
 
+    if args.challonge_cookie:
+        print("\n--- aliases (needs an account linked to Challonge) ---")
+        alias_cookie = args.challonge_cookie
+        name = "parity-alias"
+
+        # Clear any leftover from an interrupted run, on both backends.
+        for base in (express, fastapi):
+            _, existing = call(base, "GET", "/api/user/aliases", alias_cookie)
+            for item in existing if isinstance(existing, list) else []:
+                if item["alias"] == name:
+                    call(base, "DELETE", f"/api/user/aliases/{item['id']}", alias_cookie)
+
+        status, created = call(fastapi, "POST", "/api/user/aliases", alias_cookie, {"alias": name})
+        check("POST /api/user/aliases on fastapi", status == 201, f"status {status}: {created}")
+
+        if status == 201:
+            alias_id = created["id"]
+
+            status, listing = call(express, "GET", "/api/user/aliases", alias_cookie)
+            mine = next((a for a in listing if a["id"] == alias_id), None)
+            check("alias written by fastapi is visible to express", mine is not None, str(listing))
+            if mine is not None:
+                check("express returns the same alias fastapi wrote", mine == created, f"{mine} vs {created}")
+
+            # Uniqueness is global, so the second claim must be refused by both.
+            compare_rejection(
+                express, fastapi, "POST", "/api/user/aliases",
+                {"alias": name}, alias_cookie, "POST an alias that is already claimed",
+            )
+
+            status, _ = call(express, "DELETE", f"/api/user/aliases/{alias_id}", alias_cookie)
+            check("DELETE alias on express accepted", status == 200, f"status {status}")
+
+            status, listing = call(fastapi, "GET", "/api/user/aliases", alias_cookie)
+            check(
+                "alias deletion by express is visible to fastapi",
+                all(a["id"] != alias_id for a in listing),
+                str(listing),
+            )
+
+        compare_rejection(
+            express, fastapi, "POST", "/api/user/aliases", {"alias": "   "},
+            alias_cookie, "POST an empty alias",
+        )
+        compare_rejection(
+            express, fastapi, "DELETE", "/api/user/aliases/not-a-number", None,
+            alias_cookie, "DELETE an alias with a non-numeric id",
+        )
+        compare_rejection(
+            express, fastapi, "DELETE", "/api/user/aliases/999999", None,
+            alias_cookie, "DELETE an alias that does not exist",
+        )
+
+        # The admin account has no Challonge link, so it must be refused.
+        compare_rejection(
+            express, fastapi, "POST", "/api/user/aliases", {"alias": "should-be-refused"},
+            cookie, "POST an alias without a linked Challonge account",
+        )
+
     print("\n--- without a session ---")
-    for path in ("/api/favorites/combos", "/api/favorites/decks"):
+    for path in ("/api/favorites/combos", "/api/favorites/decks", "/api/user/aliases"):
         express_status, express_body = call(express, "GET", path, "")
         fastapi_status, fastapi_body = call(fastapi, "GET", path, "")
         check(

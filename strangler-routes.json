@@ -167,6 +167,17 @@
     },
 
     {
+      "path": "/api/user/aliases",
+      "match": "exact",
+      "_note": "GET and POST. Writes are covered by tools/parity_writes.py."
+    },
+    {
+      "match": "regex",
+      "pattern": "^/api/user/aliases/[^/]+$",
+      "_note": "DELETE /api/user/aliases/:id"
+    },
+
+    {
       "path": "/api/analytics/meta",
       "match": "exact",
       "samples": [
