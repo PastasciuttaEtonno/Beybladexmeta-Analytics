@@ -208,6 +208,19 @@ uv run tools/convert-images-to-webp.py --apply   # convert and upload
 It reads `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` from `backend/.env`.
 The first run converted 96 images and took the set from 63.6 MB to 6.3 MB.
 
+## Why the tournament archive needs our own tables
+
+ChallengerMode's `tournamentsForGame` returns **at most 50 tournaments**, newest
+first. Its filter accepts only `tournamentsAfter` — there is no upper bound, no
+cursor and no limit argument (confirmed by introspecting the schema). So once
+more than 50 tournaments exist, older ones drop out of the API response for
+good, and moving the `after` date backwards does not bring them back.
+
+`GET /api/tournaments` therefore unions the API response with everything in
+`tournaments_view`, filling in each recovered entry from the cached detail. At
+the time of writing that is the difference between showing 50 tournaments
+(May 2026 onwards) and showing all 124 (October 2025 onwards).
+
 ## Documentation
 
 `docs/backend/api-endpoints.md` documents all ~70 endpoints with their auth

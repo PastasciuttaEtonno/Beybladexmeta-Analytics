@@ -145,6 +145,32 @@ export function registerTournamentsRoutes(app: Express): void {
         }
       }
 
+      // Challengermode's tournamentsForGame returns at most 50 results, newest
+      // first, and its filter has no upper bound and no pagination (verified by
+      // introspecting the schema: completedTournamentSelector accepts only
+      // tournamentsAfter). So once more than 50 tournaments exist, older ones
+      // fall out of the API response permanently — even though we already know
+      // about them. Add back everything tournaments_view has that the API did
+      // not return, so the archive stays visible.
+      if (platform === 'all' || platform === 'challengermode') {
+        const apiIds = new Set<string>(cmNodes.map((n: any) => String(n.id)));
+        const knownRows = await db.execute(sql`SELECT id, name FROM tournaments_view`);
+        for (const row of (knownRows.rows as any[]) || []) {
+          const id = String(row.id);
+          if (apiIds.has(id)) continue;
+          // Detail (name, schedule, hosts) is filled in by the enrichment pass
+          // below, from the same cache the API responses are stored in.
+          cmNodes.push({
+            id,
+            name: row.name || `Tournament ${id}`,
+            description: '',
+            state: 'COMPLETED',
+            contactUrl: null,
+            gameTitle: { title: 'Beyblade X' },
+          } as any);
+        }
+      }
+
       const allNodes = [...cmNodes, ...challongeNodes];
       const rowsCombos = await db.execute(sql`SELECT DISTINCT tournament_id FROM cm_match_results UNION SELECT DISTINCT tournament_id FROM challonge_reported_combos UNION SELECT DISTINCT tournament_id FROM external_player_combos`);
       const idSet = new Set<string>((rowsCombos.rows as any[]).map((r) => String((r as any).tournament_id || (r as any).tournamentId)));

@@ -106,6 +106,33 @@ async def list_tournaments(request: Request, db: Annotated[AsyncSession, Depends
                 # A ChallengerMode outage degrades the list rather than failing it.
                 log.error("Error fetching CM tournaments: %s", exc)
 
+            # Challengermode's tournamentsForGame returns at most 50 results,
+            # newest first, and its filter has no upper bound and no pagination
+            # (verified by introspecting the schema: completedTournamentSelector
+            # accepts only tournamentsAfter). Once more than 50 tournaments
+            # exist, older ones fall out of the response permanently — even
+            # though we already know about them. Add back everything
+            # tournaments_view has that the API did not return, so the archive
+            # stays visible.
+            api_ids = {str(n.get("id")) for n in cm_nodes}
+            known = await db.execute(text("SELECT id, name FROM tournaments_view"))
+            for row in known:
+                tournament_id = str(row.id)
+                if tournament_id in api_ids:
+                    continue
+                # name/schedule/hosts get filled in by the enrichment pass below,
+                # from the same cache the API responses are stored in.
+                cm_nodes.append(
+                    {
+                        "id": tournament_id,
+                        "name": row.name or f"Tournament {tournament_id}",
+                        "description": "",
+                        "state": "COMPLETED",
+                        "contactUrl": None,
+                        "gameTitle": {"title": "Beyblade X"},
+                    }
+                )
+
         challonge_nodes: list[dict] = []
         if platform in ("all", "challonge"):
             rows = await db.execute(

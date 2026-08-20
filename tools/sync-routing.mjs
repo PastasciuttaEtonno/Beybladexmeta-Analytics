@@ -17,7 +17,8 @@ const templatePath = resolve(root, "frontend/nginx.conf.template");
 const BEGIN = "    # BEGIN STRANGLER ROUTES";
 const END = "    # END STRANGLER ROUTES";
 
-const proxyBody = `        proxy_pass \${PY_UPSTREAM};
+const proxyBody = `        set $py_upstream "\${PY_UPSTREAM}";
+        proxy_pass $py_upstream$request_uri;
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
