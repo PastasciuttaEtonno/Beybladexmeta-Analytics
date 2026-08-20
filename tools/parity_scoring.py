@@ -35,6 +35,7 @@ TABLES = [
     "ratchet_stats",
     "bit_stats",
     "lock_chip_stats",
+    "player_regional_stats",
 ]
 
 KEY_COLUMNS = {
@@ -44,16 +45,24 @@ KEY_COLUMNS = {
     "ratchet_stats": ["ratchet", "season"],
     "bit_stats": ['"bit"', "season"],
     "lock_chip_stats": ["lock_chip", "season"],
+    "player_regional_stats": ["player_id", "region", "season", "platform"],
 }
 
-COUNTERS = ["primi_posti", "secondi_posti", "terzi_posti", "quarti_posti", "punteggio_totale"]
+_PLACEMENT_COUNTERS = [
+    "primi_posti", "secondi_posti", "terzi_posti", "quarti_posti", "punteggio_totale",
+]
+
+# updated_at is excluded everywhere: it is a wall-clock stamp, so the two runs
+# would always differ on it and never on anything that matters.
+COUNTERS = {table: _PLACEMENT_COUNTERS for table in TABLES}
+COUNTERS["player_regional_stats"] = ["player_name", "points", "tournaments_played", "wins", "top4"]
 
 
 def psql(sql: str) -> str:
     result = subprocess.run(
         ["docker", "exec", CONTAINER, "psql", "-U", "postgres", "-d", DATABASE,
          "-t", "-A", "-F", "\x1f", "-v", "ON_ERROR_STOP=1", "-c", sql],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if result.returncode != 0:
         raise SystemExit(f"psql failed:\n{result.stderr.strip()}\nSQL: {sql[:200]}")
@@ -81,17 +90,23 @@ def read_diff() -> dict[str, list[str]]:
     changes: dict[str, list[str]] = {}
     for table in TABLES:
         keys = KEY_COLUMNS[table]
+        counters = COUNTERS[table]
         # Qualified with t. because the snapshot table has the same column names.
-        selected = ", ".join(f"t.{c}" for c in keys + COUNTERS)
+        selected = ", ".join(f"t.{c}" for c in keys + counters)
         joined = " AND ".join(f"t.{k} IS NOT DISTINCT FROM s.{k}" for k in keys)
-        differs = " OR ".join(f"t.{c} IS DISTINCT FROM s.{c}" for c in COUNTERS)
+        differs = " OR ".join(f"t.{c} IS DISTINCT FROM s.{c}" for c in counters)
+        first_key = keys[0]
 
-        # Rows that changed, plus rows that are new (no snapshot match).
+        # Rows that changed or are new...
         rows = psql(
-            f"SELECT {selected} FROM {table} t "
+            f"SELECT 'changed', {selected} FROM {table} t "
             f"LEFT JOIN parity_snap_{table} s ON {joined} "
-            f"WHERE s.season IS NULL OR ({differs}) "
-            f"ORDER BY 1, 2;"
+            f"WHERE s.{first_key} IS NULL OR ({differs}) "
+            f"UNION ALL "
+            # ...and rows the operation removed, which a full rebuild can do.
+            f"SELECT 'removed', {', '.join(f's.{c}' for c in keys + counters)} "
+            f"FROM parity_snap_{table} s LEFT JOIN {table} t ON {joined} "
+            f"WHERE t.{first_key} IS NULL;"
         )
         if rows:
             changes[table] = sorted(rows.splitlines())
@@ -102,6 +117,7 @@ def run_express(action: str, combo: dict) -> tuple[bool, str]:
     result = subprocess.run(
         ["npx", "tsx", "scripts/apply-scoring.ts", action, json.dumps(combo)],
         cwd=ROOT / "backend", capture_output=True, text=True, shell=True,
+        encoding="utf-8", errors="replace",
     )
     return result.returncode == 0, (result.stderr or result.stdout).strip()
 
@@ -110,6 +126,7 @@ def run_fastapi(action: str, combo: dict) -> tuple[bool, str]:
     result = subprocess.run(
         ["uv", "run", "apply_scoring.py", action, json.dumps(combo)],
         cwd=ROOT / "backend-py", capture_output=True, text=True, shell=True,
+        encoding="utf-8", errors="replace",
     )
     return result.returncode == 0, (result.stderr or result.stdout).strip()
 
@@ -169,6 +186,11 @@ CASES: list[tuple[str, str, dict]] = [
         {"blade": "WizardRod", "assistBlade": "None", "ratchet": "1-60", "bit": "Hexa",
          "lockChip": "None", "season": "Off Season 2025", "placement": 1,
          "totalParticipants": 24},
+    ),
+    (
+        "regional standings: full rebuild from scratch",
+        "regional",
+        {},
     ),
     (
         "revert something never recorded — counters must floor at zero",

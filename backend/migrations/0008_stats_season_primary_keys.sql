@@ -37,4 +37,14 @@ ALTER TABLE ratchet_stats ADD CONSTRAINT ratchet_stats_pkey PRIMARY KEY (ratchet
 ALTER TABLE bit_stats DROP CONSTRAINT IF EXISTS bit_stats_pkey;
 ALTER TABLE bit_stats ADD CONSTRAINT bit_stats_pkey PRIMARY KEY ("bit", season);
 
+-- player_regional_stats has no unique constraint either, and its case is worse:
+-- recalculateAllRegionalStats() runs DELETE FROM player_regional_stats and THEN
+-- inserts with ON CONFLICT (player_id, region, season, platform). The delete
+-- succeeds, the insert raises, and every caller wraps the whole thing in a
+-- swallowing try/catch — so the table is silently left EMPTY. It is reachable
+-- from several admin routes and from claiming a tournament result.
+ALTER TABLE player_regional_stats DROP CONSTRAINT IF EXISTS player_regional_stats_pkey;
+ALTER TABLE player_regional_stats
+  ADD CONSTRAINT player_regional_stats_pkey PRIMARY KEY (player_id, region, season, platform);
+
 COMMIT;

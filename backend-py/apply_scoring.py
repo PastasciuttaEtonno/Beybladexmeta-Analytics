@@ -14,16 +14,34 @@ import json
 import sys
 
 from app.db import dispose_engine, get_engine
+from app.lib.regional_scoring import recalculate_all
 from app.lib.scoring import ComboResult, process_external_combo, revert_external_combo
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 
 async def main() -> int:
+    if len(sys.argv) < 2:
+        print("usage: apply_scoring.py <add|revert> '<json>' | apply_scoring.py regional",
+              file=sys.stderr)
+        return 2
+
+    action = sys.argv[1]
+
+    if action == "regional":
+        engine = get_engine()
+        sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with sessionmaker() as session:
+                print(json.dumps(await recalculate_all(session)))
+        finally:
+            await dispose_engine()
+        return 0
+
     if len(sys.argv) != 3:
         print("usage: apply_scoring.py <add|revert> '<json>'", file=sys.stderr)
         return 2
 
-    action, payload = sys.argv[1], sys.argv[2]
+    payload = sys.argv[2]
     raw = json.loads(payload)
 
     # The TypeScript side takes camelCase; accept it so both probes can be

@@ -11,12 +11,19 @@
  */
 
 import { processExternalCombo, revertExternalCombo } from "../src/scoreExternalCombo";
+import { recalculateAllRegionalStats } from "../src/lib/regionalScoring";
 
 async function main() {
   const [action, payload] = process.argv.slice(2);
-  if (!action || !payload) {
-    console.error("usage: apply-scoring.ts <add|revert> '<json>'");
+  if (!action || (action !== "regional" && !payload)) {
+    console.error("usage: apply-scoring.ts <add|revert> '<json>' | apply-scoring.ts regional");
     process.exit(2);
+  }
+
+  if (action === "regional") {
+    const result = await recalculateAllRegionalStats();
+    console.log(JSON.stringify(result));
+    process.exit(0);
   }
 
   const combo = JSON.parse(payload);
