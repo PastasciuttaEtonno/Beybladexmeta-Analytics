@@ -25,6 +25,10 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 COPY --from=builder /app/.venv /app/.venv
 COPY app ./app
+# The OG renderer looks for /app/assets/meta-logo-white.png. Without this the
+# image still renders, just silently without the logo — backend/Dockerfile has
+# always copied it and this was the one place the port forgot.
+COPY assets ./assets
 
 RUN useradd --create-home --uid 10001 app && chown -R app:app /app
 USER app

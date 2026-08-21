@@ -1,17 +1,20 @@
 {
   "_comment": [
-    "Single source of truth for the Express -> FastAPI migration.",
-    "A route listed here is served by FastAPI; everything else still goes to Express.",
+    "Record of the Express -> FastAPI migration, and the URL manifest the",
+    "parity harnesses in tools/ read.",
     "",
-    "After editing: run `npm run strangler:sync` to regenerate the nginx location",
-    "blocks, then `npm run strangler:parity` to prove both backends still agree.",
-    "The Vite dev server reads this file directly, so it needs no regeneration.",
+    "This file no longer drives any routing. The migration is COMPLETE: nginx",
+    "sends the whole API to one upstream (frontend/nginx.conf.template) and the",
+    "Vite dev server does the same, so there is nothing left to generate.",
+    "",
+    "It is still worth keeping. tools/parity.py walks these entries to compare",
+    "the two backends URL by URL, which stays useful for as long as Express is",
+    "deployed as the rollback target -- and it is the inventory that proves all",
+    "69 routes were accounted for.",
     "",
     "match: 'exact' -> one URL only; 'prefix' -> that path and everything under it.",
     "samples: extra URLs (with query strings) the parity check should compare.",
-    "",
-    "Prefer 'exact' so an unmigrated sibling keeps going to Express: /api/stats/combos",
-    "is migrated, but /api/stats/combos/:key/tournaments is NOT and must not be caught."
+    "_skip_parity: not byte-comparable (rendered images, OAuth redirects)."
   ],
   "migrated": [
     {

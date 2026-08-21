@@ -9,6 +9,10 @@
 # resource, reachable over the external `coolify` network.
 
 services:
+  # The original Express backend. Nothing routes to it any more — it stays
+  # deployed purely so the cutover can be undone by pointing API_UPSTREAM at it
+  # and restarting `frontend`, with no rebuild and no lost sessions. Remove it
+  # once FastAPI has run clean for a while.
   backend:
     build:
       context: ./backend
@@ -46,19 +50,49 @@ services:
       - app
       - coolify
 
-  # Takes over routes from `backend` one group at a time; nginx decides which
-  # service answers, driven by strangler-routes.json.
+  # Serves the whole API. Every route was migrated off `backend` and verified
+  # against it with the parity harnesses in tools/ before this became the
+  # default upstream.
   backend-py:
     build:
       context: ./backend-py
     restart: unless-stopped
     environment:
       # Must be the SAME database and the SAME session secret as `backend`,
-      # otherwise a user logged in via Express looks logged out here.
+      # otherwise a session minted by one looks invalid to the other — which is
+      # what makes the rollback below seamless rather than a mass logout.
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
       PORT: 8000
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+
+      # Absolute URLs in the sitemap and the og:image tags.
+      APP_BASE_URL: ${APP_BASE_URL}
+      # /combo/:id fetches index.html from here to rewrite its OG tags. Without
+      # it that route 404s — the monolith read the file off disk instead.
+      FRONTEND_ORIGIN: http://frontend
+      # Where the OG renderer downloads component images from.
+      VITE_PUBLIC_MINIO_URL: ${VITE_PUBLIC_MINIO_URL}
+
+      # Tournament data. Without the refresh key every tournament degrades to
+      # the placeholder name "Tournament <uuid>".
+      CHALLENGERMODE_API_KEY: ${CHALLENGERMODE_API_KEY:-}
+      CHALLENGERMODE_AUTH_URL: ${CHALLENGERMODE_AUTH_URL:-}
+      CHALLENGERMODE_GRAPHQL_URL: ${CHALLENGERMODE_GRAPHQL_URL:-}
+      CHALLENGERMODE_REFRESH_KEY: ${CHALLENGERMODE_REFRESH_KEY:-}
+      CHALLENGERMODE_CACHE_TTL_MINUTES: ${CHALLENGERMODE_CACHE_TTL_MINUTES:-}
+
+      # Account linking. Separate credentials from the service key above.
+      CM_CLIENT_ID: ${CM_CLIENT_ID:-}
+      CM_CLIENT_SECRET: ${CM_CLIENT_SECRET:-}
+      CM_USERINFO_URL: ${CM_USERINFO_URL:-}
+      CHALLONGE_API_KEY: ${CHALLONGE_API_KEY:-}
+      CHALLONGE_APP_CLIENT_ID: ${CHALLONGE_APP_CLIENT_ID:-}
+      CHALLONGE_APP_CLIENT_SECRET: ${CHALLONGE_APP_CLIENT_SECRET:-}
+
+      # Registration: captcha verification and the verification email.
+      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
     networks:
       - app
       - coolify
@@ -74,8 +108,9 @@ services:
         VITE_RECAPTCHA_USE_ENTERPRISE: ${VITE_RECAPTCHA_USE_ENTERPRISE:-}
     restart: unless-stopped
     environment:
-      BACKEND_UPSTREAM: http://backend:5000
-      PY_UPSTREAM: http://backend-py:8000
+      # THE cutover switch. Set it to http://backend:5000 and restart this one
+      # container to hand the whole API back to Express.
+      API_UPSTREAM: ${API_UPSTREAM:-http://backend-py:8000}
       # Added to the CSP connect-src so the browser may talk to Garage.
       PUBLIC_STORAGE_ORIGIN: ${VITE_PUBLIC_MINIO_URL}
     depends_on:

@@ -3,6 +3,21 @@
 # nginx serves the SPA and forwards the backend's routes to it, so the browser
 # only ever talks to one origin: no CORS, and the session cookie keeps working
 # exactly as it did when Express served both halves.
+#
+# The strangler is finished: every API route goes to ${API_UPSTREAM}, which is
+# FastAPI. There is deliberately no per-route table any more — pointing
+# API_UPSTREAM back at http://backend:5000 and restarting this container hands
+# everything back to Express, which is still deployed for exactly that reason.
+
+# Traefik terminates TLS and forwards over plain HTTP, so $scheme here is
+# "http". Overwriting X-Forwarded-Proto with it would tell the backend the
+# request was insecure, and the OAuth handlers build their redirect_uri from
+# that header — the provider would then reject an http:// callback. Trust the
+# value Traefik set and fall back to $scheme only for direct access.
+map $http_x_forwarded_proto $forwarded_proto {
+    default $scheme;
+    ~.+     $http_x_forwarded_proto;
+}
 
 server {
     listen 80;
@@ -41,641 +56,55 @@ server {
         add_header Content-Type text/plain;
     }
 
-    # BEGIN STRANGLER ROUTES
-    # Generated from strangler-routes.json by `npm run strangler:sync`.
-    # Do not edit by hand — edit the JSON and regenerate.
-    # These win over the generic /api/ block below: nginx prefers an exact `=`
-    # match, and otherwise the longest matching prefix.
+    # --- The API, the sitemap and the OG shell all live on one backend ---
+    #
+    # `set` + a variable in proxy_pass is what forces nginx to re-resolve the
+    # upstream at request time (see the resolver above); with a literal name it
+    # would cache the address from startup and 502 forever after a redeploy.
 
-    location = /api/health {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/components {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/seasons {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/combos {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/combos/by-key {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/combos/by-slug {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/top/components {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/top/blade {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/top/ratchet {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/top/bit {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/leaderboard/blade {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/leaderboard/ratchet {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/leaderboard/bit {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/stats/leaderboard {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/player-rankings {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/stats/player/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/players/by-nickname/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/players/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/stats/combos/[^/]+/tournaments$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/players/by-nickname/[^/]+/tournaments$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/players/[^/]+/tournaments$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/leaderboard/regional {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/tournaments {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/challengermode/tournaments {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/tournaments/(?!claim$)[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/tournaments/claim {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/tournaments/[^/]+/combos/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/tournaments/[^/]+/players/[^/]+/combos$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/og/combo/.+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /sitemap.xml {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/combo/.+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/auth/me {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/auth/login {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/auth/logout {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/auth/register {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/auth/verify {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/auth/profile {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/user/link-challonge {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/user/link-challengermode {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/favorites/combos {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/favorites/decks {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/favorites/combos/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/favorites/decks/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/user/aliases {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/user/aliases/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/analytics/meta {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/trends {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/synergy {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/admin/tournament-results {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/admin/tournament-results/external {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/admin/tournaments {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/admin/tournaments/[^/]+/results$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/admin/tournaments/[^/]+/sync-ghost-players$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/admin/tournaments/[^/]+/combos/reset$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/admin/refresh-all-tournaments {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/admin/sync-challonge {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/admin/recalc-stats {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/admin/import-tournament {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/stats/leaderboard/[^/]+$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/me/tournaments {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/challenger/participations {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location ~ ^/api/tournaments/[^/]+/claim$ {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/challenger/login {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/challenger/callback {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/challonge/login {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location = /api/challonge/callback {
-        set $py_upstream "${PY_UPSTREAM}";
-        proxy_pass $py_upstream$request_uri;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    # FastAPI publishes its Swagger UI and OpenAPI document under /api/_py/.
+    # Now that the whole /api/ prefix reaches it, that would be world-readable,
+    # so it is closed here rather than at the application: a longer prefix wins
+    # over /api/ in nginx, and the docs stay available to anyone who can reach
+    # the container directly.
+    location /api/_py/ {
+        return 404;
     }
 
-    # END STRANGLER ROUTES
-
-    # --- Everything the backend owns ---
     location /api/ {
-        set $express_upstream "${BACKEND_UPSTREAM}";
-        proxy_pass $express_upstream$request_uri;
+        set $api_upstream "${API_UPSTREAM}";
+        proxy_pass $api_upstream$request_uri;
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
         proxy_set_header Upgrade           $http_upgrade;
         proxy_set_header Connection        "upgrade";
-        # Tournament imports and OG rendering can take a while.
+        # Tournament imports, the regional recalculation and OG rendering all
+        # run well past nginx's 60s default.
         proxy_read_timeout 120s;
     }
 
     location = /sitemap.xml {
-        set $express_upstream "${BACKEND_UPSTREAM}";
-        proxy_pass $express_upstream$request_uri;
+        set $api_upstream "${API_UPSTREAM}";
+        proxy_pass $api_upstream$request_uri;
         proxy_set_header Host              $host;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        # It walks every tournament and the top 300 combos.
+        proxy_read_timeout 120s;
     }
 
     # /combo/:id goes to the backend, which fetches /index.html back from here
     # and rewrites the og:image / twitter:image tags before returning it.
     # Serving /index.html is a plain static hit below, so there is no loop.
     location /combo/ {
-        set $express_upstream "${BACKEND_UPSTREAM}";
-        proxy_pass $express_upstream$request_uri;
+        set $api_upstream "${API_UPSTREAM}";
+        proxy_pass $api_upstream$request_uri;
         proxy_set_header Host              $host;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
         # If the backend is down, still serve the SPA rather than a 502.
         proxy_intercept_errors on;
         error_page 500 502 503 504 = /index.html;

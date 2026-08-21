@@ -12,7 +12,6 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix backend run build && npm --prefix frontend run build",
     "check": "npm --prefix backend run check && npm --prefix frontend run check",
-    "strangler:sync": "node tools/sync-routing.mjs",
     "strangler:parity": "python tools/parity.py",
     "strangler:parity-writes": "python tools/parity_writes.py",
     "strangler:parity-scoring": "python tools/parity_scoring.py",
@@ -22,7 +21,10 @@
     "db:up": "docker compose -f docker-compose.dev.yml up -d",
     "db:down": "docker compose -f docker-compose.dev.yml down",
     "db:reset": "docker compose -f docker-compose.dev.yml down -v && docker compose -f docker-compose.dev.yml up -d",
-    "db:psql": "docker exec -it beyblade-dev-db psql -U postgres -d beyblade_tracker"
+    "db:psql": "docker exec -it beyblade-dev-db psql -U postgres -d beyblade_tracker",
+    "strangler:parity-admin": "python tools/parity_admin_writes.py",
+    "strangler:parity-claim": "python tools/parity_challonge_claim.py",
+    "strangler:parity-oauth": "python tools/parity_oauth.py"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
