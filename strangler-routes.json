@@ -46,7 +46,11 @@
         "/api/stats/combos?limit=9999",
         "/api/stats/combos?page=0&limit=0",
         "/api/stats/combos?page=abc&limit=xyz",
-        "/api/stats/combos?search=nothing-matches-this&limit=5"
+        "/api/stats/combos?search=nothing-matches-this&limit=5",
+        "/api/stats/combos?season=Off%20Season%202025&search=Wizard",
+        "/api/stats/combos?season=Off%20Season%202025&search=Wizard&sortBy=first",
+        "/api/stats/combos?season=Off%20Season%202025&search=nothing-matches-this",
+        "/api/stats/combos?season=all&search=Wizard"
       ]
     },
     {
@@ -54,7 +58,7 @@
       "match": "exact",
       "samples": [
         "/api/stats/combos/by-key?key=WizardRod%7CNone%7C1-60%7CHexa%7CNone",
-        "/api/stats/combos/by-key?key=izardod-1-60-exa",
+        "/api/stats/combos/by-key?key=wizardrod-1-60-hexa",
         "/api/stats/combos/by-key?key=does-not-exist",
         "/api/stats/combos/by-key?key=",
         "/api/stats/combos/by-key?key=A%7CB%7CC"
@@ -64,8 +68,8 @@
       "path": "/api/stats/combos/by-slug",
       "match": "exact",
       "samples": [
-        "/api/stats/combos/by-slug?slug=izardod-1-60-exa",
-        "/api/stats/combos/by-slug?slug=ilverolf-9-60-reeall",
+        "/api/stats/combos/by-slug?slug=wizardrod-1-60-hexa",
+        "/api/stats/combos/by-slug?slug=silverwolf-9-60-freeball",
         "/api/stats/combos/by-slug?slug=does-not-exist",
         "/api/stats/combos/by-slug?slug="
       ]
@@ -272,7 +276,7 @@
       "_note": "The SPA shell with the og:image tags rewritten.",
       "samples": [
         "/combo/WizardRod%7CNone%7C1-60%7CHexa%7CNone",
-        "/combo/izardod-1-60-exa",
+        "/combo/wizardrod-1-60-hexa",
         "/combo/anything-at-all"
       ]
     },

@@ -20,8 +20,8 @@ services:
       # They run in filename order, so the prod snapshot lands before the
       # migrations that fix what the snapshot is missing.
       - ./docker/initdb/10-beyblade.sql.gz:/docker-entrypoint-initdb.d/10-beyblade.sql.gz:ro
-      - ./backend/migrations/0007_unified_meta_view.sql:/docker-entrypoint-initdb.d/20-unified-meta-view.sql:ro
-      - ./backend/migrations/0008_stats_season_primary_keys.sql:/docker-entrypoint-initdb.d/30-stats-pks.sql:ro
+      - ./migrations/0007_unified_meta_view.sql:/docker-entrypoint-initdb.d/20-unified-meta-view.sql:ro
+      - ./migrations/0008_stats_season_primary_keys.sql:/docker-entrypoint-initdb.d/30-stats-pks.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d beyblade_tracker"]
       interval: 5s

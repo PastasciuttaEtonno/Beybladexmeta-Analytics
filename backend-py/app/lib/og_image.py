@@ -20,6 +20,7 @@ import logging
 import math
 import os
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -91,8 +92,18 @@ async def _load_component(client: httpx.AsyncClient, base: str, folder: str, nam
     return None
 
 
+@lru_cache(maxsize=1)
 def _radial_background() -> Image.Image:
-    """#1a1a1a at the centre fading to black at the edges."""
+    """#1a1a1a at the centre fading to black at the edges.
+
+    Cached: it takes no arguments and every image gets the same gradient, but
+    the loop below is ~378_000 Python iterations and the server has one CPU —
+    paying that per request was most of the time spent rendering an OG image.
+
+    Callers must not draw on the returned image. `_render` converts it to RGBA
+    first, and PIL's convert() returns a new image, so the cached original stays
+    pristine.
+    """
     canvas = Image.new("RGB", (WIDTH, HEIGHT), (17, 17, 17))
     pixels = canvas.load()
     centre_x, centre_y = WIDTH / 2, HEIGHT / 2

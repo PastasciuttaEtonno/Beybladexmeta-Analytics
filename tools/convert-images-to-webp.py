@@ -16,7 +16,8 @@ change is additive and safe to repeat.
     uv run tools/convert-images-to-webp.py              # report only
     uv run tools/convert-images-to-webp.py --apply      # actually upload
 
-Credentials are read from backend/.env (S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY).
+Credentials are read from backend-py/.env, falling back to backend/.env
+(S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY).
 """
 
 from __future__ import annotations
@@ -31,7 +32,20 @@ from botocore.config import Config
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-ENV_FILE = ROOT / "backend" / ".env"
+def _env_file() -> Path:
+    """Prefer backend-py/.env, fall back to backend/.env.
+
+    Both hold the same values; backend/ is the Express application that is on
+    its way out, so this stops pointing at it first and keeps working either
+    way while both exist.
+    """
+    for candidate in (ROOT / "backend-py" / ".env", ROOT / "backend" / ".env"):
+        if candidate.exists():
+            return candidate
+    return ROOT / "backend-py" / ".env"
+
+
+ENV_FILE = _env_file()
 BUCKET = "beyblades"
 
 # WebP quality. 82 is visually indistinguishable for these renders and lands
@@ -52,7 +66,7 @@ def read_env() -> dict[str, str]:
 def client(env: dict[str, str]):
     endpoint = env.get("S3_ENDPOINT")
     if not endpoint:
-        sys.exit("S3_ENDPOINT is not set in backend/.env")
+        sys.exit(f"S3_ENDPOINT is not set in {ENV_FILE}")
     return boto3.client(
         "s3",
         endpoint_url=endpoint,

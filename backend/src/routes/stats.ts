@@ -104,14 +104,16 @@ export function registerStatsRoutes(app: Express): void {
       let query = db.select().from(comboStats);
       let countQuery = db.select({ count: sql<number>`count(*)` }).from(comboStats);
 
-      const whereClause = buildSearchWhere();
-      if (whereClause) {
-        query = (query as any).where(whereClause);
-        countQuery = (countQuery as any).where(whereClause);
-      }
+      // ONE where() per builder. Calling it twice does not add a condition —
+      // Drizzle keeps only the last, so the previous version silently dropped
+      // the search whenever a season was also chosen, returning every combo in
+      // the season instead of the matching ones.
+      const searchClause = buildSearchWhere();
+      const seasonClause = eq(comboStats.season, seasonRaw);
+      const combined = searchClause ? and(searchClause, seasonClause) : seasonClause;
 
-      query = (query as any).where(eq(comboStats.season, seasonRaw));
-      countQuery = (countQuery as any).where(eq(comboStats.season, seasonRaw));
+      query = (query as any).where(combined);
+      countQuery = (countQuery as any).where(combined);
 
       const sortColumn = {
         score: comboStats.punteggioTotale,
@@ -226,11 +228,11 @@ export function registerStatsRoutes(app: Express): void {
                punteggio_totale AS "punteggioTotale", data_creazione AS "dataCreazione", rank
         FROM ranked
         WHERE concat_ws('-',
-          CASE WHEN lower(lock_chip) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(lock_chip), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
-          lower(regexp_replace(regexp_replace(trim(blade), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')),
-          CASE WHEN lower(assist_blade) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(assist_blade), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
-          CASE WHEN lower(ratchet) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(ratchet), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
-          lower(regexp_replace(regexp_replace(trim(bit), '\s+', '-', 'g'), '[^a-z0-9-]', '', 'g'))
+          CASE WHEN lower(lock_chip) <> 'none' THEN regexp_replace(regexp_replace(lower(trim(lock_chip)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g') END,
+          regexp_replace(regexp_replace(lower(trim(blade)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g'),
+          CASE WHEN lower(assist_blade) <> 'none' THEN regexp_replace(regexp_replace(lower(trim(assist_blade)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g') END,
+          CASE WHEN lower(ratchet) <> 'none' THEN regexp_replace(regexp_replace(lower(trim(ratchet)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g') END,
+          regexp_replace(regexp_replace(lower(trim(bit)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')
         ) = ${slug}
         LIMIT 1
       `);

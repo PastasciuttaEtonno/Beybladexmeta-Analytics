@@ -25,7 +25,20 @@ from pathlib import Path
 from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parent.parent
-ENV_FILE = ROOT / "backend" / ".env"
+def _env_file() -> Path:
+    """Prefer backend-py/.env, fall back to backend/.env.
+
+    Both hold the same values; backend/ is the Express application that is on
+    its way out, so this stops pointing at it first and keeps working either
+    way while both exist.
+    """
+    for candidate in (ROOT / "backend-py" / ".env", ROOT / "backend" / ".env"):
+        if candidate.exists():
+            return candidate
+    return ROOT / "backend-py" / ".env"
+
+
+ENV_FILE = _env_file()
 DEFAULT_CONTAINER = "beyblade-dev-db"
 
 
@@ -59,7 +72,7 @@ def main() -> int:
 
     secret = read_env().get("SESSION_SECRET")
     if not secret:
-        print("SESSION_SECRET is not set in backend/.env", file=sys.stderr)
+        print(f"SESSION_SECRET is not set in {ENV_FILE}", file=sys.stderr)
         return 1
 
     where = f"email = '{args.email}'" if args.email else "is_admin = true"

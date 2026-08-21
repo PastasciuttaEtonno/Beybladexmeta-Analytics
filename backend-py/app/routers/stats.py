@@ -109,29 +109,36 @@ async def combos(request: Request, db: Annotated[AsyncSession, Depends(get_sessi
                 for r in rows
             ]
         else:
-            # NOTE: `search` is deliberately NOT applied here.
-            #
-            # The Express version calls .where() twice on the same builder — once
-            # for the search, once for the season — and Drizzle keeps only the
-            # last one, so picking a season silently discards the search filter.
-            # Verified against the running service. Reproduced for parity; fix it
-            # in both backends at once if it is ever meant to work.
+            # `search` narrows the season too. It used not to: the Express
+            # version called .where() twice on one builder and Drizzle kept only
+            # the last, so choosing a season silently threw the search away and
+            # returned every combo in it. Fixed in both backends together.
+            season_filter = "season = :season"
+            season_args: dict[str, object] = {"season": season}
+            if search:
+                season_filter += (
+                    " AND (blade ILIKE :term OR assist_blade ILIKE :term "
+                    "OR ratchet ILIKE :term OR bit ILIKE :term "
+                    "OR lock_chip ILIKE :term)"
+                )
+                season_args["term"] = f"%{search}%"
+
             column = _SORT_FIELDS[sort_by]
             rows = await db.execute(
                 text(
                     "SELECT blade, assist_blade, ratchet, bit, lock_chip, season, "
                     "primi_posti, secondi_posti, terzi_posti, quarti_posti, "
                     "punteggio_totale, data_creazione "
-                    "FROM combo_stats WHERE season = :season "
+                    f"FROM combo_stats WHERE {season_filter} "
                     f"ORDER BY {column} {direction}, data_creazione DESC "
                     "LIMIT :limit OFFSET :offset"
                 ),
-                {"season": season, "limit": limit, "offset": offset},
+                {**season_args, "limit": limit, "offset": offset},
             )
             total = (
                 await db.execute(
-                    text("SELECT count(*) FROM combo_stats WHERE season = :season"),
-                    {"season": season},
+                    text(f"SELECT count(*) FROM combo_stats WHERE {season_filter}"),
+                    season_args,
                 )
             ).scalar() or 0
 
@@ -276,11 +283,11 @@ async def combo_by_key(
 # 'None' placeholders omitted entirely.
 _SLUG_EXPRESSION = """
     concat_ws('-',
-      CASE WHEN lower(lock_chip) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(lock_chip), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
-      lower(regexp_replace(regexp_replace(trim(blade), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')),
-      CASE WHEN lower(assist_blade) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(assist_blade), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
-      CASE WHEN lower(ratchet) <> 'none' THEN lower(regexp_replace(regexp_replace(trim(ratchet), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')) END,
-      lower(regexp_replace(regexp_replace(trim(bit), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g'))
+      CASE WHEN lower(lock_chip) <> 'none' THEN regexp_replace(regexp_replace(lower(trim(lock_chip)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g') END,
+      regexp_replace(regexp_replace(lower(trim(blade)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g'),
+      CASE WHEN lower(assist_blade) <> 'none' THEN regexp_replace(regexp_replace(lower(trim(assist_blade)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g') END,
+      CASE WHEN lower(ratchet) <> 'none' THEN regexp_replace(regexp_replace(lower(trim(ratchet)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g') END,
+      regexp_replace(regexp_replace(lower(trim(bit)), '\\s+', '-', 'g'), '[^a-z0-9-]', '', 'g')
     )
 """
 

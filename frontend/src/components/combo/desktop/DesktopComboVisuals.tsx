@@ -112,7 +112,10 @@ export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
                         <stop offset="100%" stopColor="transparent" />
                     </linearGradient>
                 </defs>
-                <path d="M0,50% H100%" stroke="url(#lineResult)" strokeWidth="1" className="text-primary" />
+                {/* <line>, not <path>: percentages are valid on geometry
+                    attributes but not inside path data, so the original
+                    "M0,50% H100%" was silently never drawn. */}
+                <line x1="0" y1="50%" x2="100%" y2="50%" stroke="url(#lineResult)" strokeWidth="1" className="text-primary" />
             </svg>
         </Card>
     );

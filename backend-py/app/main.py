@@ -29,8 +29,10 @@ from app.routers import (
     tournaments,
 )
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [fastapi] %(message)s")
-log = logging.getLogger(__name__)
+from app import logging_setup
+
+logging_setup.configure()
+log = logging.getLogger("app")
 
 
 @asynccontextmanager
@@ -127,3 +129,6 @@ app.include_router(oauth.router)
 from app import openapi_docs  # noqa: E402
 
 openapi_docs.install(app)
+
+# Outermost: it must see failures from every other layer.
+app.add_middleware(logging_setup.RequestContextMiddleware)
