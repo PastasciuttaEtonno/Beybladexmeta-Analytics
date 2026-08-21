@@ -118,6 +118,11 @@ def main() -> int:
     parser.add_argument("--allow-bad-ids", action="store_true",
                         help="send files whose id is a URL sub-page anyway; they will "
                              "collide with each other")
+    parser.add_argument("--only", action="append", metavar="ID",
+                        help="import just this tournament id; repeatable. Useful "
+                             "after fixing one scraped file, so the rest are not "
+                             "re-sent and the server does not redo a full "
+                             "recalculation per tournament.")
     parser.add_argument("--timeout", type=int, default=300)
     args = parser.parse_args()
 
@@ -163,6 +168,15 @@ def main() -> int:
         print("\n  the same tournament id appears more than once — the last one wins:")
         for tid, names in duplicates.items():
             print(f"     {tid}: {', '.join(n[:44] for n in names)}")
+
+    if args.only:
+        wanted = set(args.only)
+        ready = [r for r in ready if r[1]["id"] in wanted]
+        unknown = wanted - {r[1]["id"] for r in ready}
+        print()
+        if unknown:
+            print("  --only matched nothing for: " + ", ".join(sorted(unknown)))
+        print(f"  --only: narrowed to {len(ready)} of them")
 
     standings = sum(len(p["standings"]) for _, p, _ in ready)
     print(f"\n  {len(ready)} tournaments, {standings} standings rows would be sent to {args.base}")
