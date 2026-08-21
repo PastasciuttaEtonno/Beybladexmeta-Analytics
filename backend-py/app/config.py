@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -65,6 +66,21 @@ class Settings(BaseSettings):
     # renderer to fetch component pictures. Named VITE_* for historical
     # reasons: the frontend bakes the same value into its bundle.
     vite_public_minio_url: str = ""
+
+    @field_validator("port", "challengermode_cache_ttl_minutes", mode="before")
+    @classmethod
+    def _blank_means_unset(cls, value: object, info: ValidationInfo) -> object:
+        """Treat an empty environment variable as an absent one.
+
+        Compose renders `KEY: ${KEY:-}` as KEY="" and passes it anyway, so a
+        variable that simply is not configured arrives as a blank string. On a
+        numeric field pydantic then refuses to start at all -- the container
+        crash-looped in exactly the shape production has, where
+        CHALLENGERMODE_CACHE_TTL_MINUTES is not set.
+        """
+        if isinstance(value, str) and not value.strip():
+            return cls.model_fields[info.field_name].default
+        return value
 
     @property
     def public_storage_url(self) -> str:
