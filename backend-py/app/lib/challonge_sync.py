@@ -38,7 +38,7 @@ async def sync_challonge_tournaments(db: AsyncSession) -> dict[str, int]:
         "subdomain": "ibna",
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         try:
             response = await client.get(f"{BASE_URL}/tournaments.json", params=params)
             response.raise_for_status()

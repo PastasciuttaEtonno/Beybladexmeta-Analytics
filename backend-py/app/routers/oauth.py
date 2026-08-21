@@ -225,7 +225,7 @@ async def challenger_callback(
         if not code_verifier:
             return _redirect_with(redirect, "Missing PKCE code_verifier")
 
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             token_response = await client.post(
                 CM_TOKEN_URL,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -240,7 +240,7 @@ async def challenger_callback(
                     }
                 ),
             )
-            if token_response.status_code >= 400:
+            if not token_response.is_success:
                 return _redirect_with(redirect, "Token exchange failed")
 
             try:
@@ -256,7 +256,7 @@ async def challenger_callback(
                 settings.cm_userinfo_url or CM_USERINFO_FALLBACK,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-            if userinfo_response.status_code >= 400:
+            if not userinfo_response.is_success:
                 return _redirect_with(redirect, "Failed to fetch userinfo")
             try:
                 userinfo = userinfo_response.json()
@@ -439,7 +439,7 @@ async def challonge_callback(
         if not client_id or not client_secret:
             return _redirect_with(redirect, "Challonge OAuth misconfigured")
 
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             token_response = await client.post(
                 CHALLONGE_TOKEN_URL,
                 headers={"Content-Type": "application/json"},
@@ -451,7 +451,7 @@ async def challonge_callback(
                     "redirect_uri": redirect_uri,
                 },
             )
-            if token_response.status_code >= 400:
+            if not token_response.is_success:
                 log.error("Challonge Token Error: %s", token_response.text)
                 return _redirect_with(redirect, "Failed to exchange token with Challonge")
 
@@ -468,7 +468,7 @@ async def challonge_callback(
                     "Accept": "application/json",
                 },
             )
-            if user_response.status_code >= 400:
+            if not user_response.is_success:
                 log.error("Challonge User Info Error: %s", user_response.text)
                 return _redirect_with(redirect, "Failed to fetch user info from Challonge")
             user_payload = user_response.json() or {}

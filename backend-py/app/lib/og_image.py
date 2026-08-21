@@ -201,7 +201,7 @@ async def generate_combo_image(combo: dict[str, Any]) -> bytes:
 
     images: dict[str, Image.Image | None] = {"blade": None, "ratchet": None, "bit": None}
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
             images["blade"], images["ratchet"], images["bit"] = await asyncio.gather(
                 _load_component(client, base, "blades", str(combo.get("blade") or "")),
                 _load_component(client, base, "ratchets", str(combo.get("ratchet") or "")),

@@ -100,7 +100,7 @@ async def _verify_captcha(settings: Settings, token: str, ip: str) -> bool:
         f"?secret={quote(secret)}&response={quote(token)}&remoteip={quote(ip)}"
     )
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             payload = (await client.post(url)).json()
     except Exception as exc:
         log.error("reCAPTCHA verification failed: %s", exc)
@@ -194,7 +194,7 @@ async def _send_verification_email(
     )
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             response = await client.post(
                 "https://api.resend.com/emails",
                 headers={"Authorization": f"Bearer {settings.resend_api_key}"},

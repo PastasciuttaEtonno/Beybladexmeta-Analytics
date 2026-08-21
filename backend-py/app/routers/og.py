@@ -70,7 +70,7 @@ async def _fetch_index_html(settings: Settings) -> str | None:
         return _index_cache["html"]
 
     try:
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(timeout=5, follow_redirects=True) as client:
             response = await client.get(f"{origin.rstrip('/')}/index.html")
         if response.status_code >= 400:
             return None

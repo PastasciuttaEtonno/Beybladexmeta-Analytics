@@ -153,7 +153,7 @@ async def get_access_token() -> str:
             )
 
         log.info("[Challengermode] Auth POST %s (refreshKey provided)", _auth_url())
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             response = await client.post(_auth_url(), json={"refreshKey": refresh_key})
 
         if response.status_code >= 400:
@@ -223,7 +223,7 @@ async def _graphql(query: str, variables: dict | None = None) -> dict:
     if variables is not None:
         body["variables"] = variables
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
         response = await client.post(
             _graphql_url(),
             json=body,
@@ -398,7 +398,7 @@ async def _user_graphql(access_token: str, query: str, label: str) -> dict:
     entered", which are per-user and per-request, so they take the caller's
     OAuth token and are never cached.
     """
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         response = await client.post(
             _graphql_url(),
             headers={
