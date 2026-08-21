@@ -43,6 +43,18 @@ class Settings(BaseSettings):
     cm_client_id: str = ""
     cm_client_secret: str = ""
 
+    # Where the ChallengerMode OAuth flow reads the linked profile from.
+    cm_userinfo_url: str = ""
+
+    # Challonge's own OAuth application, distinct from CHALLONGE_API_KEY.
+    challonge_app_client_id: str = ""
+    challonge_app_client_secret: str = ""
+
+    # --- Challonge ---
+    # Only /api/admin/sync-challonge uses this. It is unset in practice:
+    # the Challonge dataset was scraped and loaded from CSV by hand.
+    challonge_api_key: str = ""
+
     # --- Registration and login ---
     recaptcha_secret_key: str = ""
     resend_api_key: str = ""

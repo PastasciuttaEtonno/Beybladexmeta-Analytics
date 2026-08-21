@@ -12,6 +12,7 @@ prove the participant is them, so anyone could file results in someone else's
 name. Hence `check_tournament_placement`, which asks ChallengerMode directly.
 """
 
+import json
 import logging
 import re
 from datetime import date, datetime, timezone
@@ -810,3 +811,304 @@ async def delete_combo(
         await db.rollback()
         log.error("Combo delete failed: %s", exc)
         return JSONResponse(status_code=400, content={"error": str(exc) or "Richiesta non valida"})
+
+
+# --------------------------------------------------- claiming on Challonge ---
+
+# Challonge tournaments have no API the application can query for a placement,
+# so identity is established the other way round: the caller must have a
+# verified alias (or a linked Challonge username) that appears in the stored
+# standings. Without one there is no way to tell them apart from anyone else
+# typing a name, which is why the route refuses rather than guessing.
+
+CHALLONGE_EDIT_WINDOW_MS = 172_800_000
+
+
+def _normalise(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+@router.post("/api/tournaments/{tournament_id}/claim")
+async def claim_challonge_combos(
+    tournament_id: str,
+    request: Request,
+    user: Annotated[CurrentUser, Depends(require_user)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+):
+    try:
+        tournament_id = str(tournament_id or "").strip()
+        if not tournament_id:
+            return JSONResponse(status_code=400, content={"error": "Missing tournament id"})
+
+        if not user.is_admin:
+            first_created = (
+                await db.execute(
+                    text(
+                        "SELECT created_at FROM challonge_reported_combos "
+                        "WHERE tournament_id = :tournament AND user_id = :user "
+                        "ORDER BY created_at ASC LIMIT 1"
+                    ),
+                    {"tournament": tournament_id, "user": user.id},
+                )
+            ).scalar()
+            if first_created is not None:
+                moment = (
+                    first_created
+                    if first_created.tzinfo
+                    else first_created.replace(tzinfo=timezone.utc)
+                )
+                elapsed = (datetime.now(timezone.utc) - moment).total_seconds() * 1000
+                if elapsed > CHALLONGE_EDIT_WINDOW_MS:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"error": "Tempo per le modifiche scaduto (48 ore)."},
+                    )
+
+        row = (
+            await db.execute(
+                text(
+                    "SELECT data FROM challonge_match_results "
+                    "WHERE tournament_id = :tournament LIMIT 1"
+                ),
+                {"tournament": tournament_id},
+            )
+        ).first()
+        if row is None:
+            return JSONResponse(status_code=404, content={"error": "Tournament not found"})
+
+        data = row.data if isinstance(row.data, dict) else json.loads(row.data or "{}")
+
+        valid_names = [
+            r.alias
+            for r in (
+                await db.execute(
+                    text(
+                        "SELECT alias FROM user_aliases "
+                        "WHERE user_id = :user AND is_verified = true"
+                    ),
+                    {"user": user.id},
+                )
+            ).all()
+        ]
+        challonge_username = (
+            await db.execute(
+                text("SELECT challonge_username FROM users WHERE id = :id"), {"id": user.id}
+            )
+        ).scalar()
+        if challonge_username:
+            valid_names.append(challonge_username)
+
+        if not valid_names and not user.is_admin:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "Per registrare combo su tornei Challonge devi "
+                    "collegare il tuo account Challonge."
+                },
+            )
+
+        standings = data.get("standings") or []
+        participant = next(
+            (
+                p
+                for p in standings
+                if any(
+                    _normalise(v) == _normalise(p.get("name") or p.get("username") or "")
+                    for v in valid_names
+                )
+            ),
+            None,
+        )
+
+        if participant is None:
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Utente non trovato tra i partecipanti del torneo."},
+            )
+
+        possible_player_ids: set[str] = set()
+        if participant.get("name"):
+            possible_player_ids.add(participant["name"])
+        if participant.get("username"):
+            possible_player_ids.add(participant["username"])
+        if participant.get("id"):
+            possible_player_ids.add(str(participant["id"]))
+        possible_player_ids.update(valid_names)
+
+        rank = participant.get("rank")
+        # `participant.rank > 4` in JS is false when rank is missing, so an
+        # unranked entry is allowed through rather than refused.
+        if rank is not None and rank > 4:
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Solo i primi 4 classificati possono registrare le combo."},
+            )
+
+        season = None
+        try:
+            raw_date = (
+                data.get("start_date")
+                or data.get("started_at")
+                or (data.get("tournament") or {}).get("started_at")
+            )
+            if raw_date:
+                season = determine_season(
+                    datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
+                )
+        except Exception:
+            pass
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        raw_combos = body.get("combos") if isinstance(body, dict) else None
+        combos = (raw_combos if isinstance(raw_combos, list) else [])[:3]
+
+        blades = [
+            str(c.get("blade")).strip()
+            for c in combos
+            if isinstance(c, dict) and c.get("blade") and str(c.get("blade")).strip()
+        ]
+        if len({b.lower() for b in blades}) != len(blades):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "Regola Deck Unico violata: Non puoi usare la stessa "
+                    "Blade più volte."
+                },
+            )
+
+        participants = int(
+            data.get("total_players")
+            or data.get("participants_count")
+            or (data.get("tournament") or {}).get("participants_count")
+            or 0
+        )
+
+        previous = (
+            await db.execute(
+                text(
+                    "SELECT blade, assist_blade, ratchet, bit, lock_chip, rank, season "
+                    "FROM challonge_reported_combos "
+                    "WHERE tournament_id = :tournament AND user_id = :user"
+                ),
+                {"tournament": tournament_id, "user": user.id},
+            )
+        ).all()
+
+        if possible_player_ids:
+            ids = list(possible_player_ids)
+            admin_filed = (
+                await db.execute(
+                    text(
+                        "SELECT blade, assist_blade, ratchet, bit, lock_chip, "
+                        "placement AS rank, season FROM external_player_combos "
+                        "WHERE tournament_id = :tournament AND platform = 'challonge' "
+                        "AND player_id = ANY(:ids)"
+                    ),
+                    {"tournament": tournament_id, "ids": ids},
+                )
+            ).all()
+
+            # An admin may already have filed this deck on the player's behalf.
+            # Take those points back before the self-reported ones are added,
+            # or the same finish would be counted twice.
+            if admin_filed and participants > 0:
+                for entry in admin_filed:
+                    if not entry.season:
+                        continue
+                    try:
+                        await revert_external_combo(
+                            db,
+                            ComboResult(
+                                blade=entry.blade,
+                                assist_blade=entry.assist_blade or "None",
+                                ratchet=entry.ratchet, bit=entry.bit,
+                                lock_chip=entry.lock_chip or "None",
+                                season=entry.season, placement=entry.rank or 0,
+                                total_participants=participants,
+                            ),
+                        )
+                    except Exception:
+                        pass
+
+            await db.execute(
+                text(
+                    "DELETE FROM external_player_combos WHERE tournament_id = :tournament "
+                    "AND platform = 'challonge' AND player_id = ANY(:ids)"
+                ),
+                {"tournament": tournament_id, "ids": ids},
+            )
+
+        if previous and participants > 0:
+            for entry in previous:
+                if not entry.season:
+                    continue
+                try:
+                    await revert_external_combo(
+                        db,
+                        ComboResult(
+                            blade=entry.blade, assist_blade=entry.assist_blade or "None",
+                            ratchet=entry.ratchet, bit=entry.bit,
+                            lock_chip=entry.lock_chip or "None",
+                            season=entry.season, placement=entry.rank or 0,
+                            total_participants=participants,
+                        ),
+                    )
+                except Exception:
+                    pass
+
+        await db.execute(
+            text(
+                "DELETE FROM challonge_reported_combos "
+                "WHERE tournament_id = :tournament AND user_id = :user"
+            ),
+            {"tournament": tournament_id, "user": user.id},
+        )
+        await db.commit()
+
+        for index, combo in enumerate(combos):
+            if not isinstance(combo, dict) or not combo.get("blade"):
+                continue
+            await db.execute(
+                text(
+                    "INSERT INTO challonge_reported_combos (tournament_id, user_id, "
+                    "combo_number, rank, blade, assist_blade, ratchet, bit, lock_chip, season) "
+                    "VALUES (:tournament, :user, :combo_number, :rank, :blade, :assist, "
+                    ":ratchet, :bit, :chip, :season)"
+                ),
+                {
+                    "tournament": tournament_id,
+                    "user": user.id,
+                    "combo_number": index + 1,
+                    "rank": rank,
+                    "blade": combo["blade"],
+                    "assist": combo.get("assistBlade") or "None",
+                    "ratchet": combo.get("ratchet"),
+                    "bit": combo.get("bit"),
+                    "chip": combo.get("lockChip") or "None",
+                    "season": season,
+                },
+            )
+            await db.commit()
+
+            if season and participants > 0:
+                await process_external_combo(
+                    db,
+                    ComboResult(
+                        blade=combo["blade"],
+                        assist_blade=combo.get("assistBlade") or "None",
+                        ratchet=combo.get("ratchet"), bit=combo.get("bit"),
+                        lock_chip=combo.get("lockChip") or "None",
+                        season=season, placement=rank or 0,
+                        total_participants=participants,
+                    ),
+                )
+
+        await _refresh_top_components(db)
+        return {"success": True}
+    except Exception as exc:
+        await db.rollback()
+        log.error("Error claiming Challonge combos: %s", exc)
+        return JSONResponse(status_code=500, content={"error": "Failed to claim combos"})

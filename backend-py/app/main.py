@@ -10,6 +10,9 @@ from app.config import get_settings
 from app.main_helpers import raw_path
 from app.db import dispose_engine, get_engine
 from app.routers import (
+    admin,
+    me,
+    oauth,
     aliases,
     auth_routes,
     analytics,
@@ -116,3 +119,6 @@ app.include_router(og.router)
 app.include_router(tournament_history.router)
 app.include_router(tournaments.router)
 app.include_router(tournament_writes.router)
+app.include_router(admin.router)
+app.include_router(me.router)
+app.include_router(oauth.router)

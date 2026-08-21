@@ -40,6 +40,12 @@ def unsign(signed_value: str, secret: str) -> str | None:
     # unquote (not unquote_plus) leaves '+' alone, which base64 signatures need.
     signed_value = unquote(signed_value)
 
+    # A value carrying an unusual character is sent wrapped in double quotes
+    # (RFC 6265 quoted-string). Express's parser strips them, so this must too,
+    # or a cookie issued before the encoding was fixed would look invalid.
+    if len(signed_value) >= 2 and signed_value[0] == '"' and signed_value[-1] == '"':
+        signed_value = signed_value[1:-1]
+
     if not signed_value.startswith("s:"):
         return None
 

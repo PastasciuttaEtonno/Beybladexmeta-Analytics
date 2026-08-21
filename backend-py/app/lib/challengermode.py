@@ -369,3 +369,101 @@ async def check_tournament_placement(
                 return True
 
     return False
+
+
+def map_to_torneo_cards(nodes: list[dict]) -> list[dict]:
+    """The shape /api/admin/tournaments hands to the admin UI."""
+    cards = []
+    for node in nodes:
+        spaces = ((node.get("hosts") or {}).get("spaces") or [])
+        first = spaces[0] if spaces else None
+        cards.append(
+            {
+                "id": node.get("id"),
+                "name": node.get("name"),
+                "state": node.get("state"),
+                "contactUrl": node.get("contactUrl"),
+                "logo": ((first or {}).get("logo") or {}).get("url") or None,
+                "organizer": (first or {}).get("name") or None,
+            }
+        )
+    return cards
+
+
+async def _user_graphql(access_token: str, query: str, label: str) -> dict:
+    """A GraphQL call made as the USER, not as the application.
+
+    The rest of this module authenticates with the service refresh key and
+    caches the answers. These two queries ask "who am I" and "what have I
+    entered", which are per-user and per-request, so they take the caller's
+    OAuth token and are never cached.
+    """
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            _graphql_url(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            },
+            json={"query": query},
+        )
+
+    body = response.text
+    if response.status_code >= 400:
+        raise RuntimeError(f"{label} failed: {response.status_code} {body[:400]}")
+
+    payload = json.loads(body)
+    errors = payload.get("errors")
+    if isinstance(errors, list) and errors:
+        raise RuntimeError(f"GraphQL error: {errors[0].get('message') or 'unknown'}")
+    return payload
+
+
+_ME_BASIC_QUERY = (
+    "query Me {\n  me {\n    user { userId username "
+    "profilePicture(size: SMALL) { url } }\n  }\n}"
+)
+
+_PARTICIPATIONS_QUERY = (
+    "query Me {\n  me {\n    user { username userId }\n"
+    '    ownTournamentParticipations(filter: { onlyOngoing: false, gameSlugs: '
+    '["Beyblade X", "beybladex", "BeybladeX", "beybladeX"] }) {\n'
+    "      gameAccountId\n      tournamentId\n      confirmed\n    }\n  }\n}"
+)
+
+
+async def fetch_me_basic(access_token: str) -> dict:
+    payload = await _user_graphql(
+        access_token, _ME_BASIC_QUERY, "Challengermode Me basic"
+    )
+    node = ((payload.get("data") or {}).get("me") or {}).get("user") or {}
+    picture = node.get("profilePicture") or {}
+    return {
+        "userId": str(node["userId"]) if node.get("userId") else None,
+        "username": str(node["username"]) if node.get("username") else None,
+        "profilePictureUrl": str(picture["url"]) if picture.get("url") else None,
+    }
+
+
+async def fetch_user_participations(access_token: str) -> list[dict]:
+    payload = await _user_graphql(
+        access_token, _PARTICIPATIONS_QUERY, "Challengermode Me query"
+    )
+    nodes = (
+        ((payload.get("data") or {}).get("me") or {}).get("ownTournamentParticipations")
+        or []
+    )
+    result = []
+    for node in nodes:
+        node = node or {}
+        tournament_id = str(node.get("tournamentId") or "")
+        if not tournament_id:
+            continue
+        result.append(
+            {
+                "gameAccountId": node.get("gameAccountId"),
+                "tournamentId": tournament_id,
+                "confirmed": bool(node.get("confirmed")),
+            }
+        )
+    return result

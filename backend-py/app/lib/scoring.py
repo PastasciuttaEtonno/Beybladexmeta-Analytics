@@ -75,7 +75,9 @@ def _placement_counts(placement: int) -> dict[str, int]:
     }
 
 
-async def process_external_combo(db: AsyncSession, result: ComboResult) -> None:
+async def process_external_combo(
+    db: AsyncSession, result: ComboResult, *, commit: bool = True
+) -> None:
     """Add one top-4 finish to the aggregates, in a single transaction."""
     points = calculate_points(result.placement, result.total_participants)
     if not points:
@@ -130,10 +132,13 @@ async def process_external_combo(db: AsyncSession, result: ComboResult) -> None:
             {**args, "value": result.component_values[table]},
         )
 
-    await db.commit()
+    if commit:
+        await db.commit()
 
 
-async def revert_external_combo(db: AsyncSession, result: ComboResult) -> None:
+async def revert_external_combo(
+    db: AsyncSession, result: ComboResult, *, commit: bool = True
+) -> None:
     """Remove one previously recorded finish from the aggregates.
 
     Every subtraction is floored at zero, exactly as the SQL does, so a double
@@ -178,4 +183,5 @@ async def revert_external_combo(db: AsyncSession, result: ComboResult) -> None:
             {**args, "value": result.component_values[table]},
         )
 
-    await db.commit()
+    if commit:
+        await db.commit()

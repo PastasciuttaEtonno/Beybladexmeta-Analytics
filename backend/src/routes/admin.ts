@@ -184,8 +184,13 @@ export function registerAdminRoutes(app: Express): void {
         ...fourthCombos.map((combo, idx) => ({ tournamentId: data.tournamentId, playerId: data.fourthPlacePlayerId!, comboNumber: idx + 1, ...combo, piazzamento: 4, numeroPartecipanti: data.participants, dataTorneo: new Date(data.dataTorneo), puntiGuadagnati: fourthPoints })),
       ];
 
+      // combo_stats.season is NOT NULL with no default, so seeding these rows
+      // without it made the INSERT fail and took the whole request down with
+      // it — this endpoint could never succeed.
+      const seasonValAdmin = determineSeason(new Date(data.dataTorneo));
+
       const ensureComboStats = [...firstCombos, ...secondCombos, ...thirdCombos, ...fourthCombos]
-        .map(combo => ({ blade: combo.blade, assistBlade: combo.assistBlade, ratchet: combo.ratchet, bit: combo.bit, lockChip: combo.lockChip }));
+        .map(combo => ({ blade: combo.blade, assistBlade: combo.assistBlade, ratchet: combo.ratchet, bit: combo.bit, lockChip: combo.lockChip, season: seasonValAdmin }));
       if (ensureComboStats.length > 0) {
         await db.insert(comboStats).values(ensureComboStats as any).onConflictDoNothing();
       }
@@ -200,7 +205,6 @@ export function registerAdminRoutes(app: Express): void {
         }
       });
 
-      const seasonValAdmin = determineSeason(new Date(data.dataTorneo));
       const applyIfNew = async (combos: any[], playerId: string, placement: number) => {
         for (const [idx, combo] of combos.entries()) {
           const key = `${playerId}|${idx + 1}`;

@@ -163,6 +163,34 @@ def main() -> int:
         }
         check("malformed body", results["express"] == results["fastapi"], str(results))
 
+        print()
+        print("--- every cookie round-trips, not just a lucky one ---")
+        # The signed cookie is base64, so about half of them contain a "/".
+        # Starlette answers an unusual character by wrapping the value in
+        # double quotes, which Express's parser strips and an earlier version
+        # of app/auth.py did not — a session that worked or not depending on
+        # the random signature. One login could not see that; several can.
+        for backend, base in backends.items():
+            round_trips = []
+            for _ in range(6):
+                make_user(verified=True)
+                psql(f"DELETE FROM login_attempts WHERE email = '{TEST_EMAIL}';")
+                _, _, cookie = call(base, "POST", "/api/auth/login", body=credentials)
+                accepted = (
+                    {
+                        name: call(url, "GET", "/api/auth/me", cookie)[0] == 200
+                        for name, url in backends.items()
+                    }
+                    if cookie
+                    else {"express": False, "fastapi": False}
+                )
+                round_trips.append(all(accepted.values()))
+            check(
+                f"six sessions minted on {backend}, all accepted by both",
+                all(round_trips),
+                f"{round_trips.count(False)} of 6 were rejected",
+            )
+
         print("\n--- the rate limit is shared, not per backend ---")
         make_user(verified=True)
         psql(f"DELETE FROM login_attempts WHERE email = '{TEST_EMAIL}';")
