@@ -186,13 +186,20 @@ async def recalculate_all(db: AsyncSession) -> dict[str, int]:
                 rank = _UNPLACED
 
             participant = entry.get("participant") or entry
-            player_id = str(participant.get("id"))
             name = (
                 participant.get("name")
                 or participant.get("username")
                 or participant.get("display_name")
                 or "Unknown"
             )
+            # Fall back to the name when there is no id, exactly as the ghost
+            # player sync in the admin router does. Scraped standings carry only
+            # rank/name/is_top_cut, so `str(participant.get("id"))` produced the
+            # literal string "None" for every entry — which is truthy, so the
+            # dedupe below kept the first and dropped the rest, and a whole
+            # season's Challonge results collapsed onto one invented player.
+            raw_id = participant.get("id")
+            player_id = str(raw_id) if raw_id else name
             if not player_id or player_id in seen:
                 continue
             seen.add(player_id)
