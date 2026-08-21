@@ -66,3 +66,15 @@ coverage/
 keygen.js
 test-minio.cjs
 REGIONAL_SCORING.md
+
+# Local DB snapshots (contain real user data: emails, bcrypt hashes)
+docker/initdb/*.sql
+docker/initdb/*.sql.gz
+docker/initdb/*.dump
+
+# Python (backend-py)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/

@@ -1,0 +1,132 @@
+# Single public origin for the whole app.
+#
+# nginx serves the SPA and forwards the backend's routes to it, so the browser
+# only ever talks to one origin: no CORS, and the session cookie keeps working
+# exactly as it did when Express served both halves.
+#
+# The strangler is finished: every API route goes to ${API_UPSTREAM}, which is
+# FastAPI. There is deliberately no per-route table any more — pointing
+# API_UPSTREAM back at http://backend:5000 and restarting this container hands
+# everything back to Express, which is still deployed for exactly that reason.
+
+# Traefik terminates TLS and forwards over plain HTTP, so $scheme here is
+# "http". Overwriting X-Forwarded-Proto with it would tell the backend the
+# request was insecure, and the OAuth handlers build their redirect_uri from
+# that header — the provider would then reject an http:// callback. Trust the
+# value Traefik set and fall back to $scheme only for direct access.
+map $http_x_forwarded_proto $forwarded_proto {
+    default $scheme;
+    ~.+     $http_x_forwarded_proto;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Hide the nginx version
+    server_tokens off;
+
+    # Docker's embedded DNS. Without a resolver, nginx resolves an upstream
+    # hostname ONCE at startup and caches the address forever — so the moment
+    # a backend container is redeployed and gets a new IP, every proxied
+    # request 502s until nginx itself is restarted. With this, and a variable
+    # in proxy_pass to force runtime resolution, a backend can be replaced on
+    # its own.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript
+               application/xml image/svg+xml application/manifest+json;
+
+    # --- Security headers (previously set by Express) ---
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${PUBLIC_STORAGE_ORIGIN} https://www.google.com https://www.gstatic.com https://*.gstatic.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://ep1.adtrafficquality.google https://*.google-analytics.com https://*.doubleclick.net; frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://*.google.com; frame-ancestors 'none'; object-src 'none'" always;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+
+    # --- The API, the sitemap and the OG shell all live on one backend ---
+    #
+    # `set` + a variable in proxy_pass is what forces nginx to re-resolve the
+    # upstream at request time (see the resolver above); with a literal name it
+    # would cache the address from startup and 502 forever after a redeploy.
+
+    # FastAPI publishes its Swagger UI and OpenAPI document under /api/_py/.
+    # Now that the whole /api/ prefix reaches it, that would be world-readable,
+    # so it is closed here rather than at the application: a longer prefix wins
+    # over /api/ in nginx, and the docs stay available to anyone who can reach
+    # the container directly.
+    location /api/_py/ {
+        return 404;
+    }
+
+    location /api/ {
+        set $api_upstream "${API_UPSTREAM}";
+        proxy_pass $api_upstream$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        "upgrade";
+        # Tournament imports, the regional recalculation and OG rendering all
+        # run well past nginx's 60s default.
+        proxy_read_timeout 120s;
+    }
+
+    location = /sitemap.xml {
+        set $api_upstream "${API_UPSTREAM}";
+        proxy_pass $api_upstream$request_uri;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        # It walks every tournament and the top 300 combos.
+        proxy_read_timeout 120s;
+    }
+
+    # /combo/:id goes to the backend, which fetches /index.html back from here
+    # and rewrites the og:image / twitter:image tags before returning it.
+    # Serving /index.html is a plain static hit below, so there is no loop.
+    location /combo/ {
+        set $api_upstream "${API_UPSTREAM}";
+        proxy_pass $api_upstream$request_uri;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        # If the backend is down, still serve the SPA rather than a 502.
+        proxy_intercept_errors on;
+        error_page 500 502 503 504 = /index.html;
+    }
+
+    # --- Static assets: hashed filenames, so cache hard ---
+    # `expires` is used instead of `add_header Cache-Control`: an add_header in a
+    # location DISCARDS every header inherited from the server block, which would
+    # silently drop the security headers above. `expires` has no such effect.
+    location /assets/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+
+    # The HTML shell must always be revalidated, or a deploy leaves clients on a
+    # stale index.html pointing at asset hashes that no longer exist.
+    location = /index.html {
+        expires -1;
+    }
+
+    # --- SPA fallback ---
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
