@@ -1,9 +1,14 @@
 # Beyblade X Meta Analytics — Technical Documentation
 
-> **Out of date on structure.** The app has since been split into two independent
-> services, `frontend/` and `backend/` — see the root `README.md`. The endpoint,
-> business-logic and schema references under `docs/backend/` are still accurate;
-> only the paths and the build/run instructions below have moved.
+> **History, not the current layout.** This describes the original single-package
+> app: `client/`, `server/` and a shared Drizzle schema. Since then it was split
+> into `frontend/` and `backend/`, and in August 2026 the Express backend was
+> replaced by `backend-py/` (FastAPI) and deleted. See the root `README.md` for
+> what exists now.
+>
+> What is still trustworthy here: the application overview, the capabilities and
+> the domain concepts. What is not: the project structure, the tech stack below
+> the API layer, and every build, run and deployment instruction.
 
 > Disclaimer: this repository is no longer maintained. The documentation and code may be outdated, and some integrations or deployment instructions may no longer be current.
 >

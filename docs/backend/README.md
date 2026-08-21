@@ -1,5 +1,15 @@
 # Backend Documentation
 
+> **Describes the Express backend, which no longer exists.** It was replaced by
+> `backend-py/` (FastAPI) and deleted in August 2026; the code is in the git
+> history up to `465343b`.
+>
+> The FastAPI port reproduces every route's behaviour — same paths, same
+> response shapes, same error bodies — so the endpoint contracts, the scoring
+> rules and the data model documented here still hold. The file paths,
+> TypeScript snippets and run instructions do not.
+
+
 ## Table of Contents
 
 - [Overview](#overview)

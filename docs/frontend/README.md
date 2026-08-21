@@ -33,7 +33,7 @@ Key frontend characteristics:
 ## Directory Structure
 
 ```
-client/src/
+frontend/src/
 ├── components/
 │   ├── analytics/desktop/        # Analytics page components
 │   ├── combo/desktop/            # Combo detail page components
@@ -123,7 +123,7 @@ The project deliberately avoids a global state store (no Redux, no Zustand). Sta
 
 ### 1. Server State — TanStack Query v5
 
-All data from the API lives in the React Query cache. Configuration in `client/src/lib/queryClient.ts`:
+All data from the API lives in the React Query cache. Configuration in `frontend/src/lib/queryClient.ts`:
 
 ```ts
 const queryClient = new QueryClient({

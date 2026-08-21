@@ -1,5 +1,10 @@
 # Database Usage Examples
 
+> **Archived — no longer applies.** This describes browsing the database
+> through Replit and Drizzle Studio. The app left Replit, and the FastAPI
+> backend has no ORM, so there is no Drizzle Studio to open. Today: Adminer
+> on <http://localhost:8081> for the local database, or `npm run db:psql`.
+
 ## Accessing the Database GUI
 
 ### Method 1: Replit Database Tool (Recommended)

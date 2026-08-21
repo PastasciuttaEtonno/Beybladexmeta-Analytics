@@ -29,21 +29,18 @@ cp frontend/.env.example   frontend/.env     # then fill in
 npm run dev              # fastapi :8000 + frontend :5173
 ```
 
-Open <http://localhost:5173>. The Vite dev server proxies `/api` and
-`/sitemap.xml` to the backend, so the browser sees a single origin and the
-session cookie behaves exactly as it does in production.
+Open <http://localhost:5173>. The Vite dev server proxies `/api`, `/sitemap.xml`
+and `/combo/` to the backend, so the browser sees a single origin and the session
+cookie behaves exactly as it does in production.
 
 Other root scripts: `npm run build`, `npm run check` (typecheck),
 `npm run db:psql`, `npm run db:reset` (wipes the volume and re-seeds),
-`npm run db:migrate -- --url "$DATABASE_URL" --status`, `npm run user:create`.
+`npm run session` (mints an admin cookie), `npm run user:create`.
 
 ### Getting the data
 
 The local database is a replica of production. The dump is **not** committed —
 it contains real emails and password hashes.
-
-To take a fresh one from the VPS (Coolify Postgres container, see
-`docs/` for the current container id):
 
 ```bash
 # 1. On the VPS: dump the database out of the Coolify Postgres container
@@ -63,138 +60,133 @@ npm run db:reset
 ```
 
 `db:reset` destroys the local volume, so the dump is re-applied from scratch;
-without it, an existing volume means the seed scripts are skipped entirely.
+without it an existing volume means the seed scripts are skipped entirely.
+
+Coolify also takes a nightly backup of production at 03:00, keeping seven. Those
+are `pg_dump --format=custom`, so they restore with `pg_restore`, not `psql`.
+
+## Database schema
+
+`migrations/` holds numbered SQL files and `tools/migrate.py` applies them,
+recording what ran in a `schema_migrations` table. See `migrations/README.md`.
+
+```bash
+python tools/migrate.py --url "$DATABASE_URL" --status
+python tools/migrate.py --url "$DATABASE_URL" --apply
+```
+
+There is no ORM: the backend issues SQL directly, so these files are the
+definition of the schema rather than generated output. `migrations/schema.sql`
+is a readable snapshot of the current state — reference only, nothing applies it.
 
 ## Environment variables
 
 `VITE_*` variables are **baked into the JS bundle at build time** — changing one
-requires a rebuild, not a restart. Everything else is read by the backend at
-runtime. Each service has its own `.env`; see the two `.env.example` files.
+requires a rebuild, not a restart. Everything else is read at runtime. Each
+service has its own `.env`; see the two `.env.example` files.
 
-Two that are new to the split:
+Two worth calling out:
 
-- `FRONTEND_ORIGIN` (backend) — where to fetch `index.html` from in order to
-  inject OG tags on `/combo/:id`.
-- `CORS_ORIGINS` (backend) — leave **empty** for the single-origin deployment.
-  Set it only if the frontend ever moves to its own domain, and note the session
-  cookie would then need `SameSite=None; Secure`.
+- `FRONTEND_ORIGIN` — where the backend fetches `index.html` from in order to
+  inject OG tags on `/combo/:id`. Without it that route 404s.
+- `CORS_ORIGINS` — leave **empty** for the single-origin deployment. Set it only
+  if the frontend ever moves to its own domain, and note the session cookie
+  would then need `SameSite=None; Secure`.
+
+`SESSION_SECRET` signs the `connect.sid` cookies already in people's browsers.
+Changing it logs everyone out.
 
 ## Deployment
 
 `docker-compose.prod.yml` builds both images. Traefik/Coolify terminates TLS and
 routes the domain to `frontend`; nginx there serves the SPA and reverse-proxies
-`/api`, `/sitemap.xml` and `/combo` to `backend`.
+`/api`, `/sitemap.xml` and `/combo` to `${API_UPSTREAM}`.
 
-Keeping one origin is deliberate: authentication is a cookie session
-(`express-session` + `connect-pg-simple`), and a second origin would mean CORS
-with credentials plus relaxed cookie flags for no real benefit.
+Keeping one origin is deliberate: authentication is a cookie session in the
+`session` table (the format `express-session` wrote, kept for compatibility with
+sessions issued before the migration), and a second origin would mean CORS with
+credentials plus relaxed cookie flags for no real benefit.
 
-## Migrating to FastAPI (strangler fig)
+The Coolify application is a **Docker Compose** resource pointed at
+`/docker-compose.prod.yml`, and with that build pack the domain belongs to the
+`frontend` *service*, not to the resource. Auto-deploy is on: a push to `main`
+goes live.
 
-`backend-py/` takes routes over from `backend/` a few at a time. Both services
-run side by side against the same database, and **`strangler-routes.json` is the
-single source of truth** for who answers what: nginx routes a listed path to
-FastAPI and everything else to Express.
+nginx forwards `X-Forwarded-Proto` from Traefik rather than overwriting it with
+its own scheme. The OAuth handlers build their `redirect_uri` from that header,
+and Traefik terminates TLS, so overwriting it would offer the provider an
+`http://` callback and get the login rejected.
 
-Sessions are shared, so a user logged in through Express is logged in on the
-FastAPI routes too: `backend-py/app/auth.py` verifies the same signed
-`connect.sid` cookie and reads the same `session` table. Both services therefore
-need the **same `SESSION_SECRET` and the same `DATABASE_URL`**.
+`/api/_py/` returns 404 at the edge, which keeps FastAPI's Swagger UI off the
+public origin. It is still reachable on the service port during development at
+<http://127.0.0.1:8000/api/_py/docs>. `X-Served-By: fastapi` is set on every
+response.
 
-To move a route across:
+## Tools
 
-1. Implement it in `backend-py/`, matching the response exactly — including
-   error bodies, which are `{"error": "..."}`, not FastAPI's `{"detail": ...}`.
-2. Add it to `strangler-routes.json` (with `samples` for any query-string
-   variants worth checking).
-3. `npm run strangler:sync` — regenerates the nginx location blocks. The Vite
-   dev server reads the JSON directly and needs no regeneration.
-4. `npm run strangler:parity` — calls both backends and diffs every response.
-   It exits non-zero on any difference, so it can gate a deploy.
-5. If the route **writes**, also run the write checks (below).
-6. Once green, delete the Express implementation.
+Everything in `tools/` is standalone and takes `--help`.
 
-### Checking routes that write
-
-`parity.py` cannot send a write to both backends — the effect would happen
-twice. `tools/parity_writes.py` instead performs each write on ONE backend and
-reads it back from the OTHER, in both directions, then deletes what it made.
-That also proves the two really do share a session and a database. Requests that
-get rejected change nothing, so those are sent to both and compared directly.
-
-```bash
-npm run strangler:session          # mints a signed connect.sid for an admin
-npm run strangler:parity-writes -- --cookie 'connect.sid=...' \n    --challonge-cookie 'connect.sid=...'   # optional; unlocks the alias checks
-```
-
-`strangler:session` writes a real session row and signs the cookie the way
-express-session would, which is the only practical way in: the login form
-requires reCAPTCHA.
-
-`X-Served-By: fastapi` is set on every FastAPI response, so you can always tell
-which backend answered. `GET /api/_py/whoami` (reachable only on the service
-port, never through nginx) reports who FastAPI thinks you are — useful when a
-session problem is suspected.
-
-### Migrated so far
-
-| Group | Routes |
+| | |
 |---|---|
-| System | `/api/health`, `/api/components`, `/api/seasons` |
-| Combo stats | `/api/stats/combos`, `/api/stats/combos/by-key`, `/api/stats/combos/by-slug` |
-| Component stats | `/api/stats/top/{blade,ratchet,bit,components}`, `/api/stats/leaderboard/{blade,ratchet,bit}` |
-| Analytics | `/api/analytics/meta`, `/api/trends`, `/api/synergy` |
-| Players | `/api/stats/leaderboard`, `/api/stats/player/:nickname`, `/api/player-rankings`, `/api/players/:id`, `/api/players/by-nickname/:nickname`, `/api/leaderboard/regional` |
-| Favourites | `/api/favorites/combos`, `/api/favorites/decks` (GET, POST and DELETE) |
-| Aliases | `/api/user/aliases` (GET, POST and DELETE) |
-| Tournament history | `/api/stats/combos/:comboKey/tournaments`, `/api/players/:id/tournaments`, `/api/players/by-nickname/:nickname/tournaments` |
-| Tournaments | `/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/players/:playerId/combos`, `/api/challengermode/tournaments` |
-| Tournament writes | `POST /api/tournaments/claim`, `PUT`/`DELETE /api/tournaments/:id/combos/:num` |
-| Authentication | `/api/auth/{register,login,logout,me,verify,profile}`, `/api/user/link-{challonge,challengermode}` |
+| `migrate.py` | apply and track schema migrations |
+| `create_user.py` | create an account directly — registration needs a captcha and an emailed link, so this is how the first admin gets made |
+| `dev_session.py` | mint a signed `connect.sid` for an admin, against the **local** database |
+| `import_challonge_json.py` | bulk-load scraped Challonge tournaments through the admin import endpoint |
+| `convert-images-to-webp.py` | add a WebP beside every component PNG that lacks one |
 
-Routing rules are exact matches and anchored regexes rather than prefixes, so
-that a migrated route never swallows an unmigrated sibling —
-`^/api/players/[^/]+$` claims the profile without touching anything below it.
-
-nginx cannot route on HTTP method, so a path that is migrated for GET but not
-for POST needs the exclusion written into the pattern itself. That is why the
-tournament detail rule reads `^/api/tournaments/(?!claim$)[^/]+$`: without the
-lookahead it would also capture `POST /api/tournaments/claim`, which is still
-served by Express.
-
-### Talking to ChallengerMode
+## Talking to ChallengerMode
 
 Tournament names and schedules live in ChallengerMode's API, not our database.
-`backend-py/app/lib/challengermode.py` mirrors the TypeScript client, including
-the `external_api_cache` table and its `cache_key` format, so whichever backend
-fetches first fills the cache for both.
+`backend-py/app/lib/challengermode.py` caches responses in the
+`external_api_cache` table; `CHALLENGERMODE_CACHE_TTL_MINUTES` controls for how
+long (default 1440, matching what the old backend used).
 
-For a parity run this matters: if the cache is cold, both backends call the live
-API and can legitimately get different answers. Set
-`CHALLENGERMODE_CACHE_TTL_MINUTES` very high on **both** so they read the same
-cached rows and neither reaches the network. Both services also need the same
-`CHALLENGERMODE_REFRESH_KEY`.
+Every HTTP client in `backend-py` sets `follow_redirects=True`. That is not
+optional: node's `fetch` and `axios` follow redirects by default and httpx does
+not, and `challengermode.com/oauth/token` answers **307** to
+`www.challengermode.com`. Without it the token exchange silently returns an
+empty body and account linking fails with a misleading message.
 
-### Quirks preserved on purpose
+### Why the tournament archive needs our own tables
 
-Parity means copying the behaviour that is actually shipped, not the behaviour
-that was intended. Two cases are reproduced deliberately and should be fixed in
-both backends at once, or in neither:
+ChallengerMode's `tournamentsForGame` returns **at most 50 tournaments**, newest
+first. Its filter accepts only `tournamentsAfter` — there is no upper bound, no
+cursor and no limit argument (confirmed by introspecting the schema). So once
+more than 50 tournaments exist, older ones drop out of the API response for
+good, and moving the `after` date backwards does not bring them back.
 
-- `/api/stats/combos` **ignores `search` whenever `season` is set.** The Express
-  handler calls `.where()` twice and Drizzle keeps only the last condition.
-- The SQL that builds combo slugs lowercases *after* stripping non-lowercase
-  characters, so `WizardRod` becomes `izardod`, not `wizardrod`. `by-slug` and
-  the sitemap use that SQL; the `by-key` fallback uses a JS helper that
-  lowercases first, so the two disagree on what a slug is.
+`GET /api/tournaments` therefore unions the API response with everything in
+`tournaments_view`, filling in each recovered entry from the cached detail.
 
-Also worth knowing when porting: endpoints built with the Drizzle query builder
-return timestamps as ISO strings (`2026-01-14T13:25:19.053Z`), while endpoints
-built on raw `db.execute` return the unparsed Postgres text
-(`2026-01-14 13:25:19.053603+00`). Aggregates over integer columns (`SUM`,
-`COUNT`) arrive as bigint, which node-postgres renders as a **string**, while
-sums over `double precision` arrive as numbers. `app/serialization.py` exists to
-reproduce all four cases.
+## Challonge
+
+Results are scraped separately (see the `script_challonge_test` repo, which
+writes one JSON per tournament) and loaded with
+`tools/import_challonge_json.py`. It reports before it sends and refuses files
+the scraper got wrong: a `start_date` that is not a date, a missing standings
+list, or an id that is a URL sub-page — `challonge.com/it/<slug>/standings`
+yields the id `standings`, and two such files would overwrite each other.
+
+Importing standings gives points and players. It does **not** produce a meta:
+`/api/analytics/meta` reads `challonge_reported_combos`, which is what a player
+says they used, and that only arrives when someone claims their combos.
+
+The Challonge v1 REST API is the way to resolve a tournament's real date —
+`api.challonge.com/v1/tournaments/<id>.json?api_key=...` returns `start_at`.
+Scraping the web page instead gets a Cloudflare challenge. Note the API renders
+timestamps in a **randomly varying timezone**, so compare instants, never
+strings.
+
+## Serialization
+
+`backend-py/app/serialization.py` exists because the original backend's
+responses were not uniform, and the frontend parses what it was given.
+Endpoints built with the Drizzle query builder returned timestamps as ISO
+strings (`2026-01-14T13:25:19.053Z`); endpoints built on raw SQL returned the
+unparsed Postgres text (`2026-01-14 13:25:19.053603+00`). Aggregates over
+integer columns (`SUM`, `COUNT`) arrive as bigint, which node-postgres rendered
+as a **string**, while sums over `double precision` arrived as numbers. All four
+cases are reproduced deliberately.
 
 ## Component images
 
@@ -214,25 +206,15 @@ uv run tools/convert-images-to-webp.py --apply   # convert and upload
 It reads `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` from `backend-py/.env`.
 The first run converted 96 images and took the set from 63.6 MB to 6.3 MB.
 
-## Why the tournament archive needs our own tables
-
-ChallengerMode's `tournamentsForGame` returns **at most 50 tournaments**, newest
-first. Its filter accepts only `tournamentsAfter` — there is no upper bound, no
-cursor and no limit argument (confirmed by introspecting the schema). So once
-more than 50 tournaments exist, older ones drop out of the API response for
-good, and moving the `after` date backwards does not bring them back.
-
-`GET /api/tournaments` therefore unions the API response with everything in
-`tournaments_view`, filling in each recovered entry from the cached detail. At
-the time of writing that is the difference between showing 50 tournaments
-(May 2026 onwards) and showing all 124 (October 2025 onwards).
-
 ## Documentation
 
-`docs/backend/api-endpoints.md` documents all ~70 endpoints with their auth
-level and payloads — it is the contract the FastAPI port has to reproduce.
-`docs/backend/business-logic.md` and `docs/backend/database-schema.md` cover
-scoring and the data model.
+`docs/backend/api-endpoints.md` documents the endpoints with their auth level
+and payloads; `docs/backend/business-logic.md` and
+`docs/backend/database-schema.md` cover scoring and the data model. They were
+written for the Express implementation, which FastAPI reproduces route for
+route, so the contracts still hold even though the file paths they mention do
+not.
 
-> Note: `docs/README.md` still describes the pre-split single-package layout
-> (`client/`, `server/`, `shared/`).
+`docs/README.md` predates both the split and the migration: it describes the
+original single-package layout (`client/`, `server/`, `shared/`) and should be
+read as history.
