@@ -24,9 +24,8 @@ FROM nginx:1.27-alpine AS runner
 
 # nginx:alpine renders /etc/nginx/templates/*.template through envsubst on
 # startup, so the backend upstream stays runtime-configurable.
-# One upstream for the whole API. The strangler is finished, so this points
-# at FastAPI; setting it back to http://backend:5000 and restarting this
-# container puts Express back in charge without rebuilding anything.
+# One upstream for the whole API. Kept as a variable so it can be repointed
+# at runtime, though FastAPI is now the only backend there is.
 ENV API_UPSTREAM=http://backend-py:8000 \
     PUBLIC_STORAGE_ORIGIN=""
 

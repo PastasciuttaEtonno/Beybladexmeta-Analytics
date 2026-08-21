@@ -9,58 +9,16 @@
 # resource, reachable over the external `coolify` network.
 
 services:
-  # The original Express backend. Nothing routes to it any more — it stays
-  # deployed purely so the cutover can be undone by pointing API_UPSTREAM at it
-  # and restarting `frontend`, with no rebuild and no lost sessions. Remove it
-  # once FastAPI has run clean for a while.
-  backend:
-    build:
-      context: ./backend
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      PORT: 5000
-      DATABASE_URL: ${DATABASE_URL}
-      SESSION_SECRET: ${SESSION_SECRET}
-      APP_BASE_URL: ${APP_BASE_URL}
-      # nginx serves index.html; the backend fetches it from here to inject OG tags.
-      FRONTEND_ORIGIN: http://frontend
-      # Empty: same origin, so no CORS. Fill only if the frontend ever moves to
-      # its own domain — and then the session cookie needs SameSite=None.
-      CORS_ORIGINS: ${CORS_ORIGINS:-}
-      S3_ENDPOINT: ${S3_ENDPOINT}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
-      VITE_PUBLIC_MINIO_URL: ${VITE_PUBLIC_MINIO_URL}
-      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      CHALLENGERMODE_API_KEY: ${CHALLENGERMODE_API_KEY:-}
-      CHALLENGERMODE_AUTH_URL: ${CHALLENGERMODE_AUTH_URL:-}
-      CHALLENGERMODE_GRAPHQL_URL: ${CHALLENGERMODE_GRAPHQL_URL:-}
-      CHALLENGERMODE_REFRESH_KEY: ${CHALLENGERMODE_REFRESH_KEY:-}
-      CHALLONGE_API_KEY: ${CHALLONGE_API_KEY:-}
-      CHALLONGE_API_REST_URL: ${CHALLONGE_API_REST_URL:-}
-      CHALLONGE_APP_CLIENT_ID: ${CHALLONGE_APP_CLIENT_ID:-}
-      CHALLONGE_APP_CLIENT_SECRET: ${CHALLONGE_APP_CLIENT_SECRET:-}
-      CM_CLIENT_ID: ${CM_CLIENT_ID:-}
-      CM_CLIENT_SECRET: ${CM_CLIENT_SECRET:-}
-      CM_REDIRECT_URI: ${CM_REDIRECT_URI:-}
-    networks:
-      - app
-      - coolify
-
-  # Serves the whole API. Every route was migrated off `backend` and verified
-  # against it with the parity harnesses in tools/ before this became the
-  # default upstream.
+  # Serves the whole API. Every route was migrated off the Express backend and
+  # verified against it route by route before that backend was removed; see the
+  # git history for the parity harnesses if you ever need them again.
   backend-py:
     build:
       context: ./backend-py
     restart: unless-stopped
     environment:
-      # Must be the SAME database and the SAME session secret as `backend`,
-      # otherwise a session minted by one looks invalid to the other — which is
-      # what makes the rollback below seamless rather than a mass logout.
+      # SESSION_SECRET must not change: it signs the connect.sid cookies that
+      # are already in people's browsers, so a new value logs everyone out.
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
       PORT: 8000
@@ -109,13 +67,13 @@ services:
         VITE_RECAPTCHA_USE_ENTERPRISE: ${VITE_RECAPTCHA_USE_ENTERPRISE:-}
     restart: unless-stopped
     environment:
-      # THE cutover switch. Set it to http://backend:5000 and restart this one
-      # container to hand the whole API back to Express.
+      # Where nginx sends /api, /sitemap.xml and /combo. It stays a variable so
+      # the upstream can be repointed without rebuilding the image; there is no
+      # second backend to point it at any more.
       API_UPSTREAM: ${API_UPSTREAM:-http://backend-py:8000}
       # Added to the CSP connect-src so the browser may talk to Garage.
       PUBLIC_STORAGE_ORIGIN: ${VITE_PUBLIC_MINIO_URL}
     depends_on:
-      - backend
       - backend-py
     networks:
       - app

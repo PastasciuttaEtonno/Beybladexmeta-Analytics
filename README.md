@@ -1,17 +1,20 @@
 # Beybladexmeta Analytics
 
-Two independent services behind one public origin:
+Two services behind one public origin:
 
 | | | |
 |---|---|---|
-| `frontend/` | React 18 + Vite + wouter + TanStack Query | served by nginx |
-| `backend/`  | Express + Drizzle + Postgres | Node, being migrated to FastAPI |
-| `backend-py/` | FastAPI + SQLAlchemy | takes over routes one group at a time |
+| `frontend/` | React 18 + Vite + wouter + TanStack Query | served by nginx, which also proxies the API |
+| `backend-py/` | FastAPI + SQLAlchemy + asyncpg | serves every route |
+| `migrations/` | numbered SQL | the schema of record, applied by `tools/migrate.py` |
 
 The frontend does **not** import anything from the backend. It calls the API with
 relative URLs and declares the response shapes itself in
-`frontend/src/types/api.ts`, so replacing the Express backend with a Python one
-is invisible to it.
+`frontend/src/types/api.ts` — which is what let the original Express backend be
+replaced route by route without the frontend noticing. That migration finished
+on 2026-08-21 and the Express service was removed; it is in the git history up
+to commit `465343b`, along with the parity harnesses that proved the two agreed
+on all 176 compared URLs.
 
 ## Local setup
 
@@ -19,11 +22,11 @@ Prerequisites: Node 20+, Docker, and a copy of the production dump at
 `docker/initdb/10-beyblade.sql.gz` (see [Getting the data](#getting-the-data)).
 
 ```bash
-npm run install:all      # installs frontend/ and backend/ separately
+npm run install:all      # frontend deps + backend-py via uv
 npm run db:up            # Postgres on :5433, seeded from the dump on first start
-cp backend/.env.example  backend/.env    # then fill in
-cp frontend/.env.example frontend/.env   # then fill in
-npm run dev              # express :5000 + fastapi :8000 + frontend :5173
+cp backend-py/.env.example backend-py/.env   # then fill in
+cp frontend/.env.example   frontend/.env     # then fill in
+npm run dev              # fastapi :8000 + frontend :5173
 ```
 
 Open <http://localhost:5173>. The Vite dev server proxies `/api` and
@@ -31,7 +34,8 @@ Open <http://localhost:5173>. The Vite dev server proxies `/api` and
 session cookie behaves exactly as it does in production.
 
 Other root scripts: `npm run build`, `npm run check` (typecheck),
-`npm run db:psql`, `npm run db:reset` (wipes the volume and re-seeds).
+`npm run db:psql`, `npm run db:reset` (wipes the volume and re-seeds),
+`npm run db:migrate -- --url "$DATABASE_URL" --status`, `npm run user:create`.
 
 ### Getting the data
 
@@ -207,7 +211,7 @@ uv run tools/convert-images-to-webp.py           # report what is missing
 uv run tools/convert-images-to-webp.py --apply   # convert and upload
 ```
 
-It reads `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` from `backend/.env`.
+It reads `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` from `backend-py/.env`.
 The first run converted 96 images and took the set from 63.6 MB to 6.3 MB.
 
 ## Why the tournament archive needs our own tables
