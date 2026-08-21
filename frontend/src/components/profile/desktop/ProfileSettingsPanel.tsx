@@ -12,13 +12,18 @@ import {
 } from "lucide-react";
 import { ParticipationsList } from "@/components/profile/ParticipationsList";
 
+import { AccountLinkingAlert } from "@/components/profile/AccountLinkingAlert";
+
 interface ProfileSettingsPanelProps {
     user: any;
     handleLogout: () => void;
     onOpenAliases: () => void;
+    /** Why the last OAuth linking attempt failed, if it did. */
+    linkError?: string | null;
+    onDismissLinkError?: () => void;
 }
 
-export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases }: ProfileSettingsPanelProps) {
+export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkError, onDismissLinkError }: ProfileSettingsPanelProps) {
 
     // Reusable Row Component
     const SettingsRow = ({
@@ -94,6 +99,12 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases }: Prof
                                 </span>
                             )}
                         </div>
+
+                        {linkError && onDismissLinkError && (
+                            <div className="mb-3">
+                                <AccountLinkingAlert error={linkError} onDismiss={onDismissLinkError} />
+                            </div>
+                        )}
 
                         <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm divide-y divide-border">
                             {/* Challonge */}

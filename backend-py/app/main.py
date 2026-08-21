@@ -122,3 +122,8 @@ app.include_router(tournament_writes.router)
 app.include_router(admin.router)
 app.include_router(me.router)
 app.include_router(oauth.router)
+
+# Must come after every include_router: it reads the finished route table.
+from app import openapi_docs  # noqa: E402
+
+openapi_docs.install(app)

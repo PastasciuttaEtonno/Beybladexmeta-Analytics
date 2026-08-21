@@ -16,6 +16,7 @@ import { LogOut, Moon, Sun, Lock, Info, ChevronRight, HelpCircle } from "lucide-
 // Components
 import { AliasManager } from "@/components/profile/AliasManager";
 import { LinkedAccountsCard } from "@/components/profile/LinkedAccountsCard";
+import { AccountLinkingAlert } from "@/components/profile/AccountLinkingAlert";
 import { ParticipationsList } from "@/components/profile/ParticipationsList";
 import { DesktopProfileLayout } from "@/components/profile/desktop/DesktopProfileLayout";
 import { ProfileSidebar } from "@/components/profile/desktop/ProfileSidebar";
@@ -30,19 +31,32 @@ export default function Profile() {
   // Desktop specific state
   const [isAliasesDialogOpen, setIsAliasesDialogOpen] = useState(false);
 
+  // A failed account link redirects here as /profile?error=... The toast is
+  // immediate but dismissable, and the parameter is stripped from the URL right
+  // after — so the reason is also held in state and shown beside the Connect
+  // buttons, which is where someone who just failed to link is actually looking.
+  const [linkError, setLinkError] = useState<string | null>(null);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
     if (error) {
+      const message = decodeURIComponent(error);
+      setLinkError(message);
       toast({
         title: "Account Linking Error",
-        description: decodeURIComponent(error),
+        description: message,
         variant: "destructive",
       });
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
     }
   }, [toast]);
+
+  // Once an account is linked the warning no longer describes anything true.
+  useEffect(() => {
+    if (user?.challengerId || user?.challongeId) setLinkError(null);
+  }, [user?.challengerId, user?.challongeId]);
 
 
   const handleLogout = async () => {
@@ -88,6 +102,7 @@ export default function Profile() {
         {/* Linked Accounts */}
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">Account Collegati</h2>
+          <AccountLinkingAlert error={linkError} onDismiss={() => setLinkError(null)} />
           <Card className="overflow-hidden">
             <LinkedAccountsCard user={user as any} />
           </Card>
@@ -185,6 +200,8 @@ export default function Profile() {
               user={user as any}
               handleLogout={handleLogout}
               onOpenAliases={() => setIsAliasesDialogOpen(true)}
+              linkError={linkError}
+              onDismissLinkError={() => setLinkError(null)}
             />
           }
         />
