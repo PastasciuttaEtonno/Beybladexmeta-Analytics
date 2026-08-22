@@ -1,18 +1,22 @@
 # Beyblade X Meta Analytics — Technical Documentation
 
-> **History, not the current layout.** This describes the original single-package
-> app: `client/`, `server/` and a shared Drizzle schema. Since then it was split
-> into `frontend/` and `backend/`, and in August 2026 the Express backend was
-> replaced by `backend-py/` (FastAPI) and deleted. See the root `README.md` for
-> what exists now.
->
-> What is still trustworthy here: the application overview, the capabilities and
-> the domain concepts. What is not: the project structure, the tech stack below
-> the API layer, and every build, run and deployment instruction.
-
-> Disclaimer: this repository is no longer maintained. The documentation and code may be outdated, and some integrations or deployment instructions may no longer be current.
+> This page documents the current split architecture. The root
+> [`README.md`](../README.md) is the operational quick start; the pages linked
+> below contain deeper implementation details.
 >
 > This webapp was built using AI agents, including Claude Code, Gemini, and several IDE AI tools such as Antigravity, Cursor, and Trae.
+
+> **Historical note:** [`backend/README.md`](backend/README.md) describes the
+> former Express implementation and is retained as migration context. The
+> original application used a Node.js/TypeScript Express server, a React/Vite
+> client, Drizzle ORM, `express-session`, and a shared TypeScript schema. It was
+> later split into a standalone frontend and backend, then the Express service
+> was refactored to the current Python/FastAPI service in `backend-py/`.
+
+The migration preserved the public API paths, response contracts, session
+semantics, scoring rules, and database model so the frontend could remain
+independent of the backend implementation. Historical Express-specific paths
+and commands below are intentionally not presented as current setup guidance.
 
 ## Table of Contents
 
@@ -20,7 +24,7 @@
 - [High-Level Architecture](#high-level-architecture)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [Environment Variables](#environment-variables)
+- [Configuration](#configuration)
 - [Local Development Setup](#local-development-setup)
 - [Build & Deployment](#build--deployment)
 
@@ -43,41 +47,36 @@ Key capabilities:
 
 ## High-Level Architecture
 
+The current architecture is the result of that refactor: the React/Vite SPA is
+served by nginx, nginx proxies API requests to FastAPI, and FastAPI connects to
+PostgreSQL and the external integrations. The former Express monolith is no
+longer part of the runtime.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Browser (SPA)                        │
-│                                                             │
-│  React 18 + Vite                                            │
-│  Wouter (routing) │ React Query (server state)              │
-│  React Context (auth/theme) │ shadcn/ui + TailwindCSS       │
-└────────────────────────┬────────────────────────────────────┘
-                         │  HTTP (REST JSON)
-                         │  Cookies (session)
-┌────────────────────────▼────────────────────────────────────┐
-│                    Express.js Server                        │
-│                                                             │
-│  server/index.ts  (entry, middleware, security headers)     │
-│  server/routes.ts (68 API endpoints)                        │
-│  server/auth*.ts  (session auth, OAuth linking)             │
-│  server/lib/      (ChallengerMode, Challonge, scoring)      │
-└──────┬────────────────┬──────────────────┬──────────────────┘
-       │                │                  │
-       ▼                ▼                  ▼
-┌──────────┐   ┌────────────────┐   ┌───────────────┐
-│PostgreSQL│   │MinIO / AWS S3  │   │External APIs  │
-│(Drizzle) │   │(object storage │   │ChallengerMode │
-│          │   │ images/assets) │   │Challonge      │
-└──────────┘   └────────────────┘   │Resend (email) │
-                                    │reCAPTCHA      │
-                                    └───────────────┘
+Browser (React SPA)
+       │ relative REST requests + session cookies
+       ▼
+Traefik / Coolify (TLS and public origin)
+       │
+       ▼
+frontend container (nginx)
+       │ serves static assets and proxies /api, /combo and /sitemap.xml
+       ▼
+backend-py container (FastAPI)
+       ├── SQL through SQLAlchemy + asyncpg ──► Coolify PostgreSQL
+       ├── component images ──────────────────► Garage / S3
+       └── integrations ─────────────────────► ChallengerMode, Challonge,
+                                           Resend and reCAPTCHA
 ```
 
 **Key design decisions:**
 
-- **Monorepo with shared schema** — `shared/schema.ts` defines Drizzle ORM tables that are imported by both the server (as the data layer) and the client (for TypeScript type inference via `drizzle-zod`).
-- **Single-server deployment** — The Express server serves both the REST API (`/api/*`) and the built React SPA (static files). No separate frontend hosting is required.
-- **View-based analytics** — Complex leaderboard and meta queries are offloaded to PostgreSQL views (`unified_meta_view`, `player_leaderboard`, etc.), keeping route handlers thin.
-- **Session auth, not JWT** — `express-session` with a PostgreSQL store (falling back to in-memory) keeps state server-side. Cookies are `httpOnly`, `sameSite: lax`, `secure` in production.
+- **One public origin** — nginx owns the browser-facing origin and proxies API and HTML-shell requests to FastAPI. This keeps session cookies simple and avoids browser CORS configuration.
+- **API boundary at the frontend** — the SPA uses relative URLs and owns its response types in `frontend/src/types/api.ts`; it does not import backend code.
+- **Python API service** — `backend-py/app/` contains routing, auth, integrations, serialization and RAG logic. SQL is issued through SQLAlchemy/asyncpg, while migrations remain explicit numbered SQL files.
+- **Database-backed sessions** — authentication uses server-side sessions in PostgreSQL and signed `connect.sid` cookies; the secret must remain stable across deployments.
+- **Database does the aggregation** — analytics views and SQL queries keep leaderboard and meta calculations close to the data.
+- **RAG keeps text and numbers separate** — knowledge documents are embedded and retrieved from the RAG pipeline, while tournament statistics remain queryable in PostgreSQL through typed tools.
 
 ---
 
@@ -107,30 +106,21 @@ Key capabilities:
 
 | Technology | Version | Purpose |
 |---|---|---|
-| Node.js | 18+ | Runtime |
-| Express | 4.22.0 | HTTP framework |
-| TypeScript | 5.6.3 | Type safety |
-| Drizzle ORM | 0.39.1 | Database ORM |
-| PostgreSQL (pg) | 8.16.3 | Primary database |
-| express-session | 1.18.1 | Session management |
-| connect-pg-simple | 10.0.0 | PostgreSQL session store |
-| bcrypt | 6.0.0 | Password hashing |
-| Passport | 0.7.0 | Authentication middleware |
-| Zod | 3.24.2 | Request validation |
-| Axios | 1.13.5 | HTTP client (external APIs) |
-| @napi-rs/canvas | 0.1.92 | OG image generation |
-| Resend | 6.4.2 | Transactional email |
-| AWS SDK v3 (S3) | 3.974.0 | Object storage |
-| @google-cloud/recaptcha-enterprise | 6.3.1 | Bot protection |
-| ESBuild | 0.25.0 | Server bundler |
+| Python | 3.12+ | Runtime |
+| FastAPI | current | HTTP framework and OpenAPI layer |
+| SQLAlchemy + asyncpg | current | Async PostgreSQL access |
+| Pydantic Settings | current | Typed environment configuration |
+| itsdangerous | current | Signed session cookie handling |
+| httpx | current | External HTTP integrations |
+| Pillow | current | Open Graph image generation |
 
 ### Database & Infrastructure
 
 | Technology | Purpose |
 |---|---|
 | PostgreSQL | Primary relational database |
-| Drizzle Kit | Schema migrations |
-| MinIO / AWS S3 | Image and asset object storage |
+| Numbered SQL migrations | Schema migrations and schema history |
+| Garage / S3 | Image and asset object storage |
 | Docker / docker-compose | Containerized deployment |
 | Coolify | Container orchestration (production) |
 
@@ -140,7 +130,7 @@ Key capabilities:
 
 ```
 Beybladexmeta-Analytics/
-├── client/                   # React frontend
+├── frontend/                 # React SPA and production nginx image
 │   └── src/
 │       ├── components/       # UI components (organized by feature)
 │       ├── contexts/         # React Context providers
@@ -149,52 +139,44 @@ Beybladexmeta-Analytics/
 │       ├── pages/            # Route-level page components
 │       ├── App.tsx           # Root component, routing
 │       └── main.tsx          # Entry point
-├── server/                   # Express backend
-│   ├── lib/                  # Business logic modules
-│   ├── index.ts              # Server entry, middleware setup
-│   ├── routes.ts             # All API route handlers
-│   ├── auth.ts               # Auth helpers (hashing, session)
-│   ├── auth-challenger.ts    # ChallengerMode OAuth
-│   ├── auth-challonge.ts     # Challonge OAuth
-│   ├── db.ts                 # Drizzle DB connection
-│   ├── storage.ts            # Data access layer (DAL)
-│   ├── objectStorage.ts      # S3/MinIO helpers
-│   └── og-image.ts           # Open Graph image generation
-├── shared/
-│   └── schema.ts             # Drizzle ORM schema (shared types)
-├── migrations/               # Drizzle migration SQL files
-├── scripts/                  # CLI utility scripts
-├── DOCS/                     # This documentation
-├── drizzle.config.ts         # Drizzle ORM configuration
-├── vite.config.ts            # Vite bundler configuration
-├── tailwind.config.ts        # TailwindCSS configuration
-├── tsconfig.json             # TypeScript configuration
-├── docker-compose.yml        # Full stack local Docker setup
-├── Dockerfile                # Production Docker image
-└── package.json              # Unified dependency manifest
+├── backend-py/               # FastAPI service
+│   ├── app/                  # Routes, services, auth, SQL, integrations, RAG
+│   ├── tests/                # Backend and RAG tests
+│   ├── pyproject.toml        # Python dependencies and tooling
+│   └── Dockerfile            # Backend image
+├── migrations/               # Numbered SQL migrations and schema snapshot
+├── docker/                   # Local database initialization
+├── docker-compose.dev.yml    # Development topology
+├── docker-compose.prod.yml   # Coolify production topology
+├── knowledge/                # RAG source documents
+├── tools/                    # Migration, import, evaluation, and admin CLIs
+├── docs/                     # Architecture and implementation documentation
+└── package.json              # Root orchestration scripts
 ```
 
-> **Monorepo note:** There is a single `package.json` and `tsconfig.json` at the root. Path aliases `@/*` resolve to `client/src/*` and `@shared/*` resolve to `shared/*`.
+The frontend and backend are intentionally separate applications. Their
+contract is the HTTP API, not shared source imports; frontend response types
+live in `frontend/src/types/api.ts`.
 
 ---
 
-## Environment Variables
+## Configuration
 
-Copy `.env.local` for local development. The table below lists all recognised variables.
+Each service reads its own environment file. Start from
+`backend-py/.env.example` and `frontend/.env.example`; production values are
+provided to the two containers by Coolify.
 
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `PGHOST` / `PGPORT` / `PGUSER` / `PGPASSWORD` / `PGDATABASE` | Yes | Individual PG credentials |
 | `SESSION_SECRET` | Yes | Secret for signing session cookies |
-| `NODE_ENV` | Yes | `development` or `production` |
-| `PORT` | No | HTTP port (default: `5000`) |
+| `PORT` | No | FastAPI port (default: `8000`) |
+| `FRONTEND_ORIGIN` | Prod | Internal frontend URL used for OG HTML generation |
+| `CORS_ORIGINS` | No | Leave empty for the single-origin deployment |
 | `APP_BASE_URL` | Prod | Base URL, used for cookie `secure` flag |
-| `VITE_PUBLIC_MINIO_URL` | No | Public MinIO URL for image assets |
+| `VITE_PUBLIC_MINIO_URL` | No | Public Garage/S3 URL for image assets |
 | `S3_ENDPOINT` | No | MinIO / S3 endpoint |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | No | Object storage credentials |
-| `PUBLIC_OBJECT_SEARCH_PATHS` | No | Comma-separated paths for object lookup |
-| `PRIVATE_OBJECT_DIR` | No | Local directory for private objects |
 | `RECAPTCHA_SECRET_KEY` | Prod | Google reCAPTCHA server-side secret |
 | `VITE_RECAPTCHA_SITE_KEY` | Prod | Google reCAPTCHA client-side key |
 | `VITE_RECAPTCHA_USE_ENTERPRISE` | No | `"true"` to use Enterprise reCAPTCHA |
@@ -207,6 +189,9 @@ Copy `.env.local` for local development. The table below lists all recognised va
 | `CHALLONGE_API_KEY` | No | Challonge API key |
 | `CHALLONGE_API_REST_URL` | No | Challonge REST API base URL |
 | `CHALLONGE_APP_CLIENT_ID` / `CHALLONGE_APP_CLIENT_SECRET` | No | Challonge OAuth app credentials |
+| `VOYAGE_API_KEY` | RAG | Embeddings and reranking |
+| `OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY` | RAG | Chat provider credentials |
+| `CHAT_PROVIDER` | RAG | `openrouter` or `claude` |
 
 ---
 
@@ -214,58 +199,58 @@ Copy `.env.local` for local development. The table below lists all recognised va
 
 ### Prerequisites
 
-- **Node.js** 18 or later
-- **PostgreSQL** 14 or later (or Docker)
+- **Node.js** 20 or later
+- **Docker**
+- **uv** for the Python backend
 
 ### Option A — Docker (recommended)
 
 ```bash
-# Start the full stack (app + PostgreSQL)
-docker-compose up
+# Start PostgreSQL and the application containers
+docker compose -f docker-compose.dev.yml up -d
 
-# App will be available at http://localhost:5000
+# Frontend and API are available through the nginx origin at http://localhost:8080
 ```
 
-### Option B — Manual
+### Option B — Local processes
 
 ```bash
-# 1. Install dependencies
-npm install
+# Install frontend dependencies and backend dependencies
+npm run install:all
 
-# 2. Configure environment
-cp .env.local .env
-# Edit .env and fill in DATABASE_URL + SESSION_SECRET
+# Configure both services from their example files
+cp backend-py/.env.example backend-py/.env
+cp frontend/.env.example frontend/.env
 
-# 3. Create the database (if it doesn't exist)
-npm run db:create
-
-# 4. Push schema to database
-npm run db:push
-
-# 5. (Optional) Seed initial data
-npx tsx server/seed.ts
-
-# 6. Create an admin user
-npm run user:create
-
-# 7. Start the development server
+# Start PostgreSQL first, then run the API and Vite frontend
+npm run db:up
 npm run dev
-# Server + Vite HMR on http://localhost:5000
+```
+
+The local Vite server runs on port `5173` and proxies API requests to FastAPI on
+port `8000`. For the production-shaped experience, use the Docker command above
+and browse through nginx on port `8080`.
+
+### Database migrations
+
+`migrations/` is the schema of record. Apply migrations with the Python tool:
+
+```bash
+python tools/migrate.py --url "$DATABASE_URL" --status
+python tools/migrate.py --url "$DATABASE_URL" --apply
 ```
 
 ### Available Scripts
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Start development server (tsx + Vite) |
-| `npm run build` | Build client (Vite) + server (ESBuild) |
-| `npm run start` | Start production server from `dist/` |
+| `npm run dev` | Start FastAPI and the Vite frontend |
+| `npm run build` | Build the frontend image assets |
 | `npm run check` | TypeScript type check |
-| `npm run db:push` | Push Drizzle schema changes to database |
-| `npm run db:create` | Create database if it doesn't exist |
+| `npm run db:up` | Start the local PostgreSQL container |
+| `npm run db:reset` | Recreate and reseed the local database |
 | `npm run user:create` | Create a user account via CLI |
-| `npm run regional:recalc` | Recalculate all regional leaderboard scores |
-| `npm run migrate:challonge-combos` | Run Challonge combo migration |
+| `npm run session` | Mint a local admin session cookie |
 
 ---
 
@@ -273,25 +258,26 @@ npm run dev
 
 ```bash
 npm run build
-# Outputs:
-#   dist/public/   → Vite-built React SPA
-#   dist/index.js  → ESBuild-bundled Express server
+# Builds the frontend assets used by the nginx image
 ```
 
-The single `dist/index.js` serves both the API and the SPA. Deploy with:
+Production uses the two services defined in `docker-compose.prod.yml`:
 
 ```bash
-NODE_ENV=production node dist/index.js
+docker compose -f docker-compose.prod.yml build
 ```
 
-For Docker-based deployment (Coolify, VPS):
+Coolify terminates TLS at Traefik and routes the public domain to `frontend`.
+nginx serves the Vite build and proxies `/api/`, `/sitemap.xml`, and `/combo/` to
+`backend-py`. The backend connects to the existing Coolify PostgreSQL resource;
+the production compose file does not create a second database.
 
-```bash
-docker build -t beyblade-analytics .
-docker run -p 5000:5000 --env-file .env beyblade-analytics
-```
+The RAG assistant is part of the FastAPI service. Its source documents live in
+`knowledge/`, its implementation is under `backend-py/app/lib/rag/`, and its
+design and evaluation record is in [`rag/`](rag/README.md).
 
 ---
 
-*For frontend architecture details see [frontend/README.md](frontend/README.md).*  
-*For backend architecture details see [backend/README.md](backend/README.md).*
+For frontend details see [frontend/README.md](frontend/README.md). The older
+[backend/README.md](backend/README.md) is historical; current backend code is in
+`backend-py/app/`.

@@ -44,7 +44,7 @@ it contains real emails and password hashes.
 
 ```bash
 # 1. On the VPS: dump the database out of the Coolify Postgres container
-ssh -i ~/Desktop/oracle/ssh-key-2026-08-19.key ubuntu@92.4.170.189
+ssh -i ~/Desktop/oracle/ssh-key-2026-08-19.key ubuntu@YOUR_VPS_IP
 CID=$(sudo docker ps --filter "ancestor=postgres:18-alpine" --format '{{.ID}}' | head -1)
 sudo docker exec "$CID" pg_dump -U postgres -d beyblade_tracker --no-owner --no-privileges \
   | gzip > ~/beyblade_tracker.sql.gz
@@ -52,7 +52,7 @@ exit
 
 # 2. On your machine: pull it into the seed directory
 scp -i ~/Desktop/oracle/ssh-key-2026-08-19.key \
-    ubuntu@92.4.170.189:~/beyblade_tracker.sql.gz \
+    ubuntu@YOUR_VPS_IP:~/beyblade_tracker.sql.gz \
     docker/initdb/10-beyblade.sql.gz
 
 # 3. Recreate the local database from it
@@ -122,6 +122,37 @@ public origin. It is still reachable on the service port during development at
 <http://127.0.0.1:8000/api/_py/docs>. `X-Served-By: fastapi` is set on every
 response.
 
+## The assistant (RAG)
+
+`backend-py/app/lib/rag/` answers questions about Beyblade X by combining two
+kinds of data that live in different places: the **mechanics**, which are text
+and get embedded, and the **tournament numbers**, which stay in SQL and are
+reached through six typed tools. A vector index cannot sort, sum or compare, so
+nothing numeric is ever indexed.
+
+It is reachable at `/chat`, and from a launcher on every page.
+
+```
+POST /api/chat          one JSON response
+POST /api/chat/stream   the same answer as SSE (six event types)
+GET  /api/admin/chat-errors   failures with full detail (admin only)
+```
+
+Migrations `0010`–`0016`. Corpus in `knowledge/`, ingested with
+`python -m app.lib.rag.cli ingest`. Two evaluation gates, to be run after any
+change to retrieval or prompting:
+
+```bash
+python tools/eval_retrieval.py  --url "$DATABASE_URL" --provider voyage
+python tools/eval_generation.py --url "$DATABASE_URL"
+```
+
+**Full documentation — how it was built, every decision and every defect found —
+is in [`docs/rag/`](docs/rag/README.md)** (written in Italian, like the code
+comments it describes). Start with
+[the central decision](docs/rag/01-la-decisione-centrale.md) and
+[the defects that teach](docs/rag/07-errori-che-insegnano.md).
+
 ## Tools
 
 Everything in `tools/` is standalone and takes `--help`.
@@ -133,6 +164,16 @@ Everything in `tools/` is standalone and takes `--help`.
 | `dev_session.py` | mint a signed `connect.sid` for an admin, against the **local** database |
 | `import_challonge_json.py` | bulk-load scraped Challonge tournaments through the admin import endpoint |
 | `convert-images-to-webp.py` | add a WebP beside every component PNG that lacks one |
+| `seed_component_registry.py` | populate the part registry from tournament data — run before any knowledge ingest |
+| `check_kb_registry.py` | five consistency checks; re-measures the closest pair of part names and fails if a new part closes the gap |
+| `scaffold_knowledge.py` | create empty knowledge sheets for every registered part |
+| `import_wiki_facts.py`, `import_beybladewiki.py` | pull profiles and descriptions from the two wikis, marked with their provenance |
+| `import_meta_snapshot.py` | load the dated community meta sheet |
+| `generate_synergies.py` | derive recurring pairings from the site's own statistics |
+| `knowledge_priority.py` | order the sheets still to be written by how often the part shows up in tournaments |
+| `calibrate_abstention.py` | measure the rerank-score populations behind `RERANK_FLOOR` |
+| `eval_retrieval.py`, `eval_generation.py` | the two gates: did it find the right documents, and what did it write with them |
+| `harvest_questions.py` | pull real questions that went wrong out of `chat_message`, as golden-set candidates |
 
 ## Talking to ChallengerMode
 
