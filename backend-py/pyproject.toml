@@ -13,6 +13,14 @@ dependencies = [
     "bcrypt>=4.2",
     "email-validator>=2.2",
     "pillow>=11",
+    # Frontmatter in the knowledge base. Hand-rolling a parser for it is the
+    # kind of shortcut that works until someone writes a list on two lines.
+    "pyyaml>=6.0",
+    # Generazione delle risposte (M4). Solo l'SDK ufficiale: un client HTTP
+    # a mano su /v1/messages significherebbe reimplementare streaming,
+    # ritentativi e tipi degli strumenti, tutta roba gia
+    # risolta qui.
+    "anthropic>=0.40",
 ]
 
 [dependency-groups]
