@@ -352,3 +352,23 @@
     inset: -1px;
   }
 }
+
+/* Il badge fluttuante di reCAPTCHA, nascosto.
+ *
+ * Occupava stabilmente l'angolo in basso a destra (256x60) su OGNI pagina,
+ * anche dove reCAPTCHA non viene mai eseguito - lo script si carica in
+ * index.html, non nella pagina di accesso - e vincolava la posizione di
+ * qualunque altro elemento fisso.
+ *
+ * Google lo consente a una condizione: l'attribuzione deve restare visibile nel
+ * flusso dell'utente. Sta in <RecaptchaNotice />, sotto il pulsante di
+ * registrazione. QUESTA REGOLA E QUEL COMPONENTE VANNO INSIEME: togliere il
+ * secondo lasciando la prima viola i termini d'uso di reCAPTCHA.
+ *
+ * visibility e non display: display:none impedisce a reCAPTCHA v3 di
+ * inizializzarsi in alcune versioni, e il sintomo sarebbe una registrazione che
+ * fallisce senza spiegazione.
+ */
+.grecaptcha-badge {
+  visibility: hidden;
+}
