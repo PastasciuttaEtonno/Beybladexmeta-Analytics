@@ -253,7 +253,7 @@ export default function Players() {
                   const globalRank = (page - 1) * perPage + idx;
 
                   return (
-                    <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`} className="block h-full">
+                    <Link key={`${p.id}-${idx}`} href={`/players/${encodeURIComponent(p.nickname)}`} asChild>
                       <a className="block no-underline h-full">
                         <Card className="p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg hover:scale-[1.01] transition-all duration-200 active:scale-[0.99] h-full">
                           <div className="w-10 text-center flex-shrink-0 flex justify-center">

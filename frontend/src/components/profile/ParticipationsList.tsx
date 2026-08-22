@@ -39,7 +39,7 @@ export function ParticipationsList() {
     return (
         <div className="space-y-2">
             {items.map((t) => (
-                <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+                <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`} asChild>
                     <a className="block no-underline">
                         <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
                             <div className="flex items-center justify-between gap-3">

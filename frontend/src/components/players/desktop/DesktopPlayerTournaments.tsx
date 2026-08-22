@@ -74,7 +74,7 @@ export function DesktopPlayerTournaments({ tournaments, isLoading }: DesktopPlay
                                 {t.date ? format(new Date(t.date), 'dd MMM yyyy') : '-'}
                             </TableCell>
                             <TableCell>
-                                <Link href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+                                <Link href={`/tournaments/${encodeURIComponent(t.tournamentId)}`} asChild>
                                     <a className="font-medium hover:text-primary transition-colors hover:underline">
                                         {t.name || `Torneo ${t.tournamentId}`}
                                     </a>

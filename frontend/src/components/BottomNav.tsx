@@ -23,7 +23,7 @@ export function BottomNav() {
           const isActive = location === path;
 
           return (
-            <Link key={path} href={path}>
+            <Link key={path} href={path} asChild>
               <a
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-2 py-1 rounded-lg transition-colors relative no-underline',

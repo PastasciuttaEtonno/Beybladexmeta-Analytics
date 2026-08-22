@@ -651,7 +651,7 @@ export default function Analytics() {
                     {data.combos.map((combo, index) => (
                       <Link
                         key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
-                        href={`/combo/${getComboId(combo)}?season=${encodeURIComponent(selectedSeason)}`}
+                        href={`/combo/${getComboId(combo)}?season=${encodeURIComponent(selectedSeason)}`} asChild
                       >
                         <a className="block no-underline" data-testid={`card-combo-${index}`}>
                           <Card className="p-4 hover-elevate active-elevate-2 cursor-pointer transition-colors">

@@ -110,7 +110,7 @@ export function DesktopSlimPlayersList({
                                         </TableCell>
 
                                         <TableCell>
-                                            <Link href={`/players/${encodeURIComponent(player.nickname)}`}>
+                                            <Link href={`/players/${encodeURIComponent(player.nickname)}`} asChild>
                                                 <a className="flex items-center gap-3 no-underline group-hover:text-primary transition-colors">
                                                     <div className="h-8 w-8 rounded-full overflow-hidden bg-muted flex items-center justify-center border border-border/50">
                                                         {sanitizedAvatar ? (
