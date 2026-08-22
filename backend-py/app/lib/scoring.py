@@ -22,7 +22,14 @@ log = logging.getLogger(__name__)
 
 # Points for a placement, multiplied by the number of participants. Only the
 # top four score at all.
-_BASE_POINTS = {1: 10, 2: 7, 3: 5, 4: 3}
+# Punti per piazzamento. Pubblico e non privato perche' non e' solo di questo
+# modulo: lo usano le tabelle aggregate qui, il calcolo del meta in
+# routers/analytics.py, e i tool quantitativi in lib/rag/tools.py. Prima era
+# duplicato fra i primi due, con lo stesso valore scritto due volte: se uno
+# fosse cambiato, i dati archiviati e la classifica mostrata sarebbero
+# divergiti in silenzio.
+BASE_POINTS = {1: 10, 2: 7, 3: 5, 4: 3}
+_BASE_POINTS = BASE_POINTS  # nome storico, usato piu' sotto in questo file
 
 # Component names reach SQL as bound parameters, but the check is kept because
 # it also rejects nonsense before it can be written into the aggregates.
