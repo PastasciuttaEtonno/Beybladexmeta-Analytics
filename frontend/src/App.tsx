@@ -30,6 +30,8 @@ import Terms from "@/pages/Terms";
 import ImportTournament from "@/pages/admin/ImportTournament";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import { ResponsiveAppShell } from "@/components/layout/ResponsiveAppShell";
+import { ChatLauncher } from "@/components/chat/ChatLauncher";
+import Chat from "@/pages/Chat";
 
 function AppRoutes() {
   return (
@@ -58,6 +60,11 @@ function AppRoutes() {
 
       <Route path="/">
         <Home />
+        <BottomNav />
+      </Route>
+
+      <Route path="/chat">
+        <Chat />
         <BottomNav />
       </Route>
 
@@ -148,6 +155,9 @@ export default function App() {
             <ResponsiveAppShell>
               <AppRoutes />
             </ResponsiveAppShell>
+            {/* Fuori dallo shell: il lanciatore resta a schermo su ogni pagina,
+                perche' la domanda nasce mentre si guarda una combo. */}
+            <ChatLauncher />
             <Toaster />
             {/* <TournamentRegistrationNotice /> */}
             {showIntro && (
