@@ -72,3 +72,29 @@ def test_una_domanda_tutta_maiuscola_non_diventa_un_elenco_di_sigle():
     forms = candidate_forms("QUAL E' IL MIGLIOR BIT")
     assert "il" not in forms
     assert "e" not in forms
+
+
+def test_una_lettera_attaccata_all_apostrofo_non_e_un_pezzo():
+    """Il caso vero: "C'e' differenza fra Rush e LowRush?" collegava Cyclone, e
+    la scheda di Cyclone finiva davvero fra le fonti. AMBIGUE non poteva
+    coprirlo - elenca parole funzione, e C non lo e'. Il segnale e' l'apostrofo."""
+    forms = candidate_forms("C'e' differenza fra Rush e LowRush?")
+    assert "c" not in forms
+    assert "v" not in candidate_forms("V'e' un blade migliore di WizardRod?")
+    assert "s" not in candidate_forms("S'intende il bit o il ratchet?")
+
+
+def test_vale_anche_per_l_apostrofo_tipografico():
+    """Chi scrive dal telefono manda U+2019 senza saperlo. Guardare solo
+    l'apostrofo dattilografico lascerebbe scoperta meta' delle domande."""
+    assert "c" not in candidate_forms("C’e’ differenza fra Rush e LowRush?")
+    assert "v" not in candidate_forms("V’e’ un blade migliore di WizardRod?")
+    # Non con la L: 'l' e' gia' in AMBIGUE, quindi passerebbe anche senza il
+    # controllo sull'apostrofo e non direbbe niente su cio' che si vuole pinnare.
+
+
+def test_una_sigla_a_fine_domanda_resta_una_sigla():
+    """Il carattere dopo l'ultimo token e' la stringa vuota, e `"" in "'x"` e'
+    vero: con APOSTROFI dichiarato come stringa, ogni sigla in fondo alla
+    domanda passava per elisa e il filtro esatto spariva proprio dove serviva."""
+    assert "lr" in candidate_forms("cosa fa il bit LR")

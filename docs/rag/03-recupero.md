@@ -48,6 +48,40 @@ WizardRod, i tre rami cercano solo dentro WizardRod. È la differenza fra un
 sistema che a *"parlami di WizardRod"* risponde su WizardRod e uno che risponde
 su cinque blade che gli somigliano.
 
+### Il nome più corto che un pezzo abbia
+
+Il confronto esatto lavora su quello che `candidate_forms()` gli passa, e la
+regola con cui quella funzione decide cosa è un nome è meno ovvia di quanto
+sembri. Un bit si scrive `LowRush` ma anche **`LR`**, e il registro ha **42
+alias di una o due lettere** che coprono quasi tutto l'alfabeto.
+
+Prendere ogni token corto è impossibile: `a` è Accel, `e` è Elevate, `o` è Orb,
+`un` è UnderNeedle. Scartarli tutti — come faceva la prima versione — lascia
+senza filtro esatto proprio la domanda che nomina il pezzo nel modo più preciso
+disponibile. La via di mezzo è la maiuscola: le sigle si scrivono `LR`, `HN`,
+`FB`, le parole no.
+
+La maiuscola però arriva anche per motivi che col nome di un pezzo non c'entrano
+niente, e sono due:
+
+- **le parole funzione a inizio frase o in un titolo.** Sette alias coincidono
+  con una parola italiana (`a d e l lo o un`) e restano fuori sempre. Una
+  domanda scritta tutta in maiuscolo perde le sigle del tutto: se non c'è niente
+  di minuscolo, la maiuscola non distingue più niente.
+- **l'elisione.** Questa non è un elenco: è l'apostrofo. *"C'e' differenza fra
+  Rush e LowRush?"* collegava **Cyclone**, e la scheda di Cyclone finiva davvero
+  fra le fonti della risposta; *"V'e' un blade migliore"* tirava dentro Vortex,
+  *"S'intende"* Spike. Nessuna delle tre è una parola funzione, quindi nessun
+  elenco le avrebbe coperte — mentre il carattere dopo la lettera le copre
+  tutte, comprese quelle che nessuno ha ancora provato.
+
+Vale la pena notare da che parte pende lo scambio, perché è il motivo per cui
+tutte queste regole tolgono invece di aggiungere. Chi intende Elevate può
+scrivere *Elevate*, e funziona. Chi scrive *"un blade da attacco"* non ha modo
+di dire al sistema che `un` non era UnderNeedle: il collegamento è un filtro
+rigido, quindi la domanda verrebbe ristretta al pezzo sbagliato e la risposta
+arriverebbe sicura di sé, senza che niente segnali un errore.
+
 ### Una soglia misurata, non scelta
 
 `FUZZY_THRESHOLD = 0.70`. Il numero esce da questa misura sul registro vero:

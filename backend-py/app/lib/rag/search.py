@@ -59,8 +59,10 @@ def _normalise(value: str) -> str:
 # l'alfabeto, quindi la collisione non e' un caso limite: 'un' e' UnderNeedle,
 # 'lo' e' LowOrb, 'e' e' Elevate, 'o' e' Orb, 'a' e' Accel, 'l' e' Level, 'd'
 # e' Dot. Il maiuscolo di solito basta a separarle - i codici si scrivono LR,
-# HN, FB - ma non quando arriva per un altro motivo: a inizio frase, o in
-# un'elisione come "L'attacco". Queste sette restano fuori sempre.
+# HN, FB - ma non quando arriva per un altro motivo: a inizio frase, o in un
+# titolo. Queste sette restano fuori sempre. L'altro modo in cui una maiuscola
+# arriva senza voler dire niente, l'elisione, lo tratta _elisione(): li' il
+# segnale e' l'apostrofo e non serve un elenco.
 #
 # Chi cerca davvero Elevate o Orb ha il nome per esteso, che funziona. Il
 # contrario non e' vero: senza questa lista, 'un blade da attacco' verrebbe
@@ -68,6 +70,29 @@ def _normalise(value: str) -> str:
 # rigido, e la risposta sbagliata arriverebbe senza che nulla segnali un
 # errore.
 AMBIGUE = frozenset({"a", "d", "e", "l", "lo", "o", "un"})
+
+# L'apostrofo tipografico e quello dattilografico. Chi scrive dal telefono manda
+# il primo senza saperlo, quindi guardarne uno solo lascia scoperta meta' delle
+# domande.
+APOSTROFI = frozenset("'’")
+
+
+def _elisione(query: str, m: re.Match[str]) -> bool:
+    """La lettera e' attaccata a un apostrofo: e' un pezzo di parola.
+
+    "C'e' differenza fra Rush e LowRush?" collegava Cyclone, e la scheda di
+    Cyclone finiva davvero fra le fonti della risposta. Cosi' "V'e' un blade
+    migliore" tirava dentro Vortex e "S'intende" Spike. Nessuna delle tre e'
+    coperta da AMBIGUE, che elenca parole funzione: C, V e S non lo sono, e' la
+    lingua italiana che le elide.
+
+    L'apostrofo e' un segnale sintattico, non un elenco da mantenere: vale per
+    tutte le lettere insieme, comprese quelle che nessuno ha ancora provato.
+    """
+    successivo = query[m.end():m.end() + 1]
+    # frozenset e non stringa: `"" in "'’"` e' vero, e con APOSTROFI come
+    # stringa una sigla a fine domanda ("cosa fa il bit LR") passava per elisa.
+    return successivo in APOSTROFI
 
 
 def candidate_forms(query: str) -> set[str]:
@@ -82,17 +107,19 @@ def candidate_forms(query: str) -> set[str]:
     came out as 'il Wizard' plus 'Rod', so no compound part name was ever
     recognised. Splitting the job in two is duller and correct.
     """
-    tokens = TOKEN.findall(query)
+    trovati = list(TOKEN.finditer(query))
+    tokens = [m.group() for m in trovati]
 
     # Se la domanda e' tutta maiuscola il maiuscolo non distingue piu' niente:
     # meglio perdere la sigla che scambiare una preposizione per un pezzo.
     urlata = query.isupper()
 
     forms: set[str] = set()
-    for token in tokens:
+    for m in trovati:
+        token = m.group()
         if len(token) > 2:
             forms.add(_normalise(token))
-        elif token.isupper() and not urlata:
+        elif token.isupper() and not urlata and not _elisione(query, m):
             norm = _normalise(token)
             if norm not in AMBIGUE:
                 forms.add(norm)

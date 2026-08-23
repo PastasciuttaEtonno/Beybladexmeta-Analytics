@@ -109,6 +109,27 @@ cases:
     forbidden_docs: [low-orb, gear-rush]
     tags: [sigla, esatto]
 
+  # --- l'apostrofo: una maiuscola che non vuol dire niente ---
+  # Il registry ha un alias di UNA lettera per quasi tutto l'alfabeto, e
+  # l'italiano elide: C'e', L'attacco, V'e', S'intende. Misurato prima della
+  # correzione, "C'e' differenza fra Rush e LowRush?" restituiva la scheda di
+  # Cyclone al terzo posto - non uno slug di troppo in una lista, una fonte in
+  # piu' nella risposta, su un pezzo che nessuno aveva nominato.
+  #
+  # Le due domande chiedono altro: cio' che si misura e' che la lettera prima
+  # dell'apostrofo NON tiri dentro il suo pezzo.
+  - id: elisione-l-non-level
+    query: "L'attacco di WizardRod come si comporta"
+    expected_docs: [wizard-rod]
+    forbidden_docs: [level]
+    tags: [sigla, ambiguo]
+
+  - id: elisione-c-non-cyclone
+    query: "C'e' differenza fra Rush e LowRush?"
+    expected_docs: [rush, low-rush]
+    forbidden_docs: [cyclone]
+    tags: [sigla, ambiguo]
+
   # --- fuori ambito: la risposta giusta e' astenersi ---
   - id: fuori-ambito-meteo
     query: "che tempo fa domani a Milano"
