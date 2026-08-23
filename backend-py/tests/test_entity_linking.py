@@ -46,3 +46,29 @@ def test_pairs_do_not_invent_a_third_word():
     # 'sword contro' is a pair, but it resolves to nothing in the registry and
     # so costs only a hash lookup.
     assert "swordcontrodran" not in forms
+
+
+def test_le_sigle_dei_bit_maiuscole_sono_candidate():
+    """Un bit si chiama LR, HN, FB. Sono due lettere: la regola "piu' di due
+    caratteri" le scartava tutte, e una domanda che nomina un pezzo nel modo
+    piu' preciso possibile finiva senza filtro esatto."""
+    forms = candidate_forms("meglio HN o FB")
+    assert "hn" in forms
+    assert "fb" in forms
+
+
+def test_le_sigle_che_sono_anche_parole_restano_fuori():
+    """'L' e' Level, ma in "L'attacco" e' un articolo elidato. Il collegamento
+    entita' e' un filtro rigido: scambiarne una restringe il recupero al pezzo
+    sbagliato, e la risposta arriva senza che nulla segnali l'errore."""
+    assert "l" not in candidate_forms("L'attacco di Wizard Rod")
+    assert "un" not in candidate_forms("Un blade da attacco")
+
+
+def test_una_domanda_tutta_maiuscola_non_diventa_un_elenco_di_sigle():
+    """Il maiuscolo distingue la sigla dalla parola solo finche' qualcosa e'
+    minuscolo. Se lo e' tutto, meglio perdere la sigla che leggere 'IL' come un
+    pezzo."""
+    forms = candidate_forms("QUAL E' IL MIGLIOR BIT")
+    assert "il" not in forms
+    assert "e" not in forms

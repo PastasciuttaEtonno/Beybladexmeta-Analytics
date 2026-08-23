@@ -53,6 +53,23 @@ def _normalise(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", value.lower())
 
 
+# Le sigle dei bit che coincidono con una parola funzione italiana.
+#
+# Il registry ne contiene 42 di una o due lettere e occupano quasi tutto
+# l'alfabeto, quindi la collisione non e' un caso limite: 'un' e' UnderNeedle,
+# 'lo' e' LowOrb, 'e' e' Elevate, 'o' e' Orb, 'a' e' Accel, 'l' e' Level, 'd'
+# e' Dot. Il maiuscolo di solito basta a separarle - i codici si scrivono LR,
+# HN, FB - ma non quando arriva per un altro motivo: a inizio frase, o in
+# un'elisione come "L'attacco". Queste sette restano fuori sempre.
+#
+# Chi cerca davvero Elevate o Orb ha il nome per esteso, che funziona. Il
+# contrario non e' vero: senza questa lista, 'un blade da attacco' verrebbe
+# ristretto a UnderNeedle, perche' il collegamento entita' e' un filtro
+# rigido, e la risposta sbagliata arriverebbe senza che nulla segnali un
+# errore.
+AMBIGUE = frozenset({"a", "d", "e", "l", "lo", "o", "un"})
+
+
 def candidate_forms(query: str) -> set[str]:
     """Normalised strings to look up in component_alias.
 
@@ -66,7 +83,20 @@ def candidate_forms(query: str) -> set[str]:
     recognised. Splitting the job in two is duller and correct.
     """
     tokens = TOKEN.findall(query)
-    forms = {_normalise(token) for token in tokens if len(token) > 2}
+
+    # Se la domanda e' tutta maiuscola il maiuscolo non distingue piu' niente:
+    # meglio perdere la sigla che scambiare una preposizione per un pezzo.
+    urlata = query.isupper()
+
+    forms: set[str] = set()
+    for token in tokens:
+        if len(token) > 2:
+            forms.add(_normalise(token))
+        elif token.isupper() and not urlata:
+            norm = _normalise(token)
+            if norm not in AMBIGUE:
+                forms.add(norm)
+
     forms.update(
         _normalise(f"{a}{b}") for a, b in zip(tokens, tokens[1:])
     )
