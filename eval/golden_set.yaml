@@ -94,6 +94,21 @@ cases:
     expected_docs: [shark-scale, 1-70, low-rush]
     tags: [nome, designazione, combinato]
 
+  # --- le sigle: il nome piu' corto che un bit abbia ---
+  # Un bit si scrive LR, HN, FB tanto quanto LowRush, HighNeedle, FreeBall, e il
+  # registry ha 42 alias di una o due lettere. Il caso non e' li' per vedere se
+  # la scheda giusta esce - il ramo denso la portava al primo posto anche prima
+  # che le sigle fossero collegate. E' li' per la PRECISIONE: senza il
+  # collegamento, "LR" tirava dentro anche LowOrb, GearRush, LowFlat e Rush,
+  # perche' al modello quelle schede si somigliano tutte. I forbidden_docs sono
+  # misurati, non immaginati: sono due dei sei slug che il recupero restituiva
+  # prima del commit che ha aggiunto le sigle.
+  - id: bit-sigla-lr
+    query: "cosa fa il bit LR"
+    expected_docs: [low-rush]
+    forbidden_docs: [low-orb, gear-rush]
+    tags: [sigla, esatto]
+
   # --- fuori ambito: la risposta giusta e' astenersi ---
   - id: fuori-ambito-meteo
     query: "che tempo fa domani a Milano"
