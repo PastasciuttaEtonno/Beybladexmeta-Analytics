@@ -36,7 +36,10 @@ Nelle edizioni occidentali il pezzo è distribuito con il nome |ProductCode=CX-0
 ## Note di formato
 
 
+
+
 **Flame** è marcato come legale nel formato X Standard.
+Codice prodotto: CX-08 (Takara Tomy) / G2747 (Hasbro).
 Uscita: Giappone July 19th, 2025, Stati Uniti January 30th, 2026.
 
 Eventuali limitazioni di torneo (parti limitate, Hall of Fame, decisioni B4) sono elencate su https://beyblade.fandom.com/wiki/Main_Blade_-_Flame e vanno riassunte qui a mano: cambiano nel tempo.

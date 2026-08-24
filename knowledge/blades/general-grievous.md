@@ -35,7 +35,10 @@ Nelle edizioni occidentali il pezzo è distribuito con il nome |ProductCode=G169
 ## Note di formato
 
 
+
+
 **GeneralGrievous** è marcato come legale nel formato X Standard.
+Codice prodotto: G1694 (Hasbro) / BX-00 (Takara Tomy).
 Uscita: Stati Uniti May 2025.
 
 Eventuali limitazioni di torneo (parti limitate, Hall of Fame, decisioni B4) sono elencate su https://beyblade.fandom.com/wiki/Blade_-_General_Grievous e vanno riassunte qui a mano: cambiano nel tempo.

@@ -9,7 +9,7 @@ system: CX
 lang: it
 status: draft
 doc_version: 1
-sources: []
+sources: ["https://beyblade.fandom.com/wiki/Main_Blade_-_Eclipse"]
 reference: https://beyblade.wiki/eclipse-main-blade/
 ---
 
@@ -35,6 +35,10 @@ Nelle edizioni occidentali il pezzo è distribuito con il nome |ProductCode=CX-0
 ## Note di formato
 
 
+
+
+**Eclipse** è marcato come legale nel formato X Standard.
+Codice prodotto: CX-09.
 Uscita: Giappone September 27th, 2025.
 
 Eventuali limitazioni di torneo (parti limitate, Hall of Fame, decisioni B4) sono elencate su https://beyblade.fandom.com/wiki/Main_Blade_-_Eclipse e vanno riassunte qui a mano: cambiano nel tempo.

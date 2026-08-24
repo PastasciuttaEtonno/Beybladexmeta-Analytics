@@ -36,7 +36,10 @@ Nelle edizioni occidentali il pezzo è distribuito con il nome |ProductCode=CX-1
 ## Note di formato
 
 
+
+
 **Might** è marcato come legale nel formato X Standard.
+Codice prodotto: CX-11 (Takara Tomy) / G3028 (Hasbro).
 Uscita: Giappone November 1st, 2025.
 
 Eventuali limitazioni di torneo (parti limitate, Hall of Fame, decisioni B4) sono elencate su https://beyblade.fandom.com/wiki/Main_Blade_-_Might e vanno riassunte qui a mano: cambiano nel tempo.

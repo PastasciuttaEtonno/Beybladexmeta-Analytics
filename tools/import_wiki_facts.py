@@ -75,15 +75,22 @@ TYPE_IT = {
 SPIN_IT = {"Right-Spin": "rotazione destrorsa", "Left-Spin": "rotazione sinistrorsa",
            "Dual-Spin": "doppio verso di rotazione"}
 
-# Un parametro per riga era l'assunto, e la wiki non lo rispetta: su cinque
-# pagine due parametri stanno sulla stessa riga (|AKA=Flame|ProductCode=CX-08).
-# Il risultato erano due difetti insieme - AKA conteneva "Flame|ProductCode=CX-08",
-# che e' finito in component_alias come alias vero, e ProductCode spariva del
-# tutto: Flame, Eclipse, Might, YellKong e GeneralGrievous non ne avevano uno.
+# Un parametro VUOTO si mangiava la riga dopo. Con `\s*` subito dopo l'uguale e
+# `.` che non attraversa il fine riga, sembrava impossibile - ma `\s*` e' avido e
+# il fine riga e' spazio, quindi da `|AKA=` il motore saltava alla riga seguente
+# e catturava quella. Le cinque pagine con l'AKA vuoto davano
+# AKA = "|ProductCode=CX-08 (Takara Tomy) / G2747 (Hasbro)".
 #
-# Il valore ora finisce dove comincia il parametro successivo. Il lookahead
-# pretende `=` dopo il nome, altrimenti spezzerebbe i collegamenti wiki, che
-# contengono un | ma non un = ([[Blade - Flame|Flame]]).
+# Due danni da un solo baco. Il valore veniva spezzato sulle barre e inserito in
+# component_alias, da cui alias come `|ProductCode=CX-08` e `G2747`; e
+# ProductCode, gia' consumato, non veniva piu' letto: Flame, Eclipse, Might,
+# YellKong e GeneralGrievous sono rimasti senza codice prodotto finche' la 0020
+# non ha ripulito gli alias e l'importer non e' stato rilanciato.
+#
+# Il valore ora finisce dove comincia il parametro successivo, sulla stessa riga
+# o su quella dopo. Il lookahead pretende `=` dopo il nome, altrimenti
+# spezzerebbe i collegamenti wiki, che contengono un | ma non un =
+# ([[Blade - Flame|Flame]]).
 INFOBOX_FIELD = re.compile(r"\|\s*(\w+)\s*=\s*(.*?)(?=\|\s*\w+\s*=|$)", re.M)
 SECTION = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 PLACEHOLDER = re.compile(r"\A(?:\s|<!--.*?-->|TODO\b.*|_.*_)*\Z", re.DOTALL | re.IGNORECASE)

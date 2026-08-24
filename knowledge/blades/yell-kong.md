@@ -35,7 +35,10 @@ Nelle edizioni occidentali il pezzo è distribuito con il nome |ProductCode=G019
 ## Note di formato
 
 
+
+
 **YellKong** è marcato come legale nel formato X Standard.
+Codice prodotto: G0198 (Hasbro) / BX-ORG07 (Takara Tomy Development Code).
 Uscita: Stati Uniti August 2024.
 
 Eventuali limitazioni di torneo (parti limitate, Hall of Fame, decisioni B4) sono elencate su https://beyblade.fandom.com/wiki/Blade_-_Yell_Kong e vanno riassunte qui a mano: cambiano nel tempo.
