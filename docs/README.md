@@ -5,6 +5,9 @@
 > below contain deeper implementation details.
 >
 > This webapp was built using AI agents, including Claude Code, Gemini, and several IDE AI tools such as Antigravity, Cursor, and Trae.
+>
+> Cosa si sa gia' essere debole, e come verificarlo:
+> [`da-migliorare.md`](da-migliorare.md).
 
 > **Historical note:** [`backend/README.md`](backend/README.md) describes the
 > former Express implementation and is retained as migration context. The

@@ -1,5 +1,25 @@
 # Beybladexmeta Analytics
 
+A spare-time project, built for the love of Beyblade X and as an excuse to
+learn by building something real: a site that collects tournament results,
+shows what the metagame actually looks like, and answers questions about the
+parts.
+
+It is written **with AI, deliberately and throughout** — Claude Code and other
+agents wrote most of the code here, and the point of doing it that way was to
+get from idea to something alive in the least time possible, and to find out
+how far that approach carries. Far, is the answer, provided every claim gets
+checked against something real: a test, a query against the database, a number
+measured rather than remembered. That habit is why the commit messages are long
+and say what broke, why `docs/rag/` exists at all, and why
+[`docs/da-migliorare.md`](docs/da-migliorare.md) lists what is still weak
+instead of pretending it is finished.
+
+There is no team, no deadline and no roadmap: things get fixed when they annoy
+someone or when they are interesting to fix.
+
+## How it is put together
+
 Two services behind one public origin:
 
 | | | |
@@ -259,3 +279,9 @@ not.
 `docs/README.md` predates both the split and the migration: it describes the
 original single-package layout (`client/`, `server/`, `shared/`) and should be
 read as history.
+
+[`docs/da-migliorare.md`](docs/da-migliorare.md) is the honest list: what is
+known to be weak, measured where it could be measured, with how to check that
+each item is still true. The corpus work — the empty *Interazioni* sections —
+is deliberately not in it, because that one is the main job and lives in
+[`docs/rag/02-corpus.md`](docs/rag/02-corpus.md).
