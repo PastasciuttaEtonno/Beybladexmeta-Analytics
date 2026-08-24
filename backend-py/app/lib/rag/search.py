@@ -186,6 +186,12 @@ class Retrieval:
     # Perche' ci si e' astenuti, quando ci si e' astenuti.
     reason: str | None = None
 
+    # La domanda con cui si e' cercato davvero, quando non e' quella scritta
+    # dall'utente. Succede con le domande di seguito - "Perche'?" da sola non
+    # trova niente - e senza questo campo, guardando i log, la ricerca
+    # sembrerebbe aver funzionato su un testo che nessuno ha mai scritto.
+    riformulata: str | None = None
+
     def to_dict(self) -> dict[str, Any]:
         """Quello che finisce in chat_message.retrieval."""
         return {
@@ -197,6 +203,7 @@ class Retrieval:
             "reason": self.reason,
             "slugs": self.entities.slugs,
             "codes": self.entities.codes,
+            "riformulata": self.riformulata,
         }
 
 

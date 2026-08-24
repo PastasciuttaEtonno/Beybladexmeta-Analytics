@@ -49,6 +49,7 @@ type Attivita = {
     reason?: string | null;
     top_score?: number | null;
     slugs?: string[];
+    riformulata?: string | null;
   };
   answer: string;
   question: string | null;
@@ -227,6 +228,11 @@ export default function ChatLogs() {
                     <span>punteggio {a.retrieval.top_score.toFixed(3)}</span>
                   )}
                   {a.retrieval?.reason && <span>{a.retrieval.reason}</span>}
+                  {/* Con che testo si e' cercato davvero: su una domanda di
+                      seguito non e' quello che l'utente ha scritto. */}
+                  {a.retrieval?.riformulata && (
+                    <span>cercato con &laquo;{a.retrieval.riformulata}&raquo;</span>
+                  )}
                   {a.retrieval?.slugs?.length ? (
                     <span>entita' {a.retrieval.slugs.join(", ")}</span>
                   ) : null}

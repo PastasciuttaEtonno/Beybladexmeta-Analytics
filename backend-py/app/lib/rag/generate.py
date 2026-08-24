@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 import asyncio
 from collections.abc import AsyncIterator
@@ -144,6 +145,85 @@ class Answer:
         }
 
 
+# Quante parole "vere" servono perche' una domanda si regga da sola. Tre e' una
+# scelta, non una misura: "meglio 1-60 o 9-60" ne ha quattro e si regge, "e
+# quello?" ne ha due e non si regge.
+_PAROLA = re.compile(r"[0-9A-Za-z\u00C0-\u024F]+")
+_PAROLE_MINIME = 3
+
+
+def _ultima_domanda_piena(history: list[dict] | None) -> str | None:
+    """L'ultima domanda dell'utente che si regge da sola.
+
+    Si cammina all'indietro invece di prendere l'ultima e basta: in una serie
+    come "quanto pesa?" -> "e l'altro?" -> "perche'?" l'ultima non aiuta piu'
+    della penultima. Serve quella che nomina ancora qualcosa.
+    """
+    for turno in reversed(history or []):
+        if turno.get("role") != "user":
+            continue
+        contenuto = (turno.get("content") or "").strip()
+        if len(_PAROLA.findall(contenuto)) >= _PAROLE_MINIME:
+            return contenuto
+    return None
+
+
+def con_contesto(question: str, history: list[dict] | None) -> str | None:
+    """La domanda unita a quella che l'ha preceduta, o None se non serve.
+
+    Non riscrive niente col modello: costerebbe un giro intero prima ancora di
+    cercare, e la latenza e' gia' il difetto piu' sentito. Accostare i due testi
+    basta a far somigliare l'embedding a quello giusto, e i rami esatto e
+    full-text ritrovano le sigle che la domanda breve non conteneva.
+    """
+    precedente = _ultima_domanda_piena(history)
+    if not precedente:
+        return None
+    unita = f"{precedente} {question}".strip()
+    return unita if unita != question else None
+
+
+async def _recupera(session, question, embedder, *, limit, reranker,
+                    history: list[dict] | None):
+    """Cerca; se non trova, riprova una volta sola con la domanda precedente.
+
+    Il caso che questo ripara si vede nei log di produzione:
+
+        utente:      45
+        assistente:  "45 e' il valore di attacco di ..."
+        utente:      Perche'?
+        assistente:  "Non ho trovato niente nel sito..."
+
+    La cronologia arrivava al MODELLO ma non al RECUPERO, e l'astensione decisa
+    dal recupero torna indietro prima che il modello venga chiamato: la storia
+    non aveva modo di servire proprio nel caso in cui serviva. Una domanda di
+    seguito - "perche'?", "e quello?", "quanto?" - da sola non somiglia a
+    niente, quindi finiva sotto la soglia ogni volta.
+
+    Il secondo tentativo costa un embedding e un re-rank, e si paga SOLO sul
+    percorso che oggi fallisce comunque. Se anche cosi' non trova, ci si astiene
+    come prima: cercare col contesto non e' una licenza per rispondere lo
+    stesso.
+    """
+    trovato = await search.hybrid(
+        session, question, embedder, limit=limit, reranker=reranker
+    )
+    if not trovato.abstained:
+        return trovato
+
+    riformulata = con_contesto(question, history)
+    if not riformulata:
+        return trovato
+
+    secondo = await search.hybrid(
+        session, riformulata, embedder, limit=limit, reranker=reranker
+    )
+    if secondo.abstained:
+        return trovato
+    secondo.riformulata = riformulata
+    return secondo
+
+
 def get_model(provider: str | None = None, model: str | None = None) -> LanguageModel:
     return providers.get_model(provider or DEFAULT_PROVIDER, model)
 
@@ -193,8 +273,9 @@ async def answer(
     reranker = reranker or get_reranker(
         env_str("VOYAGE_RERANK_MODEL", "rerank-2.5"))
 
-    retrieval = await search.hybrid(
-        session, question, embedder, limit=limit, reranker=reranker
+    retrieval = await _recupera(
+        session, question, embedder, limit=limit, reranker=reranker,
+        history=history,
     )
     hits, abstained = retrieval.hits, retrieval.abstained
 
@@ -352,8 +433,9 @@ async def answer_stream(
         env_str("VOYAGE_RERANK_MODEL", "rerank-2.5"))
 
     yield {"event": "status", "phase": "retrieval", "detail": "cerco fra le schede"}
-    retrieval = await search.hybrid(
-        session, question, embedder, limit=limit, reranker=reranker
+    retrieval = await _recupera(
+        session, question, embedder, limit=limit, reranker=reranker,
+        history=history,
     )
     hits, abstained = retrieval.hits, retrieval.abstained
 
