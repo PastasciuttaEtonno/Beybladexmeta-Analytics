@@ -130,6 +130,18 @@ cases:
     forbidden_docs: [cyclone]
     tags: [sigla, ambiguo]
 
+  # --- un pezzo, due nomi ---
+  # Quetzalcoatlus e PteraSwing sono lo stesso Blade (stessa pagina wiki, stessi
+  # 34,3 g, stessi codici prodotto). La 0017 li ha uniti tenendo PteraSwing, che
+  # e' il nome che il foglio meta usa davvero. Il caso misura la meta' che si
+  # perde piu' facilmente in una fusione: il nome che NON sopravvive deve
+  # continuare a trovare il pezzo, altrimenti chi lo conosce cosi' non lo trova
+  # piu' e la fusione ha rotto qualcosa invece di ripararlo.
+  - id: nome-alternativo-quetzalcoatlus
+    query: "parlami di Quetzalcoatlus"
+    expected_docs: [ptera-swing]
+    tags: [nome, localizzato]
+
   # --- fuori ambito: la risposta giusta e' astenersi ---
   - id: fuori-ambito-meteo
     query: "che tempo fa domani a Milano"
