@@ -8,10 +8,11 @@
 # erano frammenti di wikitext, tre migrazioni applicate ma non registrate.
 # check_kb_registry.py da solo avrebbe visto i primi quattro.
 #
-# Due lavori, e girano in parallelo:
+# Tre lavori, e girano in parallelo:
 #
-#   veloce     nessun servizio, nessun segreto, meno di un minuto
+#   veloce     nessun servizio, nessun segreto: test e tipi
 #   database   un Postgres con pgvector, ripristinato da docker/ci-db.sql.gz
+#   immagini   le due build vere, che prendono cio' che i tipi non vedono
 #
 # I due gate del RAG (eval_retrieval, eval_generation) NON stanno qui: costano
 # chiamate a pagamento e vanno in notturna, non a ogni push.
