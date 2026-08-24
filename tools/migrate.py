@@ -60,7 +60,33 @@ def discover() -> list[tuple[str, Path]]:
 
 
 def checksum(path: Path) -> str:
+    """L'impronta del CONTENUTO, non dei byte.
+
+    I fine riga si normalizzano prima di calcolarla. Senza, la stessa
+    migrazione dava due impronte diverse a seconda di come git l'aveva
+    depositata sul disco: CRLF su Windows, LF su Linux e sul server. Il
+    risultato era che `--status` annunciava "il database e il repo sono
+    divergenti" per undici file che nessuno aveva toccato - cioe' lo strumento
+    che esiste per accorgersi di una divergenza gridava al lupo, ed e' il modo
+    piu' rapido di insegnare a ignorarlo.
+    """
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:16]
+
+
+def _impronta_storica(path: Path) -> str:
+    """L'impronta com'era calcolata prima: byte grezzi.
+
+    Serve solo a riconoscere le righe gia' registrate. Chi ha applicato una
+    migrazione da Windows ha in archivio l'impronta dei byte con CRLF, e
+    rifiutarla vorrebbe dire chiedere di ri-registrare a mano cio' che e'
+    corretto. Le registrazioni nuove usano solo la forma normalizzata.
+    """
     return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+
+
+def concorda(registrata: str, path: Path) -> bool:
+    """Vero se il file su disco e' quello che risulta applicato."""
+    return registrata in (checksum(path), _impronta_storica(path))
 
 
 def main() -> int:
@@ -109,14 +135,15 @@ def main() -> int:
             print(f"{MIGRATIONS}\n")
             for version, path in migrations:
                 if version in applied:
-                    changed = applied[version] != checksum(path)
+                    changed = not concorda(applied[version], path)
                     mark = "CHANGED SINCE APPLIED" if changed else "applied"
                 else:
                     mark = "PENDING"
                 print(f"  {version}  {mark:22} {path.name}")
             print(f"\n{len(applied)} applied, {len(pending)} pending")
             # A file edited after it ran means the database and the repo disagree.
-            drifted = [v for v, p in migrations if v in applied and applied[v] != checksum(p)]
+            drifted = [v for v, p in migrations
+                       if v in applied and not concorda(applied[v], p)]
             if drifted:
                 print(f"\nWARNING: {', '.join(drifted)} changed after being applied. "
                       "The database does not match the file; write a new migration "

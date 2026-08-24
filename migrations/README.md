@@ -28,7 +28,20 @@ transaction, so a failure leaves neither a half-applied file nor a false record.
 
 Both the local database and production were baselined on 2026-08-21: all ten
 files are recorded as applied without having been re-run, because they already
-were. A database created from scratch instead needs `--apply` from empty.
+were.
+
+**A database created from scratch does NOT work with `--apply` from empty**, and
+the line that used to say so here was wrong. The chain begins from a schema that
+Drizzle generated, so 0003 stops immediately with `relation
+"external_player_combos" does not exist`. The starting point is a dump:
+`docker/initdb/10-beyblade.sql.gz` for development, `docker/ci-db.sql.gz` for the
+checks in CI — the same database minus the personal data and the embeddings.
+
+The checksum is taken on the CONTENT, with line endings normalised. Before that it
+was taken on the raw bytes, so the same file gave one answer on Windows and
+another on Linux, and `--status` announced a divergence for eleven files nobody
+had touched. A checksum recorded the old way is still accepted, so no database
+needs re-recording.
 
 ## Adding one
 
