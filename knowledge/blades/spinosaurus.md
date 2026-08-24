@@ -5,24 +5,24 @@ type: component
 slot: blade
 canonical_name: "Spinosaurus"
 aliases: ["Spinosaurus"]
-system: BX
+system:        # BX | UX | CX
 lang: it
 status: draft
 doc_version: 1
-sources: ["https://beyblade.fandom.com/wiki/Blade_-_Roar_Tyranno"]
+sources: []
 ---
 
 # Spinosaurus
 
 ## Profilo
 
-
-**Spinosaurus** è un Blade del sistema BX (Basic Line), di tipo attacco.
-Il pezzo pesa 36,0 grammi e ha rotazione destrorsa.
-Le statistiche dichiarate dal produttore sono attacco 60, difesa 28, resistenza 12. Sono valori del produttore, non misure di torneo: descrivono l'intenzione di progetto, non il rendimento reale.
-Nelle edizioni occidentali il pezzo è distribuito con il nome TyrannoRoar.
-
-<!-- Generato da tools/import_wiki_facts.py dai campi scheda di https://beyblade.fandom.com/wiki/Blade_-_Roar_Tyranno — fatti, non prosa della wiki. Riscrivilo pure: una sezione modificata a mano non viene piu' toccata. -->
+<!-- Da riscrivere da zero. Questa scheda era stata generata da
+     https://beyblade.fandom.com/wiki/Blade_-_Roar_Tyranno, che e' la pagina di
+     TyrannoRoar: peso, statistiche, codici prodotto e date di uscita che
+     c'erano scritti erano di un ALTRO Blade. Spinosaurus e TyrannoRoar sono
+     due pezzi diversi. Serve la pagina giusta prima di rigenerare: finche' non
+     c'e', la scheda resta scaffold e non entra nel corpus, che e' meglio di una
+     scheda che afferma i dati di qualcun altro. -->
 
 ## Interazioni
 
@@ -34,12 +34,4 @@ Nelle edizioni occidentali il pezzo è distribuito con il nome TyrannoRoar.
 
 ## Note di formato
 
-
-**Spinosaurus** è marcato come legale nel formato X Standard.
-Codice prodotto: G0284 (Hasbro) / BX-ORG03 (Takara Tomy).
-Uscita: Giappone July 19th, 2025, Stati Uniti July 27th, 2024.
-
-Eventuali limitazioni di torneo (parti limitate, Hall of Fame, decisioni B4) sono elencate su https://beyblade.fandom.com/wiki/Blade_-_Roar_Tyranno e vanno riassunte qui a mano: cambiano nel tempo.
-
-<!-- Generato da tools/import_wiki_facts.py dai campi scheda di https://beyblade.fandom.com/wiki/Blade_-_Roar_Tyranno — fatti, non prosa della wiki. Riscrivilo pure: una sezione modificata a mano non viene piu' toccata. -->
-
+<!-- da scrivere -->
