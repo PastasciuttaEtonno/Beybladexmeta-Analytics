@@ -108,7 +108,7 @@ export default function ComboDetail() {
     return (
       <div className="min-h-screen bg-background p-4 pb-24">
         <div className="max-w-2xl mx-auto space-y-6">
-          <Link href="/analytics">
+          <Link href="/analytics" asChild>
             <a
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
               data-testid="button-back"
@@ -186,7 +186,7 @@ export default function ComboDetail() {
 
       {/* Shared Back Button & Share */}
       <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between">
-        <Link href="/analytics">
+        <Link href="/analytics" asChild>
           <a
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]"
             data-testid="button-back"
@@ -373,7 +373,7 @@ export default function ComboDetail() {
                       {tournaments.map((t) => (
                         <Link
                           key={`${t.tournamentId}-${t.playerId}`}
-                          href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}
+                          href={`/tournaments/${encodeURIComponent(t.tournamentId)}`} asChild
                         >
                           <a className="block no-underline">
                             <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">

@@ -89,7 +89,7 @@ export function DesktopTournamentHistory({
                                         className="cursor-pointer hover:bg-muted/50 transition-colors group"
                                     >
                                         <TableCell className="font-medium">
-                                            <Link href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+                                            <Link href={`/tournaments/${encodeURIComponent(t.tournamentId)}`} asChild>
                                                 <a className="hover:underline decoration-primary underline-offset-4 group-hover:text-primary transition-colors">
                                                     {t.tournamentName || t.tournament_name || `Tournament ${t.tournamentId}`}
                                                 </a>
@@ -99,7 +99,7 @@ export function DesktopTournamentHistory({
                                             {t.date ? format(new Date(t.date), 'MMM dd, yyyy') : 'Unknown'}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
-                                            <Link href={`/player/${encodeURIComponent(t.playerId)}`}>
+                                            <Link href={`/player/${encodeURIComponent(t.playerId)}`} asChild>
                                                 <a className="hover:text-foreground transition-colors">
                                                     {t.playerName}
                                                 </a>

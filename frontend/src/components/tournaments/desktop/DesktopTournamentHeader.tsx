@@ -45,7 +45,7 @@ export function DesktopTournamentHeader({
 
             <div className="relative z-10 space-y-5">
                 {/* Top Row: Back button */}
-                <Link href="/tournaments">
+                <Link href="/tournaments" asChild>
                     <a className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors no-underline">
                         <ArrowLeft className="w-4 h-4" />
                         Torna ai Tornei

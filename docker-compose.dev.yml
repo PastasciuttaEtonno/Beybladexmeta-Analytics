@@ -4,7 +4,14 @@
 
 services:
   db:
-    image: postgres:18-alpine
+    # pgvector, not plain postgres: migration 0010 needs the extension.
+    # Debian-based, because pgvector publishes no alpine variant — so the
+    # data directory changes libc. Text index ordering is collation-dependent,
+    # so do NOT reuse a volume initialised by postgres:18-alpine: run
+    #   docker compose -f docker-compose.dev.yml down -v
+    # and let it re-seed from docker/initdb/. The local data is a prod
+    # snapshot, so there is nothing to lose.
+    image: pgvector/pgvector:pg18
     container_name: beyblade-dev-db
     restart: unless-stopped
     environment:
@@ -39,6 +46,71 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  # Il backend, col codice montato: una modifica a un file .py fa ripartire
+  # uvicorn da solo. Senza, ogni cambio richiede `docker build` e la ricreazione
+  # del container - e un container stantio non da' errore, da' il comportamento
+  # di ieri, che e' molto piu' lento da diagnosticare.
+  backend-py:
+    build:
+      context: ./backend-py
+    container_name: beyblade-dev-api
+    restart: unless-stopped
+    volumes:
+      # Solo il sorgente. Il .venv resta quello dell'immagine: montarci sopra
+      # la cartella del progetto lo nasconderebbe e il container non troverebbe
+      # piu' le dipendenze.
+      - ./backend-py/app:/app/app:ro
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/beyblade_tracker
+      PORT: 8000
+      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-non-usare-in-produzione}
+      APP_BASE_URL: http://localhost:8080
+      # Le chiavi arrivano dal .env della repo, che docker compose legge da solo.
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CHAT_PROVIDER: ${CHAT_PROVIDER:-openrouter}
+      CHAT_MODEL: ${CHAT_MODEL:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      # Senza, /api/tournaments risponde ma i nomi dei tornei degradano a
+      # "Tournament <uuid>" - un fallimento parziale che sembra un problema
+      # dei dati invece che una variabile mancante.
+      CHALLENGERMODE_REFRESH_KEY: ${CHALLENGERMODE_REFRESH_KEY:-}
+      CHALLENGERMODE_API_KEY: ${CHALLENGERMODE_API_KEY:-}
+      CHALLENGERMODE_AUTH_URL: ${CHALLENGERMODE_AUTH_URL:-}
+      CHALLENGERMODE_GRAPHQL_URL: ${CHALLENGERMODE_GRAPHQL_URL:-}
+      CHALLENGERMODE_CACHE_TTL_MINUTES: ${CHALLENGERMODE_CACHE_TTL_MINUTES:-1440}
+      # Su Windows e macOS gli eventi del filesystem non attraversano un bind
+      # mount, quindi watchfiles non vedrebbe mai una modifica e --reload
+      # sarebbe una promessa non mantenuta. Il polling costa un po' di CPU e
+      # funziona ovunque.
+      WATCHFILES_FORCE_POLLING: "true"
+    command: >
+      sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+             --reload-dir /app/app"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Il frontend serve la SPA e inoltra /api al backend. L'alias di rete non e'
+  # decorativo: nginx proxia verso `backend-py`, e ricreando il container a mano
+  # con `docker run` quell'alias si perde - il sintomo e' un 502 che sembra un
+  # backend spento.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_PUBLIC_MINIO_URL: ${VITE_PUBLIC_MINIO_URL:-http://localhost:9000}
+    container_name: beyblade-dev-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      API_UPSTREAM: http://backend-py:8000
+      PUBLIC_STORAGE_ORIGIN: ${VITE_PUBLIC_MINIO_URL:-http://localhost:9000}
+    depends_on:
+      - backend-py
 
 volumes:
   beyblade_dev_pgdata:

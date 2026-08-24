@@ -38,7 +38,7 @@ export default function Contact() {
                 </div>
 
                 <div className="flex justify-center pt-8 border-t">
-                    <Link href="/profile">
+                    <Link href="/profile" asChild>
                         <a className="no-underline">
                             <Button variant="outline" className="gap-2">
                                 <ArrowLeft className="w-4 h-4" />

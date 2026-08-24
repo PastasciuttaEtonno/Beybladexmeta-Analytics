@@ -1242,3 +1242,36 @@ async def admin_upsert_player_combos(
         return JSONResponse(
             status_code=400, content={"error": str(exc) or "Failed to upsert player combos"}
         )
+
+
+@router.get("/api/admin/chat-errors")
+async def admin_chat_errors(
+    _user: Annotated[CurrentUser, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    limit: int = 50,
+    reference: str | None = None,
+):
+    """I guasti della chat col loro dettaglio completo.
+
+    E' l'altra meta' di app/lib/rag/errors.py: all'utente arriva un messaggio
+    fisso e un codice breve, qui c'e' tutto il resto. Quando qualcuno segnala
+    "l'assistente non funziona, codice a5d0d6ba", questo endpoint interrogato
+    con ?reference=a5d0d6ba porta alla riga esatta, traceback compreso.
+
+    Protetto da require_admin come il resto del router: il dettaglio contiene
+    nomi di fornitori, stati dei piani e tracce di esecuzione, cioe' esattamente
+    cio' che si e' smesso di mostrare all'utente.
+    """
+    rows = (
+        await db.execute(
+            text(
+                "SELECT reference, kind, detail, traceback, endpoint, session_id, "
+                "       host(client_ip) AS client_ip, created_at "
+                "FROM chat_error "
+                "WHERE (:ref IS NULL OR reference = :ref) "
+                "ORDER BY created_at DESC LIMIT :limit"
+            ),
+            {"ref": reference, "limit": max(1, min(limit, 200))},
+        )
+    ).mappings().all()
+    return {"errors": [dict(r) for r in rows]}

@@ -28,12 +28,23 @@ export function DesktopSidebar() {
                 {navItems.map(({ path, icon: Icon, label }) => {
                     const isActive = location === path;
                     return (
-                        <Link key={path} href={path}>
+                        <Link key={path} href={path} asChild>
                             <a
                                 className={cn(
-                                    "flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-4 py-3 rounded-xl transition-all duration-200 group no-underline",
+                                    // Il bordo sta nello stato base, trasparente: e' lo stato attivo a
+                                    // dargli un colore. Dichiararlo solo sull'attivo faceva crescere la
+                                    // voce selezionata di 1px per lato, e transition-all animava quella
+                                    // crescita: le voci vicine scivolavano di 2px a ogni cambio pagina.
+                                    // `transition` invece di `transition-all`: `all` includeva
+                                    // font-weight, che e' interpolabile, quindi il passaggio a
+                                    // font-medium veniva animato 400->500 in 200ms e il testo
+                                    // sembrava gonfiarsi e poi assestarsi. La lista predefinita
+                                    // di Tailwind copre colore, sfondo, bordo e ombra - tutto
+                                    // cio' che lo stato attivo cambia davvero - e lascia fuori
+                                    // il peso del carattere, che ora scatta subito.
+                                    "flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-4 py-3 rounded-xl border border-transparent transition duration-200 group no-underline",
                                     isActive
-                                        ? "bg-primary/10 text-primary font-medium shadow-sm border border-primary/20"
+                                        ? "bg-primary/10 text-primary font-medium shadow-sm border-primary/20"
                                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                 )}
                                 title={label}

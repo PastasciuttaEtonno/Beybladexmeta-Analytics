@@ -52,6 +52,26 @@ services:
       # Registration: captcha verification and the verification email.
       RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+
+      # L'assistente. Senza VOYAGE_API_KEY non c'e' recupero (embedding e
+      # re-rank passano di li'), senza la chiave del fornitore non c'e'
+      # generazione: in entrambi i casi /api/chat risponde 503 e il resto del
+      # sito continua a funzionare, che e' il motivo per cui si puo' distribuire
+      # prima di avere le chiavi.
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # Pronta per il passaggio a Claude: bastano questa e CHAT_PROVIDER=claude.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Il default del CODICE e' 'claude'. Qui si dichiara openrouter come fa il
+      # compose di sviluppo, cosi' le due macchine si comportano allo stesso
+      # modo anche quando la variabile in Coolify non c'e'.
+      CHAT_PROVIDER: ${CHAT_PROVIDER:-openrouter}
+      # Vuote di proposito: env_str() tratta la stringa vuota come "non
+      # impostata" e applica il default del codice.
+      CHAT_MODEL: ${CHAT_MODEL:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      VOYAGE_MODEL: ${VOYAGE_MODEL:-}
+      VOYAGE_RERANK_MODEL: ${VOYAGE_RERANK_MODEL:-}
     networks:
       - app
       - coolify

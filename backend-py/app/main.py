@@ -9,6 +9,14 @@ from fastapi.responses import JSONResponse
 from app.config import get_settings
 from app.main_helpers import raw_path
 from app.db import dispose_engine, get_engine
+# Prima dei router: le chiavi del RAG si leggono con os.environ, e senza
+# questo il .env resterebbe invisibile all'applicazione - come avverte il
+# commento in config.py. In Docker non fa nulla: vincono le variabili del
+# container.
+from app.lib.rag.env import load_env
+
+load_env()
+
 from app.routers import (
     admin,
     me,
@@ -16,6 +24,7 @@ from app.routers import (
     aliases,
     auth_routes,
     analytics,
+    chat,
     components,
     favorites,
     health,
@@ -102,13 +111,21 @@ async def http_exception_handler(_request: Request, exc: HTTPException):
     FastAPI would wrap the detail as {"detail": ...}; the frontend expects the
     bare object Express sends, e.g. {"error": "Not authenticated"}.
     """
+    # exc.headers va propagato: ricostruendo la risposta senza, ogni header
+    # passato a una HTTPException sparisce in silenzio. Il caso che l'ha
+    # rivelato e' Retry-After su un 429 - senza, un client riprova subito, che
+    # e' esattamente il comportamento che il limite esiste per scoraggiare -
+    # ma vale per qualunque header, WWW-Authenticate compreso.
     if isinstance(exc.detail, dict):
-        return JSONResponse(status_code=exc.status_code, content=exc.detail)
-    return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+        return JSONResponse(status_code=exc.status_code, content=exc.detail,
+                            headers=exc.headers)
+    return JSONResponse(status_code=exc.status_code, content={"error": exc.detail},
+                        headers=exc.headers)
 
 
 app.include_router(health.router)
 app.include_router(components.router)
+app.include_router(chat.router)
 app.include_router(seasons.router)
 app.include_router(internal.router)
 app.include_router(stats.router)

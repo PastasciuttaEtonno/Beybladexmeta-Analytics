@@ -1,0 +1,231 @@
+# Golden set v0 - il metro con cui si giudica il retrieval.
+#
+# Le domande sono vere, i documenti attesi sono slug reali di component_registry.
+# Le domande non affermano nulla: sono domande. Le risposte attese NON stanno
+# qui, e non ci staranno: questo file misura se il sistema trova i documenti
+# giusti, che e' una cosa verificabile. Se una risposta e' buona lo dira' la
+# valutazione della generazione, in M4.
+#
+# expected_docs: gli slug delle schede che DEVONO comparire fra i primi k.
+#                Finche' una scheda non e' scritta la domanda resta qui e
+#                fallisce - e' corretto: misura anche quanto corpus manca.
+# expected_none: la risposta giusta e' non trovare nulla. Serve a misurare che
+#                il sistema sappia astenersi invece di restituire il documento
+#                meno lontano.
+#
+#   python tools/eval_retrieval.py --url "$DATABASE_URL" --provider voyage
+#
+# Con --provider deterministic il ramo denso e' rumore e i suoi numeri non
+# vogliono dire niente; i rami esatto e full-text restano validi.
+
+version: 0
+created: 2026-08-21
+
+cases:
+  # --- designazioni esatte: il caso in cui il ramo denso da solo fallisce ---
+  - id: ratchet-9-60-profilo
+    query: "come si comporta il ratchet 9-60"
+    expected_docs: [9-60]
+    tags: [designazione, esatto]
+
+  - id: ratchet-1-60-non-9-60
+    query: "cosa cambia fra 1-60 e 9-60"
+    expected_docs: [1-60, 9-60]
+    tags: [designazione, confronto]
+
+  - id: ratchet-1-70
+    query: "1-70 conviene su un blade pesante?"
+    expected_docs: [1-70]
+    tags: [designazione, esatto]
+
+  # --- nomi di pezzi, nelle grafie che la gente usa davvero ---
+  - id: wizardrod-attaccato
+    query: "il WizardRod come si comporta in difesa"
+    expected_docs: [wizard-rod]
+    tags: [nome, camelcase]
+
+  - id: wizardrod-spaziato
+    query: "parlami di Wizard Rod"
+    expected_docs: [wizard-rod]
+    tags: [nome, spaziato]
+
+  - id: wizardrod-refuso
+    query: "parlami di Wizzard Rod"
+    expected_docs: [wizard-rod]
+    tags: [nome, refuso]
+
+  # --- la coppia piu' vicina del registry: non devono confondersi ---
+  - id: optimus-prime-non-primal
+    query: "OptimusPrime"
+    expected_docs: [optimus-prime]
+    forbidden_docs: [optimus-primal]
+    tags: [nome, ambiguo]
+
+  - id: optimus-primal-non-prime
+    query: "OptimusPrimal"
+    expected_docs: [optimus-primal]
+    forbidden_docs: [optimus-prime]
+    tags: [nome, ambiguo]
+
+  # --- domande concettuali: qui il ramo denso deve guadagnarsi lo spazio ---
+  - id: concetto-stamina
+    query: "quale blade tiene meglio la rotazione fino alla fine"
+    expected_docs: []          # da compilare quando le schede esistono
+    tags: [concettuale, da-completare]
+
+  - id: concetto-contro-attacco
+    query: "cosa metto contro una combo aggressiva"
+    expected_docs: []
+    tags: [concettuale, da-completare]
+
+  - id: concetto-bit-difesa
+    query: "che differenza fa il bit su una combo difensiva"
+    expected_docs: []
+    tags: [concettuale, da-completare]
+
+  # --- combinazioni: nome + designazione nella stessa domanda ---
+  - id: combo-wizardrod-9-60
+    query: "WizardRod su 9-60 ha senso?"
+    expected_docs: [wizard-rod, 9-60]
+    tags: [nome, designazione, combinato]
+
+  - id: combo-sharkscale-1-70
+    query: "SharkScale con 1-70 e LowRush"
+    expected_docs: [shark-scale, 1-70, low-rush]
+    tags: [nome, designazione, combinato]
+
+  # --- le sigle: il nome piu' corto che un bit abbia ---
+  # Un bit si scrive LR, HN, FB tanto quanto LowRush, HighNeedle, FreeBall, e il
+  # registry ha 42 alias di una o due lettere. Il caso non e' li' per vedere se
+  # la scheda giusta esce - il ramo denso la portava al primo posto anche prima
+  # che le sigle fossero collegate. E' li' per la PRECISIONE: senza il
+  # collegamento, "LR" tirava dentro anche LowOrb, GearRush, LowFlat e Rush,
+  # perche' al modello quelle schede si somigliano tutte. I forbidden_docs sono
+  # misurati, non immaginati: sono due dei sei slug che il recupero restituiva
+  # prima del commit che ha aggiunto le sigle.
+  - id: bit-sigla-lr
+    query: "cosa fa il bit LR"
+    expected_docs: [low-rush]
+    forbidden_docs: [low-orb, gear-rush]
+    tags: [sigla, esatto]
+
+  # --- l'apostrofo: una maiuscola che non vuol dire niente ---
+  # Il registry ha un alias di UNA lettera per quasi tutto l'alfabeto, e
+  # l'italiano elide: C'e', L'attacco, V'e', S'intende. Misurato prima della
+  # correzione, "C'e' differenza fra Rush e LowRush?" restituiva la scheda di
+  # Cyclone al terzo posto - non uno slug di troppo in una lista, una fonte in
+  # piu' nella risposta, su un pezzo che nessuno aveva nominato.
+  #
+  # Le due domande chiedono altro: cio' che si misura e' che la lettera prima
+  # dell'apostrofo NON tiri dentro il suo pezzo.
+  - id: elisione-l-non-level
+    query: "L'attacco di WizardRod come si comporta"
+    expected_docs: [wizard-rod]
+    forbidden_docs: [level]
+    tags: [sigla, ambiguo]
+
+  - id: elisione-c-non-cyclone
+    query: "C'e' differenza fra Rush e LowRush?"
+    expected_docs: [rush, low-rush]
+    forbidden_docs: [cyclone]
+    tags: [sigla, ambiguo]
+
+  # --- un pezzo, due nomi ---
+  # Quetzalcoatlus e PteraSwing sono lo stesso Blade (stessa pagina wiki, stessi
+  # 34,3 g, stessi codici prodotto). La 0017 li ha uniti tenendo PteraSwing, che
+  # e' il nome che il foglio meta usa davvero. Il caso misura la meta' che si
+  # perde piu' facilmente in una fusione: il nome che NON sopravvive deve
+  # continuare a trovare il pezzo, altrimenti chi lo conosce cosi' non lo trova
+  # piu' e la fusione ha rotto qualcosa invece di ripararlo.
+  - id: nome-alternativo-quetzalcoatlus
+    query: "parlami di Quetzalcoatlus"
+    expected_docs: [ptera-swing]
+    tags: [nome, localizzato]
+
+  # forbidden_docs: la T di "T.Rex" e' una maiuscola isolata, e 't' nel registro
+  # e' Taper. Misurato: prima della correzione la domanda restituiva Taper
+  # accanto al blade giusto - la risposta restava corretta, con un pezzo di
+  # troppo fra le fonti, che e' il modo piu' difficile da notare.
+  - id: nome-alternativo-t-rex
+    query: "parlami di T.Rex"
+    expected_docs: [tyranno-beat]
+    forbidden_docs: [taper]
+    tags: [nome, localizzato, ambiguo]
+
+  # --- fuori ambito: la risposta giusta e' astenersi ---
+  - id: fuori-ambito-meteo
+    query: "che tempo fa domani a Milano"
+    expected_none: true
+    tags: [fuori-ambito]
+
+  - id: fuori-ambito-altro-gioco
+    query: "qual e' la migliore carta di Magic the Gathering"
+    expected_none: true
+    tags: [fuori-ambito]
+
+  # I casi difficili: vocabolario vicino, dominio diverso. Sono quelli che
+  # decidono davvero la soglia - una domanda su Beyblade Burst usa meta' delle
+  # parole del corpus, quindi il re-ranker la premia molto piu' del meteo. Con
+  # due soli casi fuori tema la soglia sarebbe stata calibrata sul caso facile.
+  - id: fuori-ambito-burst
+    query: "qual e' il miglior driver di Beyblade Burst"
+    expected_none: true
+    tags: [fuori-ambito, dominio-vicino]
+
+  - id: fuori-ambito-metal-fight
+    query: "come si monta Lightning L-Drago in Metal Fight"
+    expected_none: true
+    tags: [fuori-ambito, dominio-vicino]
+
+  - id: fuori-ambito-acquisto
+    query: "dove posso comprare una beystadium online e quanto costa"
+    expected_none: true
+    tags: [fuori-ambito, dominio-vicino]
+
+  - id: fuori-ambito-anime
+    query: "in che episodio dell'anime compare per la prima volta il protagonista"
+    expected_none: true
+    tags: [fuori-ambito, dominio-vicino]
+
+  - id: fuori-ambito-generico
+    query: "come si chiama la capitale del Portogallo"
+    expected_none: true
+    tags: [fuori-ambito]
+
+  # --- statistiche: il confine fra recupero e routing ---
+  # Erano scritti come expected_none, ed era sbagliato. "quante volte e' stato
+  # usato Hexa" nomina un pezzo reale: la scheda di Hexa E' pertinente, e il
+  # recupero fa bene a restituirla. Cio' che non deve accadere e' che il modello
+  # RISPONDA con un numero preso dalla prosa invece che da un tool.
+  #
+  # Sopprimerlo tarando il recupero romperebbe il caso legittimo "parlami di
+  # Hexa". Quindi il confine appartiene al routing, non a questo strato:
+  # expected_routing dice quale strato possiede il caso, e la valutazione lo
+  # conta come in attesa finche' quello strato non esiste (M3).
+  - id: statistica-top-combo
+    query: "qual e' la combo con piu' vittorie"
+    expected_routing: tools
+    tags: [statistica, confine]
+
+  - id: statistica-usage-bit
+    query: "quante volte e' stato usato Hexa questa stagione"
+    expected_routing: tools
+    tags: [statistica, confine]
+
+  # --- regole di modellazione: documenti senza slug, riferiti per percorso ---
+  # Sono i casi che hanno smascherato il ramo full-text in AND: nessuna di
+  # queste domande contiene solo parole presenti nel documento.
+  - id: regola-over-blade
+    query: "perche non vedo le over blade nei filtri"
+    expected_paths: [knowledge/regole/identita-combo.md]
+    tags: [regola, domanda-naturale]
+
+  - id: regola-lock-chip-none
+    query: "cosa vuol dire lock chip None"
+    expected_paths: [knowledge/regole/identita-combo.md]
+    tags: [regola, domanda-naturale]
+
+  - id: regola-cosa-identifica-combo
+    query: "quali pezzi rendono due combo diverse fra loro"
+    expected_paths: [knowledge/regole/identita-combo.md]
+    tags: [regola, domanda-naturale]

@@ -46,7 +46,7 @@ export function DesktopAnalyticsGrid({
                 const comboId = getComboId(combo);
 
                 return (
-                    <Link key={comboId} href={`/combo/${comboId}?season=${encodeURIComponent(season)}`}>
+                    <Link key={comboId} href={`/combo/${comboId}?season=${encodeURIComponent(season)}`} asChild>
                         <a className="block w-full sm:w-[375px] h-full no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl shrink-0">
                             <DesktopComboCard
                                 combo={combo}

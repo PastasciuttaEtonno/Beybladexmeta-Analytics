@@ -138,21 +138,21 @@ export default function Profile() {
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground px-1">Altro</h2>
           <Card className="divide-y divide-border">
-            <Link href="/privacy-policy">
+            <Link href="/privacy-policy" asChild>
               <a className="w-full p-4 flex items-center gap-3">
                 <Lock className="w-5 h-5 text-muted-foreground" />
                 <span className="flex-1 font-medium">Privacy Policy</span>
                 <ChevronRight className="w-5 h-5 text-muted-foreground text-muted-foreground/50" />
               </a>
             </Link>
-            <Link href="/terms">
+            <Link href="/terms" asChild>
               <a className="w-full p-4 flex items-center gap-3">
                 <Info className="w-5 h-5 text-muted-foreground" />
                 <span className="flex-1 font-medium">Termini di Servizio</span>
                 <ChevronRight className="w-5 h-5 text-muted-foreground text-muted-foreground/50" />
               </a>
             </Link>
-            <Link href="/contact">
+            <Link href="/contact" asChild>
               <a className="w-full p-4 flex items-center gap-3">
                 <HelpCircle className="w-5 h-5 text-muted-foreground" />
                 <span className="flex-1 font-medium">Supporto</span>
@@ -170,7 +170,7 @@ export default function Profile() {
               Log Out
             </Button>
           ) : (
-            <Link href="/login">
+            <Link href="/login" asChild>
               <a className="inline-flex items-center justify-center w-full h-12 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
                 Login / Register
               </a>

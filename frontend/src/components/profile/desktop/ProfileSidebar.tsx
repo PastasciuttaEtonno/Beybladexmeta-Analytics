@@ -24,7 +24,7 @@ export function ProfileSidebar({ user }: ProfileSidebarProps) {
                     </p>
                 </div>
                 <div className="w-full max-w-[240px]">
-                    <Link href="/login">
+                    <Link href="/login" asChild>
                         <a className="inline-flex items-center justify-center w-full h-11 px-6 py-2 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
                             Accedi / Registrati
                         </a>

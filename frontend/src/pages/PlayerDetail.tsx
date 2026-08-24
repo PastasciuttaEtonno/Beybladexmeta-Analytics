@@ -188,7 +188,7 @@ export default function PlayerDetail() {
         {/* DESKTOP LAYOUT */}
         <div className="hidden md:block max-w-7xl mx-auto space-y-8">
           <div className="mb-4">
-            <Link href="/players">
+            <Link href="/players" asChild>
               <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline">
                 <ArrowLeft className="w-4 h-4" />
                 Torna alla lista
@@ -232,7 +232,7 @@ export default function PlayerDetail() {
               <TabsTrigger value="players">Giocatori</TabsTrigger>
             </TabsList>
             <div className="mb-4">
-              <Link href="/players">
+              <Link href="/players" asChild>
                 <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline min-w-[44px] min-h-[44px]">
                   <ArrowLeft className="w-4 h-4" />
                   Indietro
@@ -352,7 +352,7 @@ export default function PlayerDetail() {
                   ) : (
                     <div className="space-y-2">
                       {(tourData?.tournaments || []).map((t) => (
-                        <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`}>
+                        <Link key={t.tournamentId} href={`/tournaments/${encodeURIComponent(t.tournamentId)}`} asChild>
                           <a className="block no-underline">
                             <Card className="p-3 cursor-pointer hover-elevate active-elevate-2 transition-colors">
                               <div className="flex items-center justify-between gap-3">

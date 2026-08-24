@@ -8,10 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { Seo } from "@/components/Seo";
+import { RecaptchaNotice } from "@/components/RecaptchaNotice";
 
 // Helpers for sanitization and validation
 const normalizeEmail = (s: string) => s.trim().toLowerCase();
-const RECAPTCHA_SITE_KEY: string | undefined = process.env.VITE_RECAPTCHA_SITE_KEY;
+// `process` non esiste nel browser: sotto vite dev questa riga sollevava
+// ReferenceError durante la valutazione del modulo e l'intera app restava
+// bianca, su ogni rotta. In build rollup sostituiva process.env con un
+// oggetto vuoto, quindi la chiave era comunque sempre undefined e funzionava
+// solo il ripiego sul tag <script>. import.meta.env e' l'accesso di vite e
+// fa entrambe le cose: niente crash in dev, e la variabile viene davvero letta.
+const RECAPTCHA_SITE_KEY: string | undefined = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 function resolveRecaptchaSiteKey(): string | null {
   if (RECAPTCHA_SITE_KEY && typeof RECAPTCHA_SITE_KEY === "string" && RECAPTCHA_SITE_KEY.length > 0) {
@@ -439,6 +446,10 @@ export default function Login() {
               <Button type="submit" className="w-full" disabled={registering || !!regEmailError || !!regPasswordError || !!regDisplayNameError || !regEmail || !regPassword || !regDisplayName || !privacyAccepted || !tosAccepted}>
                 {registering ? (recaptchaLoading ? "Verifica reCAPTCHA..." : "Registrazione in corso...") : "Registrati"}
               </Button>
+              {/* Obbligatoria: il badge fluttuante e' nascosto in index.css, e i
+                  termini di Google consentono di toglierlo solo se il
+                  riconoscimento resta visibile qui. */}
+              <RecaptchaNotice />
             </form>
           </DialogContent>
         </Dialog>

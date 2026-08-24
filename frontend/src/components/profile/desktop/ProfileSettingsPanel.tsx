@@ -69,7 +69,7 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
 
         if (href) {
             return (
-                <Link href={href}>
+                <Link href={href} asChild>
                     <a className="block no-underline">{Content}</a>
                 </Link>
             );

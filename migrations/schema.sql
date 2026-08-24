@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict 3y3qsuHGvpC6ab0IsCOnyIq1obuKK1nrH2j3oVA72SmEYuC8Xl251SQH6ckue6X
+\restrict 4TVSEWAIpAotIYnYfaQKPOYIxefb86Oj1EAfUj7jUAk5Ai66Qh6QfavHvoOcH6c
 
--- Dumped from database version 18.6
--- Dumped by pg_dump version 18.6
+-- Dumped from database version 18.6 (Debian 18.6-1.pgdg12+2)
+-- Dumped by pg_dump version 18.6 (Debian 18.6-1.pgdg12+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,6 +20,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
+--
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -31,6 +45,45 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
+
+--
+-- Name: unaccent; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION unaccent; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
+
+
+--
+-- Name: vector; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
+
+
+--
+-- Name: kb_norm(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.kb_norm(value text) RETURNS text
+    LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+    AS $$
+    SELECT regexp_replace(lower(value), '[^a-z0-9]', '', 'g');
+$$;
 
 
 SET default_tablespace = '';
@@ -272,6 +325,36 @@ CREATE TABLE public.combo_stats (
 
 
 --
+-- Name: component_alias; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.component_alias (
+    alias_norm text NOT NULL,
+    alias text NOT NULL,
+    slug text NOT NULL,
+    kind text DEFAULT 'exact'::text NOT NULL,
+    CONSTRAINT component_alias_kind_check CHECK ((kind = ANY (ARRAY['exact'::text, 'spaced'::text, 'slug'::text, 'abbrev'::text, 'typo'::text, 'localized'::text])))
+);
+
+
+--
+-- Name: component_registry; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.component_registry (
+    slug text NOT NULL,
+    canonical_name text NOT NULL,
+    slot text NOT NULL,
+    system text,
+    attributes jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT component_registry_slot_check CHECK ((slot = ANY (ARRAY['blade'::text, 'assist_blade'::text, 'ratchet'::text, 'bit'::text, 'lock_chip'::text]))),
+    CONSTRAINT component_registry_system_check CHECK ((system = ANY (ARRAY['BX'::text, 'UX'::text, 'CX'::text])))
+);
+
+
+--
 -- Name: external_api_cache; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -344,6 +427,122 @@ CREATE TABLE public.favorite_decks (
     user_id character varying NOT NULL,
     name text NOT NULL
 );
+
+
+--
+-- Name: kb_chunk; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.kb_chunk (
+    id bigint NOT NULL,
+    document_id bigint NOT NULL,
+    ordinal integer NOT NULL,
+    heading text,
+    text text NOT NULL,
+    context_header text,
+    chunk_hash text NOT NULL,
+    embedding public.vector(1024),
+    embedding_model text,
+    tsv tsvector GENERATED ALWAYS AS (to_tsvector('italian'::regconfig, ((COALESCE(context_header, ''::text) || ' '::text) || text))) STORED,
+    code_tokens text[] DEFAULT '{}'::text[] NOT NULL,
+    meta jsonb DEFAULT '{}'::jsonb NOT NULL,
+    token_count integer,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: kb_chunk_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.kb_chunk_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: kb_chunk_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.kb_chunk_id_seq OWNED BY public.kb_chunk.id;
+
+
+--
+-- Name: kb_document; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.kb_document (
+    id bigint NOT NULL,
+    source_path text NOT NULL,
+    doc_type text NOT NULL,
+    slug text,
+    lang text DEFAULT 'it'::text NOT NULL,
+    frontmatter jsonb DEFAULT '{}'::jsonb NOT NULL,
+    content_hash text NOT NULL,
+    doc_version integer DEFAULT 1 NOT NULL,
+    git_sha text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    superseded_at timestamp with time zone,
+    CONSTRAINT kb_document_doc_type_check CHECK ((doc_type = ANY (ARRAY['component'::text, 'rule'::text, 'guide'::text, 'meta_snapshot'::text])))
+);
+
+
+--
+-- Name: kb_document_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.kb_document_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: kb_document_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.kb_document_id_seq OWNED BY public.kb_document.id;
+
+
+--
+-- Name: kb_ingest_run; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.kb_ingest_run (
+    id bigint NOT NULL,
+    git_sha text,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    docs_seen integer DEFAULT 0 NOT NULL,
+    docs_changed integer DEFAULT 0 NOT NULL,
+    chunks_embedded integer DEFAULT 0 NOT NULL,
+    chunks_skipped integer DEFAULT 0 NOT NULL,
+    error text
+);
+
+
+--
+-- Name: kb_ingest_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.kb_ingest_run_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: kb_ingest_run_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.kb_ingest_run_id_seq OWNED BY public.kb_ingest_run.id;
 
 
 --
@@ -835,6 +1034,27 @@ ALTER TABLE ONLY public.clubs ALTER COLUMN id SET DEFAULT nextval('public.clubs_
 
 
 --
+-- Name: kb_chunk id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_chunk ALTER COLUMN id SET DEFAULT nextval('public.kb_chunk_id_seq'::regclass);
+
+
+--
+-- Name: kb_document id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_document ALTER COLUMN id SET DEFAULT nextval('public.kb_document_id_seq'::regclass);
+
+
+--
+-- Name: kb_ingest_run id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_ingest_run ALTER COLUMN id SET DEFAULT nextval('public.kb_ingest_run_id_seq'::regclass);
+
+
+--
 -- Name: user_aliases id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -938,6 +1158,30 @@ ALTER TABLE ONLY public.combo_stats
 
 
 --
+-- Name: component_alias component_alias_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.component_alias
+    ADD CONSTRAINT component_alias_pkey PRIMARY KEY (alias_norm, slug);
+
+
+--
+-- Name: component_registry component_registry_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.component_registry
+    ADD CONSTRAINT component_registry_pkey PRIMARY KEY (slug);
+
+
+--
+-- Name: component_registry component_registry_slot_canonical_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.component_registry
+    ADD CONSTRAINT component_registry_slot_canonical_name_key UNIQUE (slot, canonical_name);
+
+
+--
 -- Name: external_api_cache external_api_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -975,6 +1219,38 @@ ALTER TABLE ONLY public.favorite_deck_combos
 
 ALTER TABLE ONLY public.favorite_decks
     ADD CONSTRAINT favorite_decks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: kb_chunk kb_chunk_document_id_ordinal_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_chunk
+    ADD CONSTRAINT kb_chunk_document_id_ordinal_key UNIQUE (document_id, ordinal);
+
+
+--
+-- Name: kb_chunk kb_chunk_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_chunk
+    ADD CONSTRAINT kb_chunk_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: kb_document kb_document_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_document
+    ADD CONSTRAINT kb_document_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: kb_ingest_run kb_ingest_run_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_ingest_run
+    ADD CONSTRAINT kb_ingest_run_pkey PRIMARY KEY (id);
 
 
 --
@@ -1086,6 +1362,20 @@ CREATE INDEX cm_match_results_tournament_idx ON public.cm_match_results USING bt
 
 
 --
+-- Name: component_alias_norm_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX component_alias_norm_idx ON public.component_alias USING btree (alias_norm);
+
+
+--
+-- Name: component_alias_trgm_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX component_alias_trgm_idx ON public.component_alias USING gin (alias_norm public.gin_trgm_ops);
+
+
+--
 -- Name: external_player_combos_combo_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1111,6 +1401,55 @@ CREATE INDEX external_player_combos_tournament_idx ON public.external_player_com
 --
 
 CREATE INDEX idx_user_aliases_lower_alias ON public.user_aliases USING btree (lower(alias));
+
+
+--
+-- Name: kb_chunk_code_tokens_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kb_chunk_code_tokens_idx ON public.kb_chunk USING gin (code_tokens);
+
+
+--
+-- Name: kb_chunk_document_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kb_chunk_document_idx ON public.kb_chunk USING btree (document_id);
+
+
+--
+-- Name: kb_chunk_embedding_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kb_chunk_embedding_idx ON public.kb_chunk USING hnsw (embedding public.vector_cosine_ops) WITH (m='16', ef_construction='64');
+
+
+--
+-- Name: kb_chunk_meta_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kb_chunk_meta_idx ON public.kb_chunk USING gin (meta jsonb_path_ops);
+
+
+--
+-- Name: kb_chunk_tsv_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kb_chunk_tsv_idx ON public.kb_chunk USING gin (tsv);
+
+
+--
+-- Name: kb_document_live_source_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX kb_document_live_source_idx ON public.kb_document USING btree (source_path) WHERE (superseded_at IS NULL);
+
+
+--
+-- Name: kb_document_slug_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kb_document_slug_idx ON public.kb_document USING btree (slug) WHERE (superseded_at IS NULL);
 
 
 --
@@ -1243,6 +1582,14 @@ ALTER TABLE ONLY public.cm_match_results
 
 
 --
+-- Name: component_alias component_alias_slug_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.component_alias
+    ADD CONSTRAINT component_alias_slug_fkey FOREIGN KEY (slug) REFERENCES public.component_registry(slug) ON DELETE CASCADE;
+
+
+--
 -- Name: external_player_combos external_player_combos_player_id_cm_players_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1275,8 +1622,24 @@ ALTER TABLE ONLY public.favorite_decks
 
 
 --
+-- Name: kb_chunk kb_chunk_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_chunk
+    ADD CONSTRAINT kb_chunk_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.kb_document(id) ON DELETE CASCADE;
+
+
+--
+-- Name: kb_document kb_document_slug_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.kb_document
+    ADD CONSTRAINT kb_document_slug_fkey FOREIGN KEY (slug) REFERENCES public.component_registry(slug) ON DELETE RESTRICT;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 3y3qsuHGvpC6ab0IsCOnyIq1obuKK1nrH2j3oVA72SmEYuC8Xl251SQH6ckue6X
+\unrestrict 4TVSEWAIpAotIYnYfaQKPOYIxefb86Oj1EAfUj7jUAk5Ai66Qh6QfavHvoOcH6c
 

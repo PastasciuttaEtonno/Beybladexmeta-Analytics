@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
+from app.lib.scoring import BASE_POINTS
 from app.lib.seasons import determine_season
 from app.serialization import big_number, number
 
@@ -21,7 +22,24 @@ log = logging.getLogger(__name__)
 _ALL_TIME = {"", "all", "all time", "all-time"}
 
 # Points awarded for a placement, before the participant-count multiplier.
-_PLACEMENT_SCORE = {1: 10, 2: 7, 3: 5, 4: 3}
+# Importato invece che riscritto: e' la stessa tabella che alimenta le
+# tabelle aggregate in lib/scoring.py.
+_PLACEMENT_SCORE = BASE_POINTS
+
+# I segnaposto delle tabelle stats: "nessun componente in questa posizione".
+# Stessa lista di /api/components, che li filtra da sempre.
+_PLACEHOLDERS = {"NONE", "-"}
+
+
+def _is_component(name: str | None) -> bool:
+    """Un segnaposto non e' un pezzo e non va in classifica.
+
+    Senza questo filtro 'None' compariva fra i ratchet piu' forti con 56 punti,
+    davanti a diversi ratchet veri. Emerso confrontando questo endpoint con i
+    tool quantitativi, che lo escludevano: due implementazioni della stessa
+    classifica che non concordavano, e la sbagliata era questa.
+    """
+    return bool(name) and name.strip().upper() not in _PLACEHOLDERS
 
 
 @router.get("/api/analytics/meta")
@@ -68,11 +86,11 @@ async def meta(
             if earned == 0:
                 continue
 
-            if row.blade:
+            if _is_component(row.blade):
                 add("blade", row.blade, earned)
-            if row.ratchet:
+            if _is_component(row.ratchet):
                 add("ratchet", row.ratchet, earned)
-            if row.bit:
+            if _is_component(row.bit):
                 add("bit", row.bit, earned)
 
             if row.blade and row.ratchet and row.bit:
