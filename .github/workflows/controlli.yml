@@ -17,6 +17,11 @@
 # I due gate del RAG (eval_retrieval, eval_generation) NON stanno qui: costano
 # chiamate a pagamento e vanno in notturna, non a ogni push.
 
+# NOTA: oggi questo file NON gira - il credito GitHub del repo e' bloccato.
+# Gli stessi controlli si lanciano in locale con `npm run controlli`, e
+# `npm run hooks:install` li attacca al pre-push. Resta qui perche' il giorno
+# che Actions torna disponibile e' gia' pronto.
+
 name: controlli
 
 on:
@@ -42,7 +47,11 @@ jobs:
       # onesta invece che silenziosamente parziale.
       - name: test senza database
         working-directory: backend-py
-        run: uv run pytest -q
+        # `python -m pytest` e non `pytest`: solo il primo mette la cartella
+        # corrente nel path, e senza quella i test non trovano il pacchetto
+        # `app`. Scoperto lanciandoli in locale, non qui: questo lavoro
+        # sarebbe stato rosso alla prima esecuzione.
+        run: uv run python -m pytest -q
 
       - uses: actions/setup-node@v4
         with:
@@ -116,7 +125,11 @@ jobs:
 
       - name: test col database
         working-directory: backend-py
-        run: uv run pytest -q
+        # `python -m pytest` e non `pytest`: solo il primo mette la cartella
+        # corrente nel path, e senza quella i test non trovano il pacchetto
+        # `app`. Scoperto lanciandoli in locale, non qui: questo lavoro
+        # sarebbe stato rosso alla prima esecuzione.
+        run: uv run python -m pytest -q
 
   immagini:
     name: le immagini si costruiscono

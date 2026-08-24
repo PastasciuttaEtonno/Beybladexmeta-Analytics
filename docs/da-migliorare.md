@@ -130,10 +130,24 @@ Le funzioni pure di `frontend/src/components/chat/answer.tsx` (`stripCitations`,
 `groups`) sono testabili senza browser: `vitest` più quattro test coprirebbe
 esattamente quei casi, e girerebbe nel lavoro `veloce` della CI.
 
-## 10. Della CI mancano gli strati 3 e 4
+## 10. La CI non gira, e mancano comunque gli strati 3 e 4
 
-[`.github/workflows/controlli.yml`](../.github/workflows/controlli.yml) copre
-test, tipi, integrità del registro e build delle immagini. Restano fuori:
+**GitHub Actions e' fermo su questo repo** perche' il credito e' bloccato, quindi
+[`.github/workflows/controlli.yml`](../.github/workflows/controlli.yml) e' un pezzo
+di carta finche' non lo si riabilita. Al suo posto gli stessi controlli girano in
+locale:
+
+```bash
+npm run controlli          # test, tipi, migrazioni, registro, test col database
+npm run controlli:veloce   # solo test e tipi
+npm run hooks:install      # e da li' in poi partono da soli prima di ogni push
+```
+
+Non e' equivalente: un controllo locale si salta con `--no-verify` e non protegge
+chi non l'ha installato. Il giorno che Actions torna disponibile il workflow c'e'
+gia'.
+
+E anche quando tornera', restano fuori due strati:
 
 - **i due gate del RAG in notturna** (`eval_retrieval`, `eval_generation`), che
   costano chiamate a pagamento e vanno con le chiavi nei secrets. Sono l'unico

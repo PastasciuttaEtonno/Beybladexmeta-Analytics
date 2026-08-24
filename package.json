@@ -7,6 +7,8 @@
   "scripts": {
     "build": "npm --prefix frontend run build",
     "check": "npm --prefix frontend run check",
+    "controlli": "python tools/controlli.py",
+    "controlli:veloce": "python tools/controlli.py --veloce",
     "db:down": "docker compose -f docker-compose.dev.yml down",
     "db:migrate": "python tools/migrate.py",
     "db:psql": "docker exec -it beyblade-dev-db psql -U postgres -d beyblade_tracker",
@@ -15,6 +17,7 @@
     "dev": "concurrently -n api,web -c yellow,magenta \"npm run dev:py\" \"npm --prefix frontend run dev\"",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:py": "uv run --directory backend-py uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "hooks:install": "git config core.hooksPath .githooks",
     "install:all": "npm --prefix frontend install && uv sync --directory backend-py",
     "session": "python tools/dev_session.py",
     "user:create": "python tools/create_user.py"

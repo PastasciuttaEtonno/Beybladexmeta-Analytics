@@ -1,0 +1,16 @@
+#!/bin/sh
+# I controlli veloci prima di ogni push.
+#
+# GitHub Actions non gira su questo repo, quindi se un controllo non parte da
+# qui non parte affatto. Solo test e tipi: sono cinque secondi, e un gancio che
+# fa aspettare finisce disattivato entro una settimana.
+#
+# Si installa una volta sola:   npm run hooks:install
+# Si salta quando serve:        git push --no-verify
+
+echo "controlli veloci prima del push (git push --no-verify per saltarli)"
+python tools/controlli.py --veloce || {
+    echo
+    echo "push interrotto: sistema quanto sopra, oppure --no-verify se sai cosa stai facendo"
+    exit 1
+}

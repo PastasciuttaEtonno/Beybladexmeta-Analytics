@@ -85,6 +85,27 @@ without it an existing volume means the seed scripts are skipped entirely.
 Coolify also takes a nightly backup of production at 03:00, keeping seven. Those
 are `pg_dump --format=custom`, so they restore with `pg_restore`, not `psql`.
 
+## Checks
+
+GitHub Actions does not run on this repo — the billing is switched off — so
+`.github/workflows/controlli.yml` sits there unused until it is turned back on.
+The same checks run locally instead, which is what makes them real:
+
+```bash
+npm run controlli          # tests, types, migrations, registry, tests with the DB
+npm run controlli:veloce   # just tests and types — about five seconds
+npm run hooks:install      # once, and they run before every push
+```
+
+The database steps skip themselves, and say so, when the development database on
+:5433 is not up: a check that announces it is partial beats one that looks
+complete and is not. `git push --no-verify` skips the hook when you need it to.
+
+What each of them would have caught is written down in
+[`docs/da-migliorare.md`](docs/da-migliorare.md) — the short version is that
+`check_kb_registry.py` alone would have found four duplicate parts that lived in
+production for months.
+
 ## Database schema
 
 `migrations/` holds numbered SQL files and `tools/migrate.py` applies them,
