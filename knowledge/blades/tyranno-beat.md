@@ -4,7 +4,7 @@ slug: tyranno-beat
 type: component
 slot: blade
 canonical_name: "TyrannoBeat"
-aliases: ["TyrannoBeat"]
+aliases: ["TyrannoBeat", "T.Rex"]
 system: BX
 lang: it
 status: draft
@@ -21,7 +21,7 @@ reference: https://beyblade.wiki/tyranno-beat-blade/
 **TyrannoBeat** è un Blade del sistema BX (Basic Line), di tipo attacco.
 Il pezzo pesa 37,0 grammi e ha rotazione destrorsa.
 Le statistiche dichiarate dal produttore sono attacco 65, difesa 30, resistenza 5. Sono valori del produttore, non misure di torneo: descrivono l'intenzione di progetto, non il rendimento reale.
-Nelle edizioni occidentali il pezzo è distribuito con il nome Beat Tyranno.
+Lo stesso pezzo circola con più nomi: **T.Rex** è lo stesso Blade, non un pezzo diverso, e nelle edizioni occidentali compare anche come Beat Tyranno. Una combo registrata come T.Rex e una registrata come TyrannoBeat sono la stessa combo.
 
 <!-- Generato da tools/import_wiki_facts.py dai campi scheda di https://beyblade.fandom.com/wiki/Blade_-_TyrannoBeat — fatti, non prosa della wiki. Riscrivilo pure: una sezione modificata a mano non viene piu' toccata. -->
 

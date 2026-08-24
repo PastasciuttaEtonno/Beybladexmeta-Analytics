@@ -142,6 +142,11 @@ cases:
     expected_docs: [ptera-swing]
     tags: [nome, localizzato]
 
+  - id: nome-alternativo-t-rex
+    query: "parlami di T.Rex"
+    expected_docs: [tyranno-beat]
+    tags: [nome, localizzato]
+
   # --- fuori ambito: la risposta giusta e' astenersi ---
   - id: fuori-ambito-meteo
     query: "che tempo fa domani a Milano"
