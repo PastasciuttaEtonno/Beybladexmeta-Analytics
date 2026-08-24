@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
@@ -40,8 +41,53 @@ MAX_QUESTION = 500
 HISTORY_TURNS = 6
 
 
+# Una domanda che non contiene nemmeno una lettera o una cifra non e' una
+# domanda: "?", "...", uno spazio. Riconoscerla qui costa una regex; lasciarla
+# passare costa un embedding, un re-rank e un giro di modello per poi dire
+# comunque che non si e' capito.
+_ALFANUMERICO = re.compile(r"[0-9A-Za-z\u00C0-\u024F]")
+
+# Il testo e' una costante, come tutti i messaggi all'utente in errors.py.
+_TROPPO_VAGA = (
+    "Non ho capito la domanda. Scrivi il nome di un pezzo (per esempio "
+    "WizardRod, 9-60, LR) oppure una domanda intera."
+)
+
+
+def _e_una_domanda(question: str) -> bool:
+    return bool(_ALFANUMERICO.search(question))
+
+
+def _risposta_costante(testo: str) -> dict:
+    """Una risposta senza modello, nella stessa forma di quelle vere.
+
+    Stessa forma perche' il client non deve conoscere due casi: la tratta come
+    ogni altra risposta, mostra le stesse etichette e lo stesso pollice.
+    `retrieval.reason` dice perche', ed e' quello che si legge nei log.
+    """
+    return {
+        "text": testo,
+        "sources": [],
+        "tool_calls": [],
+        "abstained": True,
+        "verdict": {"phantom_citations": [], "unknown_tools": [],
+                    "unsourced_numbers": []},
+        "model": None,
+        "usage": {"input": 0, "output": 0, "cache_write": 0, "cache_read": 0},
+        "latency_ms": 0,
+        "retrieval": {"branch_counts": {}, "fused_count": 0, "reranked": False,
+                      "top_score": None, "abstained": True,
+                      "reason": "domanda senza lettere ne' cifre",
+                      "slugs": [], "codes": []},
+    }
+
+
 class ChatRequest(BaseModel):
-    question: str = Field(min_length=2, max_length=MAX_QUESTION)
+    # Una lettera sola e' una domanda legittima: in questo dominio "F" e' Flat e
+    # "R" e' Rush, e il collegamento entita' le riconosce. Con min_length=2
+    # l'API rispondeva 422 - un errore di validazione grezzo, per giunta - a
+    # chi chiedeva di un pezzo col suo nome piu' corto.
+    question: str = Field(min_length=1, max_length=MAX_QUESTION)
     session_id: int | None = None
 
 
@@ -108,8 +154,15 @@ async def chat(
     body: Annotated[ChatRequest, Body()],
 ) -> dict:
     question = body.question.strip()
-    if not question:
-        raise HTTPException(status_code=400, detail="domanda vuota")
+    if not _e_una_domanda(question):
+        # Nessuna spesa e nessun 400: al client arriva una risposta come le
+        # altre, che dice cosa scrivere. Viene salvata, cosi' resta nei log
+        # insieme alle domande vere.
+        session_id, _ = await _open_session(db, request, body, question or "?")
+        finale = _risposta_costante(_TROPPO_VAGA)
+        message_id = await _persist(db, session_id, question or "?", finale)
+        await db.commit()
+        return {**finale, "session_id": session_id, "message_id": message_id}
 
     # Prima di qualunque spesa: la domanda costa embedding, re-rank e token, e
     # il controllo va fatto quando negare e' ancora gratis.
@@ -230,8 +283,22 @@ async def chat_stream(
     piu' nel percorso.
     """
     question = body.question.strip()
-    if not question:
-        raise HTTPException(status_code=400, detail="domanda vuota")
+    if not _e_una_domanda(question):
+        session_id, _ = await _open_session(db, request, body, question or "?")
+        finale = _risposta_costante(_TROPPO_VAGA)
+        message_id = await _persist(db, session_id, question or "?", finale)
+        await db.commit()
+
+        async def solo_finale():
+            yield _sse({"event": "status", "phase": "start",
+                        "session_id": session_id})
+            yield _sse({"event": "done", **finale, "saved": True,
+                        "message_id": message_id, "session_id": session_id})
+
+        return StreamingResponse(solo_finale(),
+                                 media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache",
+                                          "X-Accel-Buffering": "no"})
 
     # Prima di qualunque spesa: la domanda costa embedding, re-rank e token, e
     # il controllo va fatto quando negare e' ancora gratis.

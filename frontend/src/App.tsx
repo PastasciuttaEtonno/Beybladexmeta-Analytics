@@ -28,6 +28,7 @@ import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
 import ImportTournament from "@/pages/admin/ImportTournament";
+import ChatLogs from "@/pages/admin/ChatLogs";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import { ResponsiveAppShell } from "@/components/layout/ResponsiveAppShell";
 import { ChatLauncher } from "@/components/chat/ChatLauncher";
@@ -109,6 +110,11 @@ function AppRoutes() {
 
       <Route path="/players/:id">
         <PlayerDetail />
+        <BottomNav />
+      </Route>
+
+      <Route path="/admin/chat-logs">
+        <ChatLogs />
         <BottomNav />
       </Route>
 

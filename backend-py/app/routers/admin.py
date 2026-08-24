@@ -1268,10 +1268,63 @@ async def admin_chat_errors(
                 "SELECT reference, kind, detail, traceback, endpoint, session_id, "
                 "       host(client_ip) AS client_ip, created_at "
                 "FROM chat_error "
-                "WHERE (:ref IS NULL OR reference = :ref) "
+                # CAST esplicito: senza, asyncpg manda `$1 IS NULL` e Postgres non
+                # riesce a dedurre il tipo del parametro - "could not determine
+                # data type of parameter $1". L'endpoint falliva con 500
+                # ESATTAMENTE nel caso senza reference, cioe' quando lo si usa
+                # per guardare cosa e' successo; con ?reference=... funzionava,
+                # ed e' l'unico modo in cui era stato provato.
+                "WHERE (CAST(:ref AS text) IS NULL OR reference = CAST(:ref AS text)) "
                 "ORDER BY created_at DESC LIMIT :limit"
             ),
             {"ref": reference, "limit": max(1, min(limit, 200))},
         )
     ).mappings().all()
     return {"errors": [dict(r) for r in rows]}
+
+
+@router.get("/api/admin/chat-activity")
+async def admin_chat_activity(
+    _user: Annotated[CurrentUser, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    limit: int = 50,
+    problemi: bool = False,
+):
+    """Le conversazioni con accanto la diagnostica che le spiega.
+
+    L'altra meta' di /api/admin/chat-errors: li' ci sono i GUASTI, qui le
+    risposte che sono state date. Servono insieme, perche' i modi in cui un
+    assistente delude sono tre e solo uno lancia un'eccezione:
+
+      * si rompe          -> chat_error, con traceback
+      * non risponde      -> abstained, e allora la domanda dice cosa manca
+                             al corpus, oppure il recupero e' troppo severo
+      * risponde male     -> pollice giu', o una citazione inventata
+
+    `retrieval` porta i conteggi per ramo e il motivo dell'astensione: e' cio'
+    che distingue "ha cercato male" da "ha trovato bene e ha scritto male", che
+    sono due problemi con due cure opposte.
+
+    Con problemi=true restano solo le righe che meritano di essere guardate,
+    che e' come si usa davvero: le risposte riuscite non insegnano niente.
+    """
+    rows = (
+        await db.execute(
+            text(
+                "SELECT a.id, a.session_id, a.created_at, a.abstained, a.feedback, "
+                "       a.model, a.latency_ms, a.input_tokens, a.output_tokens, "
+                "       a.phantom_citations, a.tool_calls, a.retrieval, "
+                "       left(a.content, 600) AS answer, "
+                "       (SELECT u.content FROM chat_message u "
+                "         WHERE u.session_id = a.session_id AND u.role = 'user' "
+                "           AND u.id < a.id ORDER BY u.id DESC LIMIT 1) AS question "
+                "FROM chat_message a "
+                "WHERE a.role = 'assistant' "
+                "  AND (NOT :problemi OR a.feedback < 0 OR a.abstained "
+                "       OR jsonb_array_length(a.phantom_citations) > 0) "
+                "ORDER BY a.created_at DESC LIMIT :limit"
+            ),
+            {"problemi": problemi, "limit": max(1, min(limit, 200))},
+        )
+    ).mappings().all()
+    return {"activity": [dict(r) for r in rows]}
