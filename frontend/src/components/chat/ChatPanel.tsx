@@ -22,6 +22,7 @@ import { Loader2, Send, Square, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { AnswerText } from "./answer";
 import { useChatStream, type ChatSource, type ChatToolCall } from "@/hooks/useChatStream";
 import { cn } from "@/lib/utils";
 
@@ -135,9 +136,7 @@ export function ChatPanel({ className }: { className?: string }) {
               </div>
             ) : (
               <div className="max-w-full space-y-2">
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {message.text}
-                </div>
+                <AnswerText text={message.text} />
                 <ToolChips calls={message.toolCalls ?? []} />
                 <SourceChips sources={message.sources ?? []} />
                 {message.messageId && (
@@ -173,11 +172,8 @@ export function ChatPanel({ className }: { className?: string }) {
             <ToolChips calls={liveTools} />
             <SourceChips sources={liveSources} />
             {liveText && (
-              <div
-                className="whitespace-pre-wrap text-sm leading-relaxed"
-                aria-live="polite"
-              >
-                {liveText}
+              <div aria-live="polite">
+                <AnswerText text={liveText} />
               </div>
             )}
           </div>

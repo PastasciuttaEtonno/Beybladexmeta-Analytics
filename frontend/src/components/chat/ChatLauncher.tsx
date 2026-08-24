@@ -18,8 +18,41 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/**
+ * Il caricamento in ritardo, con una rete sotto.
+ *
+ * Dopo ogni distribuzione i file compilati cambiano nome (portano l'impronta
+ * del contenuto), e i vecchi spariscono. Una scheda rimasta aperta da prima
+ * chiede quindi un file che non esiste piu': l'import fallisce, l'errore
+ * risale fino alla radice di React e la PAGINA INTERA diventa nera. Visto dal
+ * vivo, cliccando il pulsante dopo aver ricostruito il frontend.
+ *
+ * Un solo tentativo di ricarica, marcato in sessionStorage: la ricarica prende
+ * l'index.html nuovo e con esso i nomi giusti. Se fallisce anche dopo non si
+ * ricarica di nuovo - sarebbe un ciclo - e l'errore arriva al fallback.
+ */
+const CHIAVE_RICARICA = "chat-panel-ricaricato";
+
 const ChatPanel = lazy(() =>
-  import("@/components/chat/ChatPanel").then((m) => ({ default: m.ChatPanel })),
+  import("@/components/chat/ChatPanel")
+    .then((m) => ({ default: m.ChatPanel }))
+    .catch((errore) => {
+      let gia = "1";
+      try {
+        gia = sessionStorage.getItem(CHIAVE_RICARICA) ?? "";
+        if (!gia) sessionStorage.setItem(CHIAVE_RICARICA, "1");
+      } catch {
+        // Modalita' privata o storage negato: meglio non ricaricare che
+        // ricaricare all'infinito senza poterselo ricordare.
+      }
+      if (!gia) {
+        window.location.reload();
+        // La ricarica non e' istantanea: si restituisce qualcosa di innocuo
+        // per non far esplodere React nel frattempo.
+        return { default: () => <></> };
+      }
+      throw errore;
+    }),
 );
 
 export function ChatLauncher() {
