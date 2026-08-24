@@ -98,3 +98,22 @@ def test_una_sigla_a_fine_domanda_resta_una_sigla():
     vero: con APOSTROFI dichiarato come stringa, ogni sigla in fondo alla
     domanda passava per elisa e il filtro esatto spariva proprio dove serviva."""
     assert "lr" in candidate_forms("cosa fa il bit LR")
+
+
+def test_il_punto_di_abbreviazione_non_lascia_una_sigla():
+    """"parlami di T.Rex" collegava Taper accanto al blade giusto: la T e' una
+    maiuscola isolata come tutte le altre. Il nome esiste davvero nel registro -
+    T.Rex e' TyrannoBeat - quindi la domanda funzionava e portava un pezzo di
+    troppo, che e' il modo peggiore di sbagliare."""
+    forms = candidate_forms("parlami di T.Rex")
+    assert "t" not in forms
+    assert "trex" in forms
+
+
+def test_il_punto_fermo_invece_non_toglie_niente():
+    """Il punto di abbreviazione e il punto fermo sono lo stesso carattere. A
+    distinguerli e' cosa viene dopo: una lettera attaccata, oppure la fine della
+    frase. Senza questa distinzione una sigla in fondo alla domanda sparirebbe,
+    che e' il bug gia' visto con l'apostrofo."""
+    assert "f" in candidate_forms("fra i bit da attacco preferisco F.")
+    assert "f" in candidate_forms("meglio F. o LF?")

@@ -142,10 +142,15 @@ cases:
     expected_docs: [ptera-swing]
     tags: [nome, localizzato]
 
+  # forbidden_docs: la T di "T.Rex" e' una maiuscola isolata, e 't' nel registro
+  # e' Taper. Misurato: prima della correzione la domanda restituiva Taper
+  # accanto al blade giusto - la risposta restava corretta, con un pezzo di
+  # troppo fra le fonti, che e' il modo piu' difficile da notare.
   - id: nome-alternativo-t-rex
     query: "parlami di T.Rex"
     expected_docs: [tyranno-beat]
-    tags: [nome, localizzato]
+    forbidden_docs: [taper]
+    tags: [nome, localizzato, ambiguo]
 
   # --- fuori ambito: la risposta giusta e' astenersi ---
   - id: fuori-ambito-meteo

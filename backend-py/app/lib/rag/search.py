@@ -60,9 +60,9 @@ def _normalise(value: str) -> str:
 # 'lo' e' LowOrb, 'e' e' Elevate, 'o' e' Orb, 'a' e' Accel, 'l' e' Level, 'd'
 # e' Dot. Il maiuscolo di solito basta a separarle - i codici si scrivono LR,
 # HN, FB - ma non quando arriva per un altro motivo: a inizio frase, o in un
-# titolo. Queste sette restano fuori sempre. L'altro modo in cui una maiuscola
-# arriva senza voler dire niente, l'elisione, lo tratta _elisione(): li' il
-# segnale e' l'apostrofo e non serve un elenco.
+# titolo. Queste sette restano fuori sempre. Gli altri modi in cui una maiuscola
+# arriva senza voler dire niente - l'elisione, il punto di abbreviazione - li
+# tratta _incollata(): li' il segnale e' la punteggiatura e non serve un elenco.
 #
 # Chi cerca davvero Elevate o Orb ha il nome per esteso, che funziona. Il
 # contrario non e' vero: senza questa lista, 'un blade da attacco' verrebbe
@@ -77,22 +77,33 @@ AMBIGUE = frozenset({"a", "d", "e", "l", "lo", "o", "un"})
 APOSTROFI = frozenset("'’")
 
 
-def _elisione(query: str, m: re.Match[str]) -> bool:
-    """La lettera e' attaccata a un apostrofo: e' un pezzo di parola.
+def _incollata(query: str, m: re.Match[str]) -> bool:
+    """La lettera non e' un nome: e' attaccata al resto di una parola.
 
-    "C'e' differenza fra Rush e LowRush?" collegava Cyclone, e la scheda di
-    Cyclone finiva davvero fra le fonti della risposta. Cosi' "V'e' un blade
-    migliore" tirava dentro Vortex e "S'intende" Spike. Nessuna delle tre e'
-    coperta da AMBIGUE, che elenca parole funzione: C, V e S non lo sono, e' la
-    lingua italiana che le elide.
+    Due modi, e in entrambi e' la punteggiatura a dire quello che la maiuscola
+    da sola non sa dire.
 
-    L'apostrofo e' un segnale sintattico, non un elenco da mantenere: vale per
-    tutte le lettere insieme, comprese quelle che nessuno ha ancora provato.
+    **L'apostrofo.** "C'e' differenza fra Rush e LowRush?" collegava Cyclone, e
+    la scheda di Cyclone finiva davvero fra le fonti della risposta. Cosi'
+    "V'e' un blade migliore" tirava dentro Vortex e "S'intende" Spike. Nessuna
+    delle tre e' coperta da AMBIGUE, che elenca parole funzione: C, V e S non lo
+    sono, e' la lingua italiana che le elide.
+
+    **Il punto di abbreviazione.** "parlami di T.Rex" collegava Taper accanto al
+    blade giusto, perche' quella T e' una maiuscola isolata come le altre. Il
+    punto pero' va distinto dal punto fermo: conta solo se subito dopo riprende
+    una lettera o una cifra, senza spazio. Cosi' "T.Rex" e' una parola sola e
+    "meglio F." a fine frase resta una sigla.
+
+    La punteggiatura e' un segnale sintattico, non un elenco da mantenere: vale
+    per tutte le lettere insieme, comprese quelle che nessuno ha ancora provato.
     """
-    successivo = query[m.end():m.end() + 1]
     # frozenset e non stringa: `"" in "'’"` e' vero, e con APOSTROFI come
     # stringa una sigla a fine domanda ("cosa fa il bit LR") passava per elisa.
-    return successivo in APOSTROFI
+    dopo = query[m.end():m.end() + 2]
+    if dopo[:1] in APOSTROFI:
+        return True
+    return dopo[:1] == "." and dopo[1:2].isalnum()
 
 
 def candidate_forms(query: str) -> set[str]:
@@ -119,7 +130,7 @@ def candidate_forms(query: str) -> set[str]:
         token = m.group()
         if len(token) > 2:
             forms.add(_normalise(token))
-        elif token.isupper() and not urlata and not _elisione(query, m):
+        elif token.isupper() and not urlata and not _incollata(query, m):
             norm = _normalise(token)
             if norm not in AMBIGUE:
                 forms.add(norm)

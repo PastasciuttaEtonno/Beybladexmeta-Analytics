@@ -68,12 +68,19 @@ niente, e sono due:
   con una parola italiana (`a d e l lo o un`) e restano fuori sempre. Una
   domanda scritta tutta in maiuscolo perde le sigle del tutto: se non c'è niente
   di minuscolo, la maiuscola non distingue più niente.
-- **l'elisione.** Questa non è un elenco: è l'apostrofo. *"C'e' differenza fra
-  Rush e LowRush?"* collegava **Cyclone**, e la scheda di Cyclone finiva davvero
-  fra le fonti della risposta; *"V'e' un blade migliore"* tirava dentro Vortex,
-  *"S'intende"* Spike. Nessuna delle tre è una parola funzione, quindi nessun
-  elenco le avrebbe coperte — mentre il carattere dopo la lettera le copre
-  tutte, comprese quelle che nessuno ha ancora provato.
+- **la punteggiatura che continua la parola.** Questa non è un elenco: sono
+  l'apostrofo e il punto di abbreviazione. *"C'e' differenza fra Rush e
+  LowRush?"* collegava **Cyclone**, e la scheda di Cyclone finiva davvero fra le
+  fonti della risposta; *"V'e' un blade migliore"* tirava dentro Vortex,
+  *"S'intende"* Spike; *"parlami di T.Rex"* tirava dentro **Taper**. Nessuna di
+  queste lettere è una parola funzione, quindi nessun elenco le avrebbe coperte
+  — mentre il carattere dopo la lettera le copre tutte, comprese quelle che
+  nessuno ha ancora provato.
+
+  Il punto va distinto dal punto fermo, ed è l'unico caso in cui serve guardare
+  due caratteri invece di uno: conta solo se subito dopo riprende una lettera o
+  una cifra, senza spazio. *"T.Rex"* è una parola sola; *"meglio F."* a fine
+  frase resta una sigla.
 
 Vale la pena notare da che parte pende lo scambio, perché è il motivo per cui
 tutte queste regole tolgono invece di aggiungere. Chi intende Elevate può
