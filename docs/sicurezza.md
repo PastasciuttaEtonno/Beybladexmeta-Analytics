@@ -290,6 +290,61 @@ spiegare perche' quella segnalazione non e' un problema, quasi sicuramente lo e'
 `tools/leggi_zap.py` questa regola la applica proprio: un `IGNORE` in
 `zap.conf` senza terza colonna viene trattato come "senza motivo scritto".
 
+## Saltare i controlli sui commit di sola documentazione
+
+L'idea viene in mente a tutti prima o poi: se un commit tocca solo il README,
+perche' far girare test, tipi e due build Docker? GitHub ha `paths-ignore`
+apposta, ed e' una riga.
+
+**Non e' stato fatto**, e i motivi valgono piu' della riga risparmiata.
+
+### `**.md` qui sarebbe la regola sbagliata
+
+`knowledge/` contiene **171 file `.md`**, e non sono documentazione: sono il
+corpus del RAG. `check_kb_registry.py` li legge e verifica che ogni
+`canonical_name:` si risolva nel registro dei pezzi - e' il controllo numero 5
+del suo elenco.
+
+Un `paths-ignore: '**.md'` spegnerebbe proprio quel controllo, sui file che in
+questo repo cambiano piu' spesso di tutti. Sarebbe la classica regola che
+sembra innocua e disattiva l'unica cosa che ti proteggeva, senza dirlo.
+
+Se un giorno la si scrive, la forma e' `*.md` e non `**.md`: nei filtri di
+GitHub `*` non attraversa le `/`, quindi prende solo la radice e lascia stare
+`knowledge/`. La differenza fra le due e' un asterisco e un controllo di
+integrita' della base di conoscenza.
+
+### E comunque non su `sicurezza`
+
+Semmai, solo su `controlli`: test, tipi, migrazioni e build non possono essere
+rotti da un file markdown, quindi li' saltare e' guadagno secco.
+
+Su `sicurezza` no, per via di **gitleaks**. La documentazione e' esattamente il
+posto dove un segreto finisce per sbaglio: un `curl` d'esempio con un token
+vero, una stringa di connessione dentro un runbook, una chiave incollata in una
+nota di risoluzione dei problemi. Saltare la scansione dei segreti sui commit
+di sola documentazione la toglie **dove il rischio e' piu' alto, non piu'
+basso.**
+
+### Quanto si risparmia, davvero
+
+Misurato sui giri veri: `controlli` circa **43 secondi**, `sicurezza` circa
+**50**. In gioco c'e' un minuto scarso. Costruire filtri per lavoro, e
+ricordarsi per sempre di tenerli allineati, per un minuto e con quei due rischi
+sopra, non e' un buon affare.
+
+### La trappola che arrivera' dopo
+
+Oggi `main` non e' protetto e non ha check obbligatori, quindi `paths-ignore`
+sarebbe innocuo da quel lato. **Il giorno che attivi la branch protection
+cambia tutto**: un check filtrato via non parte, GitHub lo aspetta per sempre,
+e la PR di sola documentazione resta bloccata su "Expected - Waiting for status
+to be reported". Non fallisce: resta li'.
+
+Da quel momento il modo corretto non e' piu' `paths-ignore`, ma far partire il
+workflow sempre e uscire subito dall'interno, cosi' il check riporta comunque
+il suo esito verde.
+
 ## Cosa resta da fare
 
 In ordine di rapporto fra utilita' e fatica:
