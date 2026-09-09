@@ -49,9 +49,22 @@ on:
     # arrivare mai.
     - cron: "0 5 * * 1"
 
+# Su un ramo qualunque, se arriva un push nuovo quello vecchio si annulla:
+# conta solo l'ultimo stato del ramo, e far girare due volte gli stessi
+# controlli su codice gia' superato spreca minuti e basta.
+#
+# Su main NO, e la differenza e' il punto. Ogni commit su main e' qualcosa a
+# cui un giorno potresti tornare - un revert, una bisezione, "ma allora
+# funzionava?" - e per rispondere serve che abbia un verdetto suo.
+#
+# Non e' un'ipotesi: fondendo tre PR in ottanta secondi, il commit di mezzo
+# (2a48d64) si e' visto annullare `sicurezza` diciannove secondi dopo l'avvio,
+# e quel verdetto non tornera' piu'. La punta di main era verde e conteneva
+# tutto, quindi non e' andato in produzione niente di non verificato - ma
+# quel commit resta per sempre senza risposta, e la risposta costa un minuto.
 concurrency:
   group: sicurezza-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # ------------------------------------------------------------------
