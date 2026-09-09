@@ -1,16 +1,38 @@
 #!/bin/sh
 # I controlli veloci prima di ogni push.
 #
-# GitHub Actions non gira su questo repo, quindi se un controllo non parte da
-# qui non parte affatto. Solo test e tipi: sono cinque secondi, e un gancio che
-# fa aspettare finisce disattivato entro una settimana.
+# Ora che Actions gira, questo gancio non serve piu' a SUPPLIRE alla CI: serve
+# a scoprire un guasto prima di aspettarne il giro. Per i test e i tipi e' una
+# comodita' - se passano di la', pace.
+#
+# Per i segreti no, ed e' il motivo per cui la scansione e' qui e non solo in
+# CI: una chiave spinta su GitHub e' gia' pubblica, e va RUOTATA anche se la
+# togli un minuto dopo, perche' nel frattempo e' stata su un server remoto e
+# in ogni clone. La CI te lo direbbe trenta secondi troppo tardi. Questo e'
+# l'ultimo istante in cui la correzione e' ancora `git reset`.
 #
 # Si installa una volta sola:   npm run hooks:install
 # Si salta quando serve:        git push --no-verify
 
 echo "controlli veloci prima del push (git push --no-verify per saltarli)"
+
 python tools/controlli.py --veloce || {
     echo
     echo "push interrotto: sistema quanto sopra, oppure --no-verify se sai cosa stai facendo"
+    exit 1
+}
+
+# Solo i segreti e le regole del progetto: insieme sono una trentina di
+# secondi, quasi tutti di gitleaks che rilegge la storia. Semgrep e le
+# scansioni delle immagini stanno FUORI di proposito - sono minuti, e un
+# gancio che fa aspettare finisce disattivato entro una settimana.
+# Il resto lo prende sicurezza.yml a ogni push.
+python tools/sicurezza.py --solo-segreti || {
+    echo
+    echo "push interrotto: c'e' una credenziale nella storia."
+    echo
+    echo "Toglierla dal file NON basta - se il commit e' gia' stato spinto"
+    echo "altrove la chiave e' compromessa e va ruotata. Se invece e' ancora"
+    echo "solo qui, riscrivi il commit prima che parta."
     exit 1
 }

@@ -1,0 +1,30 @@
+# Configurazione di Checkov: cosa scansiona e cosa non ha senso qui.
+directory:
+  - .
+framework:
+  - dockerfile
+  - github_actions
+  - secrets
+skip-path:
+  # Residuo di Replit: 9000 righe di regole Semgrep piene di segreti FINTI,
+  # che servono da bersaglio ai pattern. Non e' codice di questo progetto.
+  - .config/replit
+  - attached_assets
+  - node_modules
+skip-check:
+  # CKV_SECRET_4 "credenziali Basic Auth" su docker-compose.dev.yml.
+  # E' postgres/postgres sul database di sviluppo, in ascolto su localhost e
+  # ricreato da zero con `npm run db:reset`. E' in chiaro di proposito: mettere
+  # un segreto VERO nel compose di sviluppo sarebbe il problema, non la cura.
+  - CKV_SECRET_4
+
+  # CKV_GHA_7 "gli input di workflow_dispatch devono essere vuoti" su dast.yml.
+  # La regola nasce per l'integrita' della build: un input che cambia cio' che
+  # viene pubblicato e' un buco. dast.yml non costruisce e non pubblica niente
+  # - alza uno stack usa-e-getta e lo scansiona - e il suo unico input sceglie
+  # la profondita' della scansione. Applicarla qui vieterebbe l'avvio a mano
+  # della scansione completa, che e' esattamente cio' che serve il giorno che
+  # la notturna trova qualcosa.
+  - CKV_GHA_7
+compact: true
+quiet: true

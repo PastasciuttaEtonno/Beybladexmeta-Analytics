@@ -87,9 +87,9 @@ are `pg_dump --format=custom`, so they restore with `pg_restore`, not `psql`.
 
 ## Checks
 
-GitHub Actions does not run on this repo — the billing is switched off — so
-`.github/workflows/controlli.yml` sits there unused until it is turned back on.
-The same checks run locally instead, which is what makes them real:
+GitHub Actions runs again, so `.github/workflows/controlli.yml` is live. The
+same checks still run locally, which is what makes them useful before the CI
+gets its turn:
 
 ```bash
 npm run controlli          # tests, types, migrations, registry, tests with the DB
@@ -100,6 +100,33 @@ npm run hooks:install      # once, and they run before every push
 The database steps skip themselves, and say so, when the development database on
 :5433 is not up: a check that announces it is partial beats one that looks
 complete and is not. `git push --no-verify` skips the hook when you need it to.
+
+### Security checks
+
+A second, separate line answers a different question — not "does it work?" but
+"is it safe?". It follows the [OWASP DevSecOps Guideline][owasp]: secret
+scanning, SAST, SCA, IaC and image scanning, a nightly DAST run against the
+live stack, and a compliance script that checks this project's own promises
+(session cookie flags, the Swagger stays closed, the CI dump carries no real
+people).
+
+```bash
+npm run sicurezza          # everything; most tools run in Docker
+npm run sicurezza:veloce   # just the parts that need no Docker
+npm run conformita         # only this project's own rules
+```
+
+Every threshold in it was measured against a real scan of this repo before the
+gate was written — including the one that matters most: the backend image
+carries 54 HIGH/CRITICAL CVEs for which Debian ships **no fix at all**, so that
+gate blocks only on *fixable* ones. Otherwise it would be red forever and
+switched off within a month.
+
+**[`docs/sicurezza.md`](docs/sicurezza.md)** has the reasoning for each gate,
+what the first scan actually found, and — deliberately — what is *not*
+implemented and why (IAST, which has no free agent worth the name on FastAPI).
+
+[owasp]: https://owasp.org/www-project-devsecops-guideline/
 
 What each of them would have caught is written down in
 [`docs/da-migliorare.md`](docs/da-migliorare.md) — the short version is that

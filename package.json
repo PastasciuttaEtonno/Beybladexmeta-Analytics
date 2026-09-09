@@ -7,6 +7,7 @@
   "scripts": {
     "build": "npm --prefix frontend run build",
     "check": "npm --prefix frontend run check",
+    "conformita": "python tools/conformita.py",
     "controlli": "python tools/controlli.py",
     "controlli:veloce": "python tools/controlli.py --veloce",
     "db:down": "docker compose -f docker-compose.dev.yml down",
@@ -20,6 +21,9 @@
     "hooks:install": "git config core.hooksPath .githooks",
     "install:all": "npm --prefix frontend install && uv sync --directory backend-py",
     "session": "python tools/dev_session.py",
+    "sicurezza": "python tools/sicurezza.py",
+    "sicurezza:immagini": "python tools/sicurezza.py --immagini",
+    "sicurezza:veloce": "python tools/sicurezza.py --veloce",
     "user:create": "python tools/create_user.py"
   },
   "devDependencies": {

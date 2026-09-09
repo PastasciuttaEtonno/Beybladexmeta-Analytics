@@ -1,0 +1,15 @@
+# Le regole di hadolint che qui non si applicano, e perche'.
+ignored:
+  # DL3008 "fissa la versione dei pacchetti apt".
+  # L'unico apt-get di questo repo installa fonts-dejavu-core, un pacchetto di
+  # caratteri che non cambia comportamento fra una versione e l'altra. Fissarlo
+  # significherebbe che l'immagine smette di costruirsi il giorno che Debian
+  # promuove una patch, in cambio di una riproducibilita' che per un font non
+  # serve a nessuno.
+  - DL3008
+
+  # DL3025 "usa la notazione JSON per CMD".
+  # Il CMD del backend e' `sh -c "uvicorn ... --port ${PORT}"`: la forma shell
+  # e' l'unica che espande ${PORT}. In JSON il container partirebbe cercando di
+  # ascoltare sulla stringa letterale "${PORT}".
+  - DL3025

@@ -1,0 +1,170 @@
+# DAST: l'applicazione accesa, attaccata da fuori.
+#
+# Tutto quello che sta in sicurezza.yml legge file fermi. Questo invece alza lo
+# stack vero - Postgres, FastAPI, nginx - e lo interroga dall'esterno come
+# farebbe un browser, o chiunque altro. E' l'unico controllo della linea che
+# vede le cose che esistono solo a runtime: un'intestazione che nginx avrebbe
+# dovuto mandare e non manda, un errore che si porta dietro uno stack trace,
+# una rotta che risponde senza chiedere chi sei.
+#
+# Perche' e' un file separato e non un settimo lavoro in sicurezza.yml:
+# ci mette minuti, non secondi, e va in notturna. E' la stessa scelta gia'
+# fatta per i due gate del RAG (eval_retrieval, eval_generation): un controllo
+# lento a ogni push viene disattivato entro un mese, e un controllo disattivato
+# vale zero. Meglio ogni notte per davvero che a ogni push per tre settimane.
+#
+# Gira in "baseline": ZAP naviga e osserva, non attacca. Nessuna richiesta
+# distruttiva, nessun tentativo di iniezione - e' un ambiente usa-e-getta con
+# dati finti, ma la scansione attiva richiede una decisione esplicita, non un
+# cron. Per quella c'e' l'avvio a mano piu' sotto.
+
+name: dast
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      completa:
+        description: "scansione attiva invece che baseline (lenta, manda richieste vere)"
+        type: boolean
+        default: false
+  schedule:
+    # 4:00 UTC, un'ora prima della scansione settimanale delle dipendenze,
+    # cosi' i due referti arrivano insieme al mattino.
+    - cron: "0 4 * * *"
+
+jobs:
+  zap:
+    name: OWASP ZAP contro lo stack vero
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Serve solo a caricare il referto come artefatto.
+      actions: read
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # Una rete sua, perche' nginx cerca il backend per NOME (`backend-py`).
+      # Sulla bridge di default la risoluzione per nome non c'e' e il sintomo
+      # sarebbe un 502 che sembra un backend spento invece che una rete
+      # sbagliata.
+      - name: una rete per lo stack
+        run: docker network create prova
+
+      - name: database
+        run: |
+          docker run -d --name db --network prova \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=beyblade_tracker \
+            --health-cmd "pg_isready -U postgres -d beyblade_tracker" \
+            --health-interval 5s --health-retries 20 \
+            pgvector/pgvector:pg18
+
+      - name: aspetta il database
+        run: |
+          for i in $(seq 1 40); do
+            stato=$(docker inspect -f '{{.State.Health.Status}}' db)
+            [ "$stato" = "healthy" ] && exit 0
+            sleep 3
+          done
+          echo "il database non e' mai diventato sano"; docker logs db; exit 1
+
+      # Lo stesso dump che usa controlli.yml: niente utenti, niente sessioni,
+      # niente conversazioni. E' cio' che rende accettabile far frugare uno
+      # scanner in questo database.
+      - name: dati di prova
+        run: |
+          zcat docker/ci-db.sql.gz | docker exec -i db \
+            psql postgresql://postgres:postgres@localhost:5432/beyblade_tracker \
+            -q -v ON_ERROR_STOP=1
+
+      - name: costruisci le immagini
+        run: |
+          docker build -t prova-backend ./backend-py
+          docker build -t prova-frontend \
+            --build-arg VITE_PUBLIC_MINIO_URL=https://esempio.invalid \
+            ./frontend
+
+      # SESSION_SECRET finto e usa-e-getta: firma i cookie di un'applicazione
+      # che vivra' otto minuti su un runner che sparisce. Il segreto vero non
+      # entra qui - uno scanner non ha bisogno di sessioni valide per fare il
+      # suo mestiere, e dargliele significherebbe metterlo in un log pubblico.
+      - name: backend
+        run: |
+          docker run -d --name backend-py --network prova \
+            -e DATABASE_URL=postgresql://postgres:postgres@db:5432/beyblade_tracker \
+            -e SESSION_SECRET=segreto-usa-e-getta-per-la-scansione \
+            -e APP_BASE_URL=http://frontend \
+            -e FRONTEND_ORIGIN=http://frontend \
+            -e PORT=8000 \
+            prova-backend
+
+      - name: frontend
+        run: |
+          docker run -d --name frontend --network prova \
+            -e API_UPSTREAM=http://backend-py:8000 \
+            prova-frontend
+
+      - name: aspetta che risponda
+        run: |
+          for i in $(seq 1 30); do
+            if docker run --rm --network prova curlimages/curl:8.11.1 \
+                 -fsS http://frontend/healthz >/dev/null 2>&1; then
+              echo "in piedi"; exit 0
+            fi
+            sleep 3
+          done
+          echo "lo stack non risponde"
+          docker logs backend-py; docker logs frontend; exit 1
+
+      # ZAP entra dalla porta del frontend e non da quella del backend: e' da
+      # li' che entra il pubblico, ed e' li' che nginx aggiunge le intestazioni
+      # di sicurezza e chiude /api/_py/. Puntarlo direttamente a FastAPI
+      # misurerebbe una superficie che nessuno espone.
+      - name: ZAP baseline
+        if: ${{ !inputs.completa }}
+        run: |
+          docker run --rm --network prova \
+            -v "$PWD:/zap/wrk/:rw" \
+            -u root \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://frontend \
+              -c zap.conf -r referto-zap.html -J referto-zap.json \
+              -I || true
+
+      - name: ZAP completa (a richiesta)
+        if: ${{ inputs.completa }}
+        run: |
+          docker run --rm --network prova \
+            -v "$PWD:/zap/wrk/:rw" \
+            -u root \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-full-scan.py -t http://frontend \
+              -c zap.conf -r referto-zap.html -J referto-zap.json \
+              -I || true
+
+      # `-I` sopra e il gate qui sotto sono due cose diverse di proposito:
+      # ZAP non decide se il lavoro fallisce, lo decide zap.conf. Cosi' la
+      # soglia sta in un file leggibile e versionato invece che dentro il
+      # comportamento di default di uno strumento.
+      - name: leggi il referto
+        run: python tools/leggi_zap.py referto-zap.json
+
+      - name: conserva il referto
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: referto-zap
+          path: |
+            referto-zap.html
+            referto-zap.json
+          retention-days: 30
+
+      - name: registri, se qualcosa e' andato storto
+        if: failure()
+        run: |
+          echo "--- backend ---"; docker logs backend-py 2>&1 | tail -50
+          echo "--- frontend ---"; docker logs frontend 2>&1 | tail -50

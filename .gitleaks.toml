@@ -1,0 +1,45 @@
+# Cosa non e' un segreto, e perche'.
+#
+# La storia di questo repo e' pulita: 430 commit scansionati, quattro
+# segnalazioni, tutte e quattro false. Le regole qui sotto sono il motivo per
+# cui il controllo puo' bloccare il push invece di limitarsi a brontolare -
+# un controllo che segnala sempre le stesse quattro cose viene ignorato entro
+# una settimana, e allora tanto vale non averlo.
+#
+# Ogni voce dice PERCHE' quella cosa non e' un segreto. Se aggiungi una riga
+# qui senza saperlo spiegare, quasi sicuramente stai nascondendo un problema
+# invece di risolverlo.
+
+[extend]
+useDefault = true
+
+[[rules]]
+  id = "generic-api-key"
+  [rules.allowlist]
+    regexTarget = "match"
+    regexes = [
+      # La site key di reCAPTCHA e' PUBBLICA per costruzione: sta nel bundle
+      # del browser, chiunque apra il sito la legge. Quella segreta e'
+      # RECAPTCHA_SECRET_KEY, che vive solo nell'ambiente del backend.
+      '''6Le[0-9A-Za-z_-]{35,}''',
+    ]
+
+[allowlist]
+  description = "Percorsi che contengono segreti finti per mestiere"
+  paths = [
+    # Le regole di Semgrep sono un elenco di ESEMPI di segreti: chiavi private
+    # e webhook Slack che servono da bersaglio ai pattern. Cercarci dentro dei
+    # segreti veri e' come cercare malware nelle firme dell'antivirus.
+    # (Residuo di Replit, non piu' usato da niente: vedi docs/sicurezza.md.)
+    '''\.config/replit/\.semgrep/.*''',
+
+    # I file di esempio esistono apposta per mostrare la FORMA di una
+    # variabile. Se qui dentro finisce un valore vero, il problema e' il file,
+    # non questa riga - e conformita.py controlla proprio quello.
+    '''.*\.env\.example$''',
+
+    # Password di sviluppo che vivono su localhost e non proteggono niente:
+    # postgres/postgres sul database di prova. Sono in chiaro di proposito,
+    # perche' un segreto vero in un compose di sviluppo e' peggio.
+    '''docker-compose\.dev\.yml$''',
+  ]

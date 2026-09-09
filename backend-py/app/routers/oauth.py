@@ -94,20 +94,29 @@ def _base64url(raw: bytes) -> str:
     return base64.b64encode(raw).decode().replace("+", "-").replace("/", "_").rstrip("=")
 
 
-def _redirect_uri(request: Request, path: str, base_url: str | None = None) -> str:
+def _redirect_uri(path: str, base_url: str | None) -> str:
     """Where the provider should send the browser back to.
 
-    Behind nginx the request arrives on http with an internal host, so the
-    X-Forwarded-* headers decide — otherwise the provider would be handed an
-    unreachable address.
+    Viene dalla CONFIGURAZIONE e non dalla richiesta, ed e' il punto: prima
+    questa funzione, quando `base_url` mancava, costruiva l'indirizzo dalle
+    intestazioni `X-Forwarded-Proto` e `X-Forwarded-Host`. Dietro nginx quelle
+    le scrive nginx, ma sono pur sempre intestazioni della richiesta: chi
+    chiama puo' proporne il valore, e per i due callback di Challengermode non
+    esisteva nemmeno un `base_url` da preferirgli - passavano sempre di li'.
+
+    Cosa impediva il danno finora: i provider validano il `redirect_uri`
+    contro la loro allowlist, quindi un indirizzo inventato viene rifiutato
+    da loro. E' una difesa vera ma e' di qualcun altro, e vale finche' non
+    sbagli a registrare un dominio jolly nella console del provider.
+
+    Adesso: se APP_BASE_URL non c'e', questa torna stringa vuota e i chiamanti
+    rispondono "OAuth misconfigured". Un collegamento di account che non parte
+    e lo dice e' meglio di uno che parte verso un indirizzo che ha scelto il
+    richiedente.
     """
-    if base_url:
-        return f"{base_url}{path}"
-    forwarded_proto = request.headers.get("x-forwarded-proto")
-    proto = (forwarded_proto.split(",")[0] if forwarded_proto else "") or request.url.scheme or "https"
-    forwarded_host = request.headers.get("x-forwarded-host")
-    host = (forwarded_host.split(",")[0] if forwarded_host else "") or request.headers.get("host") or ""
-    return f"{proto}://{host}{path}"
+    if not base_url:
+        return ""
+    return f"{base_url.rstrip('/')}{path}"
 
 
 async def _session_id(request: Request, settings: Settings) -> str | None:
@@ -148,7 +157,7 @@ async def challenger_login(
     settings: Annotated[Settings, Depends(get_settings)],
 ):
     client_id = settings.cm_client_id
-    redirect_uri = _redirect_uri(request, "/api/challenger/callback")
+    redirect_uri = _redirect_uri("/api/challenger/callback", settings.app_base_url)
     if not client_id or not redirect_uri:
         return _to_profile("OAuth misconfigured")
 
@@ -214,7 +223,7 @@ async def challenger_callback(
 
         client_id = settings.cm_client_id
         client_secret = settings.cm_client_secret
-        redirect_uri = _redirect_uri(request, "/api/challenger/callback")
+        redirect_uri = _redirect_uri("/api/challenger/callback", settings.app_base_url)
         if not client_id or not client_secret or not redirect_uri:
             return _redirect_with(redirect, "OAuth misconfigured")
 
@@ -372,9 +381,9 @@ async def challonge_login(
     if not client_id:
         return _to_profile("Challonge OAuth misconfigured (Missing Client ID)")
 
-    redirect_uri = _redirect_uri(
-        request, "/api/challonge/callback", settings.app_base_url or None
-    )
+    redirect_uri = _redirect_uri("/api/challonge/callback", settings.app_base_url)
+    if not redirect_uri:
+        return _to_profile("Challonge OAuth misconfigured (Missing APP_BASE_URL)")
     state = secrets.token_bytes(16).hex()
 
     redirect = _to_profile()
@@ -433,9 +442,9 @@ async def challonge_callback(
 
         client_id = settings.challonge_app_client_id
         client_secret = settings.challonge_app_client_secret
-        redirect_uri = _redirect_uri(
-            request, "/api/challonge/callback", settings.app_base_url or None
-        )
+        redirect_uri = _redirect_uri("/api/challonge/callback", settings.app_base_url)
+        if not redirect_uri:
+            return _redirect_with(redirect, "Challonge OAuth misconfigured (Missing APP_BASE_URL)")
         if not client_id or not client_secret:
             return _redirect_with(redirect, "Challonge OAuth misconfigured")
 

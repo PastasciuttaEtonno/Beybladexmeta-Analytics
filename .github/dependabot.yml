@@ -1,0 +1,59 @@
+# Chi tiene aggiornati i riferimenti fissati.
+#
+# Questo file esiste come CONSEGUENZA dei pin sugli SHA, non a fianco. Fissare
+# un'azione a uno SHA la congela: nessuno la sposta a tua insaputa, ma nemmeno
+# le correzioni di sicurezza arrivano piu' da sole. Senza qualcuno che li
+# aggiorni, in un anno i pin diventano il problema che dovevano risolvere -
+# undici azioni ferme a una versione con dentro una falla nota, e la sicurezza
+# in piu' rispetto a un tag mobile e' zero.
+#
+# Dependabot capisce i pin `@<sha> # <versione>`: aggiorna lo SHA e riscrive il
+# commento, quindi la PR resta leggibile invece di essere quaranta caratteri
+# esadecimali che cambiano.
+
+version: 2
+updates:
+  # Le azioni. E' la parte che conta davvero: girano con il GITHUB_TOKEN e
+  # vedono il codice, quindi una compromessa e' un problema serio anche su un
+  # repo piccolo.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Una sola PR con dentro tutto invece di undici: undici PR di manutenzione
+    # a settimana non le guarda nessuno, e finiscono chiuse in blocco - che e'
+    # peggio di non averle, perche' insegna a ignorarle.
+    groups:
+      azioni:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+
+  # Le dipendenze del frontend. Solo sicurezza: il resto delle versioni si
+  # muove quando lo decide chi lavora al codice, non ogni lunedi'.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      frontend:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
+
+  # Il backend. uv.lock e' il file che conta - e' quello che pip-audit legge in
+  # sicurezza.yml, ed e' quello che finisce nell'immagine.
+  - package-ecosystem: uv
+    directory: /backend-py
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      backend:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"

@@ -17,12 +17,23 @@
 # I due gate del RAG (eval_retrieval, eval_generation) NON stanno qui: costano
 # chiamate a pagamento e vanno in notturna, non a ogni push.
 
-# NOTA: oggi questo file NON gira - il credito GitHub del repo e' bloccato.
-# Gli stessi controlli si lanciano in locale con `npm run controlli`, e
-# `npm run hooks:install` li attacca al pre-push. Resta qui perche' il giorno
-# che Actions torna disponibile e' gia' pronto.
+# Actions e' tornato disponibile: questo file gira davvero. Gli stessi
+# controlli restano lanciabili in locale con `npm run controlli`, e
+# `npm run hooks:install` li attacca al pre-push - il punto non e' piu'
+# supplire alla CI, e' scoprire un guasto prima di aspettare il suo giro.
+#
+# I controlli di SICUREZZA stanno in sicurezza.yml, non qui: sono due linee
+# separate perche' rispondono a domande diverse ("funziona?" contro "e'
+# sicuro?") e perche' una delle due si puo' rompere senza fermare l'altra.
 
 name: controlli
+
+# Il token di questo workflow legge e basta. Senza questo blocco eredita il
+# default del repo, che qui era scrittura su tutto: un `npm ci` con dentro una
+# dipendenza compromessa avrebbe potuto riscrivere il codice o muovere i tag.
+# Nessuno di questi tre lavori scrive niente, quindi non toglie nulla.
+permissions:
+  contents: read
 
 on:
   push:
@@ -34,9 +45,9 @@ jobs:
     name: test e tipi
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
 
       - name: dipendenze del backend
         working-directory: backend-py
@@ -53,7 +64,7 @@ jobs:
         # sarebbe stato rosso alla prima esecuzione.
         run: uv run python -m pytest -q
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "20"
           cache: npm
@@ -92,9 +103,9 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/beyblade_tracker
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
 
       - name: dipendenze del backend
         working-directory: backend-py
@@ -135,7 +146,7 @@ jobs:
     name: le immagini si costruiscono
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Non e' un doppione di `tsc`. Il difetto che fermo' il rilascio di
       # agosto - `cross-env not found`, perche' NODE_ENV=production faceva

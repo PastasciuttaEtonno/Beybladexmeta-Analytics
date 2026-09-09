@@ -1,0 +1,18 @@
+# Cartelle che Semgrep non deve leggere.
+
+# 9000 righe di regole Semgrep lasciate da Replit, piene di segreti FINTI che
+# servono da bersaglio ai pattern. Analizzare le regole di un analizzatore non
+# dice niente su questo progetto.
+.config/
+
+# Incollati a mano durante lo sviluppo: non vengono eseguiti da niente.
+attached_assets/
+
+# Roba di altri.
+node_modules/
+.venv/
+frontend/dist/
+
+# I dati di prova non sono codice.
+database_data/
+docker/ci-db.sql.gz
