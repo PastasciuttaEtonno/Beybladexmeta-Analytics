@@ -11,6 +11,23 @@
 # commento, quindi la PR resta leggibile invece di essere quaranta caratteri
 # esadecimali che cambiano.
 
+# Perche' i gruppi qui sotto raccolgono solo minor e patch.
+#
+# La prima versione di questo file raggruppava TUTTO (`patterns: ["*"]` e
+# basta), per non aprire venti PR a settimana. Il risultato, alla prima
+# esecuzione vera, e' stata una PR sola con dentro venti pacchetti e due
+# cambi di major: Tailwind 3->4, che sposta il plugin PostCSS in
+# `@tailwindcss/postcss`, e TypeScript 5->6, che ha rimosso `baseUrl` da
+# tsconfig. La CI l'ha bocciata, giustamente, e la PR era immergibile:
+# per sistemarla servivano due migrazioni separate, dentro un cambiamento
+# che ne conteneva altri diciotto scollegati.
+#
+# L'errore non era raggruppare, era raggruppare cose di natura diversa.
+# Un minor e una patch si leggono insieme e si fondono insieme; un major
+# e' un lavoro, e vuole una PR sua dove il rosso della CI dice una cosa
+# precisa ("Tailwind 4 vuole una migrazione") invece che "qualcosa fra
+# venti pacchetti si e' rotto".
+
 version: 2
 updates:
   # Le azioni. E' la parte che conta davvero: girano con il GITHUB_TOKEN e
@@ -48,9 +65,22 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    groups:
-      immagini:
-        patterns: ["*"]
+    # Senza gruppo, di proposito: sono due immagini, quindi al massimo due PR,
+    # e vanno guardate una per una.
+    #
+    # Raggrupparle sembrava innocuo e non lo era. La prima PR ha proposto
+    # python 3.12 -> 3.14 e node 20 -> 26 insieme: non e' "aggiornare l'immagine
+    # di base", sono due cambi di RUNTIME, ognuno capace di rompere le sue cose
+    # (le wheel di asyncpg e pydantic da una parte, la build di Vite dall'altra).
+    # In una PR sola il rosso della CI non dice quale dei due.
+    #
+    # Da sapere, perche' cambia cosa aspettarsi qui: le patch di sicurezza di
+    # un'immagine NON arrivano da Dependabot. `python:3.12-slim` e' un tag
+    # mobile, e le correzioni entrano da sole al `docker build` successivo.
+    # Quello che Dependabot propone qui sono solo salti di versione, che sono
+    # decisioni, non manutenzione. Il caso del frontend era diverso: li' era
+    # fissata una VERSIONE vecchia di nginx (1.27), e nessuna ricostruzione
+    # l'avrebbe mai portata ad Alpine 3.24.
     commit-message:
       prefix: "docker"
 
@@ -65,6 +95,7 @@ updates:
     groups:
       frontend:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
     commit-message:
       prefix: "deps"
 
@@ -79,5 +110,6 @@ updates:
     groups:
       backend:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
     commit-message:
       prefix: "deps"
