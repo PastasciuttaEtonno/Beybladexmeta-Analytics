@@ -1,6 +1,6 @@
 # Debian-based rather than Alpine: asyncpg and friends ship manylinux wheels, so
 # there is nothing to compile here.
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /bin/uv
 
@@ -11,7 +11,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 
-FROM python:3.12-slim AS runner
+FROM python:3.14-slim AS runner
 
 # DejaVu is what the OG image renderer draws with. The Node original asks for
 # "Arial", which no Linux container has either, so both sides fall back to a
