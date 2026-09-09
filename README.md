@@ -15,6 +15,13 @@ and say what broke, why `docs/rag/` exists at all, and why
 [`docs/da-migliorare.md`](docs/da-migliorare.md) lists what is still weak
 instead of pretending it is finished.
 
+The same habit runs through CI, which is two lines rather than one: `controlli`
+asks *does it work?*, `sicurezza` asks *is it safe?*. Every threshold in the
+second was set from a real scan of this repo rather than a tool default — which
+is the only reason it can block rather than merely complain. Both are described
+under [Checks](#checks), in full in
+[`docs/sicurezza.md`](docs/sicurezza.md).
+
 There is no team, no deadline and no roadmap: things get fixed when they annoy
 someone or when they are interesting to fix.
 
