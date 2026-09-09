@@ -3,7 +3,7 @@
 # soltanto - in produzione gira nginx e di node non resta niente - ma la
 # versione qui deve restare uguale a quella dei workflow, altrimenti la build
 # che fallisce in CI e quella che passa in locale non sono la stessa cosa.
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
