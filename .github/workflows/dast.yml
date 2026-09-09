@@ -151,7 +151,7 @@ jobs:
       # soglia sta in un file leggibile e versionato invece che dentro il
       # comportamento di default di uno strumento.
       - name: leggi il referto
-        run: python tools/leggi_zap.py referto-zap.json
+        run: python3 tools/leggi_zap.py referto-zap.json
 
       - name: conserva il referto
         if: always()
