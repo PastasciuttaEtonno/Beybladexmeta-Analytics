@@ -153,11 +153,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # --omit=dev di proposito. Le due segnalazioni aperte oggi (vite ALTA,
-      # esbuild MEDIA) sono entrambe nel server di sviluppo di Vite, che non
-      # esiste nell'immagine di produzione: quella serve file statici con
-      # nginx, e di Vite non resta niente. Restano da sistemare - il lavoro
-      # `sca-sviluppo` sotto le tiene in vista - ma non fermano un rilascio.
+      # --omit=dev di proposito: qui si guarda solo cio' che arriva agli
+      # utenti. Le devDependencies non finiscono nell'immagine - il frontend
+      # in produzione e' nginx che serve file statici - e una falla in uno
+      # strumento di compilazione non e' un buon motivo per fermare un
+      # rilascio. Per quelle c'e' `sca-sviluppo` qui sotto.
       - name: dipendenze del frontend
         working-directory: frontend
         run: npm audit --omit=dev --audit-level=high
@@ -170,6 +170,11 @@ jobs:
   # questo runner". E' un rischio vero (un pacchetto compromesso qui legge i
   # segreti della CI) ma di urgenza diversa, e mescolarlo al lavoro sopra
   # renderebbe quest'ultimo rosso per motivi che non riguardano la produzione.
+  #
+  # Oggi passa: le due segnalazioni con cui e' nato (vite/esbuild, il server di
+  # sviluppo) sono chiuse salendo a vite 6.4.3. `continue-on-error` resta per
+  # la prossima, cosi' una falla in uno strumento non blocca un rilascio che
+  # non la contiene - ma la si vede.
   sca-sviluppo:
     name: SCA (strumenti di sviluppo, informativo)
     runs-on: ubuntu-latest

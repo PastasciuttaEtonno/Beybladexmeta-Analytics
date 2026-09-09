@@ -139,15 +139,24 @@ un'intenzione.
 
 Sono due lavori separati, e la separazione e' il punto.
 
-Le due segnalazioni aperte oggi — **vite (ALTA)** e **esbuild (MEDIA)** — sono
-entrambe nel server di sviluppo di Vite, che **non esiste nell'immagine di
-produzione**: quella serve file statici con nginx, e di Vite non resta niente.
-Bloccare un rilascio per una falla in uno strumento che non viene distribuito
-sarebbe rumore.
+Le due segnalazioni con cui questa divisione e' nata — **vite (ALTA)** e
+**esbuild (MEDIA)** — erano entrambe nel server di sviluppo di Vite, che **non
+esiste nell'immagine di produzione**: quella serve file statici con nginx, e di
+Vite non resta niente. Per questo il gate di produzione le ignorava e quello
+degli strumenti no.
 
-Ma non sono nemmeno innocue: girano sulla macchina di chi sviluppa e su questo
-runner, dove ci sono i segreti della CI. Quindi restano visibili nel lavoro
-`sca-sviluppo`, che segnala senza fermare.
+**Sono chiuse.** npm proponeva `vite@8.2.2` avvisando "breaking change", ma
+quello e' solo npm che offre sempre l'ultima: l'avviso copre `vite <=6.4.2`, e
+**6.4.3 richiede gia' `esbuild ^0.25.0`**, cioe' la versione corretta. Un
+major invece di tre, e `@vitejs/plugin-react` dichiarava gia' di supportarlo.
+Verificato prima di applicarlo, su una copia: tipi puliti, build a posto (3040
+moduli), immagine costruita e servita, asset con hash raggiungibili.
+`npm audit` passa da 2 segnalazioni a 0.
+
+La divisione in due lavori resta, perche' la domanda che separa i due non era
+legata a quelle due segnalazioni: "cosa arriva agli utenti" e "cosa gira sulla
+macchina di chi sviluppa" restano due rischi diversi, e il secondo conta
+comunque - un pacchetto compromesso li' legge i segreti della CI.
 
 ### Immagini — blocca solo sulle CVE correggibili
 
