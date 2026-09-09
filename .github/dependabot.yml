@@ -30,6 +30,30 @@ updates:
     commit-message:
       prefix: "ci"
 
+  # Le immagini di base dei due Dockerfile.
+  #
+  # Aggiunto DOPO aver scoperto perche' serviva: il frontend stava su
+  # `1.27-alpine`, cioe' Alpine 3.21.3, con 34 CVE ALTA/CRITICA gia'
+  # CORREGGIBILI dentro - openssl, libxml2, libpng, musl. Non se n'era accorto
+  # nessuno perche' un tag di base non scade e non avvisa: resta li' e invecchia
+  # in silenzio mentre tutto continua a funzionare.
+  #
+  # E' anche il posto dove l'intuizione tradisce: 1.29-alpine stava *peggio*
+  # di 1.27 (35 CVE), quindi "prendi il numero piu' alto" non e' una regola.
+  # Meglio che a guardarci sia qualcosa che legge gli avvisi davvero.
+  - package-ecosystem: docker
+    directories:
+      - /backend-py
+      - /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      immagini:
+        patterns: ["*"]
+    commit-message:
+      prefix: "docker"
+
   # Le dipendenze del frontend. Solo sicurezza: il resto delle versioni si
   # muove quando lo decide chi lavora al codice, non ogni lunedi'.
   - package-ecosystem: npm

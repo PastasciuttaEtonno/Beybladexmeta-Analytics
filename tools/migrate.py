@@ -84,9 +84,45 @@ def _impronta_storica(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
+def _impronta_storica_da_altrove(path: Path) -> str:
+    """La stessa impronta storica, ma ricostruita da un checkout con LF.
+
+    Questa riga esiste per una ragione precisa, e vale la pena scriverla per
+    intero perche' e' costata un giro rosso di CI.
+
+    `_impronta_storica` legge i byte COSI' COME STANNO sul disco. Su Windows
+    stanno con CRLF, quindi ritrova l'impronta che c'e' in archivio per le
+    migrazioni 0000-0009, registrate da li'. Su Linux git deposita gli stessi
+    file con LF: i byte grezzi sono diversi, l'impronta storica viene diversa,
+    e nessuna delle due forme calcolate corrisponde piu' a quella registrata.
+
+    Il risultato era che `--status` passava sulla macchina di chi sviluppa e
+    falliva in CI dicendo che dieci migrazioni erano "CHANGED SINCE APPLIED",
+    quando nessuno le aveva sfiorate. Verificato leggendo il dump: 0000-0009
+    hanno in archivio l'impronta dei byte CRLF, 0010-0020 quella normalizzata.
+
+    Ricostruire la forma CRLF a partire dal contenuto chiude il cerchio: da
+    qualunque sistema, l'impronta registrata viene riconosciuta comunque i fine
+    riga siano finiti sul disco.
+    """
+    normalizzato = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(normalizzato.replace(b"\n", b"\r\n")).hexdigest()[:16]
+
+
 def concorda(registrata: str, path: Path) -> bool:
-    """Vero se il file su disco e' quello che risulta applicato."""
-    return registrata in (checksum(path), _impronta_storica(path))
+    """Vero se il file su disco e' quello che risulta applicato.
+
+    Tre forme e non due: quella normalizzata, e le due storiche - i byte come
+    stanno sul disco, e i byte come sarebbero con CRLF. Insieme rispondono alla
+    domanda giusta, che non e' "i byte sono identici?" ma "questo file e'
+    quello che e' stato applicato?". La risposta non deve dipendere da come git
+    ha deciso di scrivere i fine riga su questa macchina.
+    """
+    return registrata in (
+        checksum(path),
+        _impronta_storica(path),
+        _impronta_storica_da_altrove(path),
+    )
 
 
 def main() -> int:

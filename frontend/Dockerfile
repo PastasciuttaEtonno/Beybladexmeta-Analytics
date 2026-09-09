@@ -28,7 +28,16 @@ RUN npm run build
 # `net.ipv4.ip_unprivileged_port_start` vale 0, quindi anche un utente non
 # privilegiato puo' legarsi alla 80. (L'immagine per suo conto userebbe la
 # 8080, ma il template qui sotto sovrascrive default.conf e decide lui.)
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runner
+# La versione non e' un dettaglio di aggiornamento: e' il gate `immagini`.
+# 1.27-alpine porta Alpine 3.21.3, e con essa 34 CVE ALTA/CRITICA *con patch
+# gia' disponibile* - openssl, libxml2, libpng, musl, zlib. Non e' il fondo di
+# magazzino inevitabile che ha l'immagine del backend: qui la correzione esiste
+# e basta prenderla, che e' esattamente cio' su cui trivy blocca.
+#
+# Contro l'intuizione, 1.29-alpine sta PEGGIO (Alpine 3.23.4, 35 CVE): un
+# numero piu' alto non vuol dire una base piu' fresca. 1.31-alpine porta Alpine
+# 3.24.1 e zero CVE correggibili - misurato, non dedotto.
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runner
 
 # nginx:alpine renders /etc/nginx/templates/*.template through envsubst on
 # startup, so the backend upstream stays runtime-configurable.
