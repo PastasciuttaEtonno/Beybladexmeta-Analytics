@@ -1,5 +1,9 @@
 # ---- Build stage ----
-FROM node:20-alpine AS builder
+# node 24 e non 26: 24 e' la linea LTS, 26 no. Questa immagine compila
+# soltanto - in produzione gira nginx e di node non resta niente - ma la
+# versione qui deve restare uguale a quella dei workflow, altrimenti la build
+# che fallisce in CI e quella che passa in locale non sono la stessa cosa.
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
