@@ -93,7 +93,7 @@ export function DesktopFavoriteComboCard({ combo, onDelete, onView }: DesktopFav
                     }}
                 >
                     <Trash2 className="w-3 h-3 mr-1.5" />
-                    Delete
+                    Elimina
                 </Button>
             </div>
         </Card>

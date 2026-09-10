@@ -2,7 +2,8 @@ import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, Calendar, ExternalLink } from "lucide-react";
-import { format } from "date-fns";
+import { formatDataEstesa } from "@/lib/date";
+import { statoTorneoInItaliano } from "@/lib/text";
 
 interface DesktopTournamentHeaderProps {
     name: string;
@@ -33,15 +34,12 @@ export function DesktopTournamentHeader({
     onResetCombos,
     onSyncGhost,
 }: DesktopTournamentHeaderProps) {
-    const formattedDate = startedAt
-        ? format(new Date(startedAt), "dd MMMM yyyy")
-        : null;
+    const formattedDate = startedAt ? formatDataEstesa(startedAt) : null;
 
     return (
         <div className="relative overflow-hidden rounded-xl border border-border/50 bg-card/40 backdrop-blur-xl p-8 shadow-2xl">
             {/* Background Glow */}
-            <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+            <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
 
             <div className="relative z-10 space-y-5">
                 {/* Top Row: Back button */}
@@ -63,8 +61,8 @@ export function DesktopTournamentHeader({
                                 variant="secondary"
                                 className={
                                     platform === "challonge"
-                                        ? "bg-orange-500/20 text-orange-500 border-orange-500/50"
-                                        : "bg-blue-500/20 text-blue-400 border-blue-500/50"
+                                        ? "bg-platform-challonge/20 text-platform-challonge border-platform-challonge/50"
+                                        : "bg-platform-challengermode/20 text-platform-challengermode border-platform-challengermode/50"
                                 }
                             >
                                 {platform === "challonge" ? "Challonge" : "Challengermode"}
@@ -85,7 +83,7 @@ export function DesktopTournamentHeader({
                                     href={contactUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline no-underline"
+                                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline no-underline"
                                 >
                                     <ExternalLink className="w-3.5 h-3.5" />
                                     Info
@@ -97,7 +95,7 @@ export function DesktopTournamentHeader({
                     {/* Quick Stats */}
                     <div className="flex gap-8 divide-x divide-border/50 shrink-0">
                         <div className="px-4 text-center">
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                            <p className="text-sm font-medium text-muted-foreground">
                                 Giocatori
                             </p>
                             <p className="text-3xl font-mono font-bold text-primary mt-1 flex items-center justify-center gap-2">
@@ -106,11 +104,9 @@ export function DesktopTournamentHeader({
                             </p>
                         </div>
                         <div className="px-4 text-center pl-8">
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                                Stato
-                            </p>
+                            <p className="text-sm font-medium text-muted-foreground">Stato</p>
                             <p className="text-lg font-semibold text-foreground mt-2 capitalize">
-                                {state || "—"}
+                                {statoTorneoInItaliano(state) || "—"}
                             </p>
                         </div>
                     </div>

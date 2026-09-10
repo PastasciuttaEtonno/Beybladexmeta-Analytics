@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Trophy, Medal, Award, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { Seo } from "@/components/Seo";
-import { format } from "date-fns";
+import { formatDataBreve } from "@/lib/date";
 import { useComboDetails } from "@/hooks/useComboDetails";
 import { BeybladeImage } from "@/components/common/BeybladeImage";
 import { DesktopComboVisuals, DesktopComboVisualsSkeleton } from "@/components/combo/desktop/DesktopComboVisuals";
@@ -48,7 +48,7 @@ export default function ComboDetail() {
     season
   } = useComboDetails();
 
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
 
   const handleSeasonChange = (newSeason: string) => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -62,9 +62,9 @@ export default function ComboDetail() {
   };
 
   const getRankIcon = (r: number) => {
-    if (r === 1) return <Trophy className="w-8 h-8 text-yellow-500" />;
-    if (r === 2) return <Medal className="w-8 h-8 text-slate-400" />;
-    if (r === 3) return <Award className="w-8 h-8 text-amber-700" />;
+    if (r === 1) return <Trophy className="w-8 h-8 text-rank-1" />;
+    if (r === 2) return <Medal className="w-8 h-8 text-rank-2" />;
+    if (r === 3) return <Award className="w-8 h-8 text-rank-3" />;
     return null;
   };
 
@@ -205,7 +205,7 @@ export default function ComboDetail() {
                 <SelectValue placeholder="Seleziona Stagione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All Time">All Time</SelectItem>
+                <SelectItem value="All Time">Tutte le stagioni</SelectItem>
                 <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
                 <SelectItem value="Season 2026">Season 2026</SelectItem>
               </SelectContent>
@@ -232,7 +232,7 @@ export default function ComboDetail() {
             {tourLoading ? (
               <DesktopComboTrendSkeleton />
             ) : (
-              <DesktopComboTrend tournaments={allTournaments} season={season} />
+              <DesktopComboTrend tournaments={allTournaments} />
             )}
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function ComboDetail() {
                     />
                   </div>
                   <div className="text-center space-y-0.5">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {component.label}
                     </p>
                     <p
@@ -301,7 +301,7 @@ export default function ComboDetail() {
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">1st Place</p>
+                    <p className="text-sm text-muted-foreground">Primi posti</p>
                     <p
                       className="text-2xl font-bold"
                       data-testid="text-first-place"
@@ -310,7 +310,7 @@ export default function ComboDetail() {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">2nd Place</p>
+                    <p className="text-sm text-muted-foreground">Secondi posti</p>
                     <p
                       className="text-2xl font-bold"
                       data-testid="text-second-place"
@@ -319,7 +319,7 @@ export default function ComboDetail() {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">3rd Place</p>
+                    <p className="text-sm text-muted-foreground">Terzi posti</p>
                     <p
                       className="text-2xl font-bold"
                       data-testid="text-third-place"
@@ -328,7 +328,7 @@ export default function ComboDetail() {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">4th Place</p>
+                    <p className="text-sm text-muted-foreground">Quarti posti</p>
                     <p
                       className="text-2xl font-bold"
                       data-testid="text-fourth-place"
@@ -337,7 +337,7 @@ export default function ComboDetail() {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Total Score</p>
+                    <p className="text-sm text-muted-foreground">Punteggio totale</p>
                     <p
                       className="text-2xl font-bold text-primary"
                       data-testid="text-total-score"
@@ -383,7 +383,7 @@ export default function ComboDetail() {
                                     {t.tournamentName || t.tournament_name || `Torneo ${t.tournamentId}`}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {t.playerName} • {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
+                                    {t.playerName} • {formatDataBreve(t.date)}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2">
