@@ -4,17 +4,30 @@
 <head>
 
   <meta charset="UTF-8" />
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <!-- Niente maximum-scale/user-scalable: bloccavano il pinch-zoom, che e' un
+       fallimento WCAG 1.4.4 e su una tabella di statistiche e' anche il gesto
+       che serve piu' spesso. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#7c3aed" />
   <meta name="robots" content="index,follow" />
+  <!-- La chiave del sito reCAPTCHA. Stava nell'URL dello <script> che caricava
+       Google su OGNI pagina; lo script ora lo inietta la pagina di accesso,
+       l'unica che esegue reCAPTCHA, ma la chiave deve restare leggibile qui
+       perche' e' il ripiego quando VITE_RECAPTCHA_SITE_KEY non viene passata al
+       build - ed e' il caso di docker-compose, che non la inoltra come ARG. -->
+  <meta name="recaptcha-site-key" content="6LeEJAcsAAAAAHr-qKaPVofkEylZNDrOTk02vJVh" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/meta logo.png" />
   <link rel="icon" type="image/svg+xml" href="/meta logo.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Le immagini dei componenti arrivano da qui e sono l'elemento LCP di quasi
+       ogni pagina: aprire la connessione durante il parsing dell'HTML evita di
+       pagare DNS + TLS quando React arriva a chiederle. -->
+  <link rel="preconnect" href="https://beyblades.web.92.4.170.189.sslip.io" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <title>Beybladexmeta Analytics - Statistiche Metagame Beyblade X</title>
   <meta name="description"
@@ -31,10 +44,34 @@
   <meta name="twitter:title" content="Beybladexmeta Analytics" />
   <meta name="twitter:description" content="Statistiche e analisi sul meta di Beyblade X." />
   <meta name="twitter:image" content="https://beybladexmeta.com/meta%20logo.png" />
-  <!-- Static Google reCAPTCHA v3 script -->
-  <script src="https://www.google.com/recaptcha/api.js?render=6LeEJAcsAAAAAHr-qKaPVofkEylZNDrOTk02vJVh"></script>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9087446487631078"
-    crossorigin="anonymous"></script>
+  <!--
+    Il tema, applicato prima del primo paint.
+
+    ThemeProvider fa la stessa cosa, ma dentro un useEffect: gira dopo che React
+    ha montato, quindi chi ha il tema scuro vedeva un lampo bianco a ogni
+    caricamento. Questo script e' bloccante di proposito - sono poche righe e
+    devono finire prima che il browser dipinga qualcosa.
+
+    La logica DEVE restare allineata a ThemeProvider: stessa chiave in
+    localStorage, stesso ripiego su prefers-color-scheme.
+  -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = (stored === 'light' || stored === 'dark')
+          ? stored
+          : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        var root = document.documentElement;
+        root.classList.add(theme);
+        // Allinea a scrollbar e controlli nativi, che altrimenti restano chiari.
+        root.style.colorScheme = theme;
+      } catch (e) {
+        // localStorage puo' lanciare in navigazione privata: il tema chiaro
+        // resta un ripiego valido, e ThemeProvider riprova dopo il mount.
+      }
+    })();
+  </script>
   <script type="application/ld+json">
       {
         "@context": "https://schema.org",

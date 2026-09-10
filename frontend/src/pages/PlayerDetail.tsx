@@ -5,11 +5,11 @@ import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CardDescription } from "@/components/ui/card";
-import { format } from "date-fns";
+import { formatDataBreve } from "@/lib/date";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -58,6 +58,7 @@ type PlayerTournamentsResp = {
 };
 
 export default function PlayerDetail() {
+  const isMobile = useIsMobile();
   const [, params] = useRoute("/players/:nickname");
   const [, setLocation] = useLocation();
   const nickname = params?.nickname || "";
@@ -186,7 +187,8 @@ export default function PlayerDetail() {
 
       <main className="flex-1 px-4 py-4 w-full mx-auto space-y-3">
         {/* DESKTOP LAYOUT */}
-        <div className="hidden md:block max-w-7xl mx-auto space-y-8">
+        {!isMobile && (
+        <div className="max-w-7xl mx-auto space-y-8">
           <div className="mb-4">
             <Link href="/players" asChild>
               <a className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground transition-colors no-underline">
@@ -216,9 +218,11 @@ export default function PlayerDetail() {
             isLoading={tourLoading}
           />
         </div>
+        )}
 
         {/* MOBILE LAYOUT (Preserved) */}
-        <div className="md:hidden">
+        {isMobile && (
+        <div>
           <Tabs
             value={"players"}
             onValueChange={(val) => {
@@ -359,7 +363,7 @@ export default function PlayerDetail() {
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium truncate">{t.name || `Torneo ${t.tournamentId}`}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {t.date ? format(new Date(t.date), 'dd MMM yyyy') : 'Data sconosciuta'}
+                                    {formatDataBreve(t.date)}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -381,6 +385,7 @@ export default function PlayerDetail() {
             </TabsContent>
           </Tabs>
         </div>
+        )}
       </main>
     </div>
   );
