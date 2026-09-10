@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 export function useAnalyticsData(selectedComponent: string, selectedSeason: string | null = null) {
     // Fetch trends data

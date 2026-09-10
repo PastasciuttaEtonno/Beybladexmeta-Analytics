@@ -1,4 +1,4 @@
-import { useRoute, useLocation } from "wouter";
+import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 // Reverted to aliased paths as the relative paths were incorrect
 import { Card } from "@/components/ui/card";
@@ -62,8 +62,7 @@ function ComponentImage({ folder, name }: { folder: string; name: string }) {
 }
 
 export default function ComponentLeaderboard() {
-  const [match, params] = useRoute("/leaderboard/:type");
-  const [, setLocation] = useLocation();
+  const [, params] = useRoute("/leaderboard/:type");
   const type = (params?.type || "blade").toLowerCase();
   const titleMap: Record<string, string> = {
     blade: "Top Blades",

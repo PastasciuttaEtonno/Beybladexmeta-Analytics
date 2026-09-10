@@ -4,7 +4,6 @@ import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
-import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
 

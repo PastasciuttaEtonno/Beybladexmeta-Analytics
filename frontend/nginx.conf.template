@@ -48,7 +48,20 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${PUBLIC_STORAGE_ORIGIN} https://www.google.com https://www.gstatic.com https://*.gstatic.com https://pagead2.googlesyndication.com https://adservice.google.com https://fundingchoicesmessages.google.com https://ep1.adtrafficquality.google https://*.google-analytics.com https://*.doubleclick.net; frame-src 'self' https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://*.google.com; frame-ancestors 'none'; object-src 'none'" always;
+    # La politica elenca solo cio' che la pagina puo' davvero contattare.
+    #
+    # Prima autorizzava l'intera filiera pubblicitaria di Google - pagead2,
+    # adservice, fundingchoicesmessages, adtrafficquality, doubleclick,
+    # googlesyndication - piu' google-analytics e cloudflareinsights. Nel
+    # frontend non c'e' mai stato un <ins class="adsbygoogle"> ne' una riga di
+    # analytics, e lo script di AdSense e' stato tolto da index.html: restava
+    # una superficie aperta per niente.
+    #
+    # google.com e gstatic.com servono a reCAPTCHA v3, che ora si carica solo
+    # nella pagina di accesso ma passa comunque da qui.
+    # img-src resta su https: perche' i loghi degli organizzatori arrivano da
+    # Challengermode, che cambia sottodominio.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${PUBLIC_STORAGE_ORIGIN} https://www.google.com https://www.gstatic.com https://*.gstatic.com; frame-src 'self' https://www.google.com https://www.gstatic.com; frame-ancestors 'none'; object-src 'none'" always;
 
     location = /healthz {
         access_log off;

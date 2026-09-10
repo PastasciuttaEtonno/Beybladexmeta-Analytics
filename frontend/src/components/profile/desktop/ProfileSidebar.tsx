@@ -1,7 +1,5 @@
-import { Button } from "@/components/ui/button";
 
-import { User } from "@/types/api";
-import { Edit2, Gamepad2 } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 import { Link } from "wouter";
 
 interface ProfileSidebarProps {

@@ -1,8 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, Trophy } from "lucide-react";
+import { Edit2, Trash2 } from "lucide-react";
 import { DesktopComponentImage } from "@/components/analytics/desktop/DesktopComponentImage";
-import { useTheme } from "@/contexts/ThemeProvider";
 
 interface DeckCombo {
     id: string;
@@ -25,7 +24,6 @@ interface DesktopDeckCardProps {
 }
 
 export function DesktopDeckCard({ deck, onDelete, onEdit }: DesktopDeckCardProps) {
-    const { theme } = useTheme();
 
     return (
         <Card className="group relative overflow-hidden border-border bg-card/40 backdrop-blur-md hover:border-primary/20 transition-all duration-300 w-full mb-4">
