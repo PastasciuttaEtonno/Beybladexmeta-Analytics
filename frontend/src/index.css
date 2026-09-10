@@ -15,81 +15,110 @@
   --elevate-1: rgba(0, 0, 0, .03);
   --elevate-2: rgba(0, 0, 0, .08);
 
-  --background: 0 0% 100%;
+  /* ---------------------------------------------------------------------
+   * Superfici: acciaio freddo.
+   *
+   * Le tinte le portano le foto dei componenti - blade gialli, ratchet
+   * turchesi, bit rossi - che sono il contenuto vero di questo sito. Una
+   * superficie satura ci litiga. Tutti i grigi stanno su un'unica tonalita'
+   * (210-215) a saturazione bassissima, cosi' le fotografie restano l'unica
+   * cosa colorata a schermo.
+   * ------------------------------------------------------------------- */
+  --background: 210 20% 99%;
+  --foreground: 215 25% 12%;
+  --border: 214 15% 88%;
 
-  --foreground: 240 10% 4%;
+  --card: 210 20% 97%;
+  --card-foreground: 215 25% 12%;
+  --card-border: 214 15% 91%;
 
-  --border: 240 6% 90%;
+  --sidebar: 210 18% 96%;
+  --sidebar-foreground: 215 25% 12%;
+  --sidebar-border: 214 15% 90%;
+  --sidebar-primary: 36 60% 34%;
+  --sidebar-primary-foreground: 40 30% 99%;
+  --sidebar-accent: 210 16% 89%;
+  --sidebar-accent-foreground: 215 25% 12%;
+  --sidebar-ring: 36 60% 34%;
 
-  --card: 0 0% 98%;
+  --popover: 210 20% 97%;
+  --popover-foreground: 215 25% 12%;
+  --popover-border: 214 15% 90%;
 
-  --card-foreground: 240 10% 4%;
+  /* ---------------------------------------------------------------------
+   * Ottone: l'unico accento caldo del sistema.
+   *
+   * Sostituisce il viola 262 83% 58%, che era il default di shadcn e non
+   * diceva niente sul soggetto. Qui l'accento coincide con il primo posto
+   * (--rank-1): su un prodotto che classifica, "in evidenza" e "in testa"
+   * sono la stessa idea, e tenerli sullo stesso colore fa si' che il caldo,
+   * a schermo, voglia dire sempre una cosa sola.
+   * ------------------------------------------------------------------- */
+  --primary: 36 60% 34%;
+  --primary-foreground: 40 30% 99%;
 
-  --card-border: 240 6% 94%;
+  --secondary: 210 16% 92%;
+  --secondary-foreground: 215 25% 12%;
 
-  --sidebar: 240 5% 96%;
+  --muted: 210 16% 94%;
+  --muted-foreground: 215 12% 40%;
 
-  --sidebar-foreground: 240 10% 4%;
+  --accent: 210 16% 90%;
+  --accent-foreground: 215 25% 12%;
 
-  --sidebar-border: 240 6% 92%;
-
-  --sidebar-primary: 262 83% 58%;
-
-  --sidebar-primary-foreground: 0 0% 100%;
-
-  --sidebar-accent: 240 5% 88%;
-
-  --sidebar-accent-foreground: 240 10% 4%;
-
-  --sidebar-ring: 262 83% 58%;
-
-  --popover: 0 0% 96%;
-
-  --popover-foreground: 240 10% 4%;
-
-  --popover-border: 240 6% 92%;
-
-  --primary: 262 83% 58%;
-
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 240 5% 92%;
-
-  --secondary-foreground: 240 10% 4%;
-
-  --muted: 240 5% 94%;
-
-  --muted-foreground: 240 4% 46%;
-
-  --accent: 240 5% 90%;
-
-  --accent-foreground: 240 10% 4%;
-
-  --destructive: 0 84% 60%;
-
+  --destructive: 0 65% 42%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 240 6% 80%;
-  --ring: 262 83% 58%;
-  --chart-1: 262 83% 58%;
-  --chart-2: 221 83% 53%;
-  --chart-3: 142 76% 36%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 82% 52%;
+  --input: 214 15% 80%;
+  --ring: 36 60% 34%;
+
+  /* ---------------------------------------------------------------------
+   * La scala del podio.
+   *
+   * Prima ogni file sceglieva per conto suo: l'argento e' stato trovato come
+   * gray-400, gray-500, slate-400, slate-500, zinc-300 e zinc-500 in tre
+   * componenti diversi, e il bronzo come amber-500, amber-600 e amber-700.
+   * Sono quattro posizioni, quindi quattro valori, definiti qui.
+   *
+   * --rank-4 e' volutamente acromatico: fuori dal podio si deve vedere a
+   * colpo d'occhio che non e' un metallo.
+   * ------------------------------------------------------------------- */
+  --rank-1: 38 68% 33%;
+  --rank-2: 214 12% 40%;
+  --rank-3: 18 55% 38%;
+  --rank-4: 215 10% 44%;
+
+  /* Stati. Il caldo resta all'ottone, quindi un avviso che non e' un errore
+   * usa --info, non un arancione che litigherebbe con la scala del podio. */
+  --success: 152 58% 28%;
+  --success-foreground: 0 0% 100%;
+  --info: 212 72% 38%;
+  --info-foreground: 0 0% 100%;
+
+  /* Le due piattaforme da cui arrivano i tornei. Non sono stati ne' livelli:
+   * sono identita' di servizi esterni, e meritano un nome che lo dica. */
+  --platform-challengermode: 212 72% 38%;
+  --platform-challonge: 16 68% 40%;
+
+  --chart-1: 36 60% 36%;
+  --chart-2: 206 62% 40%;
+  --chart-3: 172 52% 32%;
+  --chart-4: 18 55% 42%;
+  --chart-5: 258 34% 46%;
 
   --font-sans: Inter, system-ui, -apple-system, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: ui-monospace, Menlo, monospace;
   --radius: .5rem;
   /* 8px */
-  --shadow-2xs: 0px 1px 2px 0px hsl(240 6% 10% / 0.05);
-  --shadow-xs: 0px 1px 3px 0px hsl(240 6% 10% / 0.08);
-  --shadow-sm: 0px 2px 4px -1px hsl(240 6% 10% / 0.06), 0px 1px 2px -1px hsl(240 6% 10% / 0.10);
-  --shadow: 0px 4px 6px -1px hsl(240 6% 10% / 0.10), 0px 2px 4px -2px hsl(240 6% 10% / 0.10);
-  --shadow-md: 0px 6px 8px -2px hsl(240 6% 10% / 0.10), 0px 4px 6px -3px hsl(240 6% 10% / 0.12);
-  --shadow-lg: 0px 10px 15px -3px hsl(240 6% 10% / 0.10), 0px 4px 6px -4px hsl(240 6% 10% / 0.10);
-  --shadow-xl: 0px 20px 25px -5px hsl(240 6% 10% / 0.10), 0px 8px 10px -6px hsl(240 6% 10% / 0.10);
-  --shadow-2xl: 0px 25px 50px -12px hsl(240 6% 10% / 0.25);
+  --shadow-2xs: 0px 1px 2px 0px hsl(215 20% 10% / 0.05);
+  --shadow-xs: 0px 1px 3px 0px hsl(215 20% 10% / 0.08);
+  --shadow-sm: 0px 2px 4px -1px hsl(215 20% 10% / 0.06), 0px 1px 2px -1px hsl(215 20% 10% / 0.10);
+  --shadow: 0px 4px 6px -1px hsl(215 20% 10% / 0.10), 0px 2px 4px -2px hsl(215 20% 10% / 0.10);
+  --shadow-md: 0px 6px 8px -2px hsl(215 20% 10% / 0.10), 0px 4px 6px -3px hsl(215 20% 10% / 0.12);
+  --shadow-lg: 0px 10px 15px -3px hsl(215 20% 10% / 0.10), 0px 4px 6px -4px hsl(215 20% 10% / 0.10);
+  --shadow-xl: 0px 20px 25px -5px hsl(215 20% 10% / 0.10), 0px 8px 10px -6px hsl(215 20% 10% / 0.10);
+  --shadow-2xl: 0px 25px 50px -12px hsl(215 20% 10% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -135,67 +164,66 @@
   --elevate-1: rgba(255, 255, 255, .04);
   --elevate-2: rgba(255, 255, 255, .09);
 
-  --background: 240 10% 4%;
+  --background: 215 25% 6%;
+  --foreground: 210 20% 96%;
+  --border: 215 18% 15%;
 
-  --foreground: 0 0% 98%;
+  --card: 215 22% 9%;
+  --card-foreground: 210 20% 96%;
+  --card-border: 215 18% 14%;
 
-  --border: 240 6% 12%;
+  --sidebar: 215 22% 8%;
+  --sidebar-foreground: 210 20% 96%;
+  --sidebar-border: 215 18% 13%;
+  --sidebar-primary: 38 62% 46%;
+  --sidebar-primary-foreground: 215 30% 7%;
+  --sidebar-accent: 215 18% 16%;
+  --sidebar-accent-foreground: 210 20% 96%;
+  --sidebar-ring: 38 62% 46%;
 
-  --card: 240 6% 6%;
+  --popover: 215 20% 11%;
+  --popover-foreground: 210 20% 96%;
+  --popover-border: 215 18% 15%;
 
-  --card-foreground: 0 0% 98%;
+  --primary: 38 62% 46%;
+  --primary-foreground: 215 30% 7%;
 
-  --card-border: 240 6% 8%;
+  --secondary: 215 18% 17%;
+  --secondary-foreground: 210 20% 96%;
 
-  --sidebar: 240 5% 8%;
+  --muted: 215 18% 14%;
+  --muted-foreground: 215 14% 64%;
 
-  --sidebar-foreground: 0 0% 98%;
+  --accent: 215 18% 20%;
+  --accent-foreground: 210 20% 96%;
 
-  --sidebar-border: 240 6% 10%;
-
-  --sidebar-primary: 262 83% 58%;
-
-  --sidebar-primary-foreground: 0 0% 100%;
-
-  --sidebar-accent: 240 5% 12%;
-
-  --sidebar-accent-foreground: 0 0% 98%;
-
-  --sidebar-ring: 262 83% 58%;
-
-  --popover: 240 6% 10%;
-
-  --popover-foreground: 0 0% 98%;
-
-  --popover-border: 240 6% 12%;
-
-  --primary: 262 83% 58%;
-
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 240 5% 14%;
-
-  --secondary-foreground: 0 0% 98%;
-
-  --muted: 240 5% 12%;
-
-  --muted-foreground: 240 5% 64%;
-
-  --accent: 240 5% 16%;
-
-  --accent-foreground: 0 0% 98%;
-
-  --destructive: 0 84% 60%;
-
+  /* 0 68% 54% e' il compromesso misurato fra i due usi di questo token:
+   * testo bianco sopra (4.54) e testo rosso sopra la card (4.00). Il valore
+   * precedente, 0 84% 60%, dava 3.78 al bianco - sotto la soglia AA. */
+  --destructive: 0 68% 54%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 240 6% 20%;
-  --ring: 262 83% 58%;
-  --chart-1: 262 83% 68%;
-  --chart-2: 221 83% 63%;
-  --chart-3: 142 76% 46%;
-  --chart-4: 280 65% 70%;
-  --chart-5: 340 82% 62%;
+  --input: 215 18% 24%;
+  --ring: 38 62% 46%;
+
+  --rank-1: 43 82% 58%;
+  --rank-2: 213 14% 70%;
+  --rank-3: 22 62% 56%;
+  --rank-4: 215 12% 54%;
+
+  --success: 152 55% 50%;
+  --success-foreground: 215 30% 7%;
+  --info: 208 80% 64%;
+  --info-foreground: 215 30% 7%;
+
+  --platform-challengermode: 208 80% 64%;
+  --platform-challonge: 20 78% 58%;
+
+  --chart-1: 40 72% 58%;
+  --chart-2: 206 72% 60%;
+  --chart-3: 170 58% 48%;
+  --chart-4: 20 70% 58%;
+  --chart-5: 258 46% 66%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.30);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.40);
@@ -242,6 +270,25 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Il movimento risponde a un gesto, o non parte.
+   *
+   * Nel frontend c'era un solo motion-reduce:, su uno spinner della chat,
+   * mentre l'animazione d'ingresso e le decine di animate-pulse giravano
+   * comunque. Questa regola le disinnesca tutte in un colpo, comprese quelle
+   * di framer-motion, che rispetta la stessa media query solo se glielo si
+   * chiede componente per componente. */
+  @media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -355,10 +402,10 @@
 
 /* Il badge fluttuante di reCAPTCHA, nascosto.
  *
- * Occupava stabilmente l'angolo in basso a destra (256x60) su OGNI pagina,
- * anche dove reCAPTCHA non viene mai eseguito - lo script si carica in
- * index.html, non nella pagina di accesso - e vincolava la posizione di
- * qualunque altro elemento fisso.
+ * Occupava stabilmente l'angolo in basso a destra (256x60) e vincolava la
+ * posizione di qualunque altro elemento fisso. Ora che lo script lo inietta
+ * solo <Login />, il badge esiste soltanto li', ma la regola serve ancora:
+ * quella e' esattamente la pagina in cui darebbe fastidio.
  *
  * Google lo consente a una condizione: l'attribuzione deve restare visibile nel
  * flusso dell'utente. Sta in <RecaptchaNotice />, sotto il pulsante di

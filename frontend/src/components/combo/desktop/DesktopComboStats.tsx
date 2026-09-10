@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, Medal, Award, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ComboStats } from "@/hooks/useComboDetails";
@@ -28,31 +28,31 @@ export function DesktopComboStatsSkeleton() {
 export function DesktopComboStats({ combo }: DesktopComboStatsProps) {
     const stats = [
         {
-            label: "1st Place",
+            label: "Primi posti",
             value: combo.primiPosti || 0,
-            icon: <Trophy className="w-5 h-5 text-yellow-500" />,
-            bg: "bg-yellow-500/10",
-            border: "border-yellow-500/20",
-            text: "text-yellow-500",
+            icon: <Trophy className="w-5 h-5 text-rank-1" />,
+            bg: "bg-rank-1/10",
+            border: "border-rank-1/20",
+            text: "text-rank-1",
         },
         {
-            label: "2nd Place",
+            label: "Secondi posti",
             value: combo.secondiPosti || 0,
-            icon: <Medal className="w-5 h-5 text-zinc-400" />,
-            bg: "bg-zinc-500/10",
-            border: "border-zinc-500/20",
-            text: "text-zinc-400",
+            icon: <Medal className="w-5 h-5 text-rank-2" />,
+            bg: "bg-rank-2/10",
+            border: "border-rank-2/20",
+            text: "text-rank-2",
         },
         {
-            label: "3rd Place",
+            label: "Terzi posti",
             value: combo.terziPosti || 0,
-            icon: <Award className="w-5 h-5 text-amber-600" />,
-            bg: "bg-amber-600/10",
-            border: "border-amber-600/20",
-            text: "text-amber-600",
+            icon: <Award className="w-5 h-5 text-rank-3" />,
+            bg: "bg-rank-3/10",
+            border: "border-rank-3/20",
+            text: "text-rank-3",
         },
         {
-            label: "Punteggio Totale",
+            label: "Punteggio totale",
             value: combo.punteggioTotale.toLocaleString(),
             icon: <Star className="w-5 h-5 text-primary" />,
             bg: "bg-primary/10",
@@ -75,7 +75,7 @@ export function DesktopComboStats({ combo }: DesktopComboStatsProps) {
                             {stat.icon}
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                            <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
                             <p className={`text-2xl font-black ${stat.text}`}>
                                 {stat.value}
                             </p>

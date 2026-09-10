@@ -52,6 +52,28 @@ export default {
           border: "var(--destructive-border)",
         },
         ring: "hsl(var(--ring) / <alpha-value>)",
+        // La scala del podio. Quattro posizioni, quattro token: prima
+        // l'argento viveva come gray-400/gray-500/slate-400/slate-500/
+        // zinc-300/zinc-500 in file diversi.
+        rank: {
+          "1": "hsl(var(--rank-1) / <alpha-value>)",
+          "2": "hsl(var(--rank-2) / <alpha-value>)",
+          "3": "hsl(var(--rank-3) / <alpha-value>)",
+          "4": "hsl(var(--rank-4) / <alpha-value>)",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success) / <alpha-value>)",
+          foreground: "hsl(var(--success-foreground) / <alpha-value>)",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info) / <alpha-value>)",
+          foreground: "hsl(var(--info-foreground) / <alpha-value>)",
+        },
+        // Identita' dei due servizi da cui arrivano i tornei.
+        platform: {
+          challengermode: "hsl(var(--platform-challengermode) / <alpha-value>)",
+          challonge: "hsl(var(--platform-challonge) / <alpha-value>)",
+        },
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
           "2": "hsl(var(--chart-2) / <alpha-value>)",

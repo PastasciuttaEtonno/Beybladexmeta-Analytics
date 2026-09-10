@@ -42,8 +42,8 @@ export function PlayerProfileDialog({ nickname, open, onOpenChange }: PlayerProf
     };
 
     const getPlatformColor = (platform: string) => {
-        if (platform === "challengermode") return "bg-blue-500/10 border-blue-500/20";
-        if (platform === "challonge") return "bg-purple-500/10 border-purple-500/20";
+        if (platform === "challengermode") return "bg-platform-challengermode/10 border-platform-challengermode/20";
+        if (platform === "challonge") return "bg-platform-challonge/10 border-platform-challonge/20";
         return "bg-muted";
     };
 

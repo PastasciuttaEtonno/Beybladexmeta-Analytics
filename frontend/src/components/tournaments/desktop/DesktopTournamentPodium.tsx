@@ -28,21 +28,21 @@ interface DesktopTournamentPodiumProps {
 
 const RANK_CONFIG: Record<number, { icon: React.ReactNode; glow: string; border: string; label: string }> = {
     1: {
-        icon: <Trophy className="w-8 h-8 text-yellow-500" />,
-        glow: "from-yellow-500/20 via-transparent to-transparent",
-        border: "border-yellow-500/40",
+        icon: <Trophy className="w-8 h-8 text-rank-1" />,
+        glow: "from-rank-1/20 via-transparent to-transparent",
+        border: "border-rank-1/40",
         label: "1° Posto",
     },
     2: {
-        icon: <Medal className="w-7 h-7 text-slate-400" />,
-        glow: "from-slate-400/15 via-transparent to-transparent",
-        border: "border-slate-400/30",
+        icon: <Medal className="w-7 h-7 text-rank-2" />,
+        glow: "from-rank-2/15 via-transparent to-transparent",
+        border: "border-rank-2/30",
         label: "2° Posto",
     },
     3: {
-        icon: <Award className="w-7 h-7 text-amber-700" />,
-        glow: "from-amber-700/15 via-transparent to-transparent",
-        border: "border-amber-700/30",
+        icon: <Award className="w-7 h-7 text-rank-3" />,
+        glow: "from-rank-3/15 via-transparent to-transparent",
+        border: "border-rank-3/30",
         label: "3° Posto",
     },
     4: {

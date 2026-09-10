@@ -1,4 +1,3 @@
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import {
@@ -50,11 +49,11 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
                 onClick={onClick}
             >
                 <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-md ${danger ? "bg-red-500/10 text-red-500" : "bg-muted text-muted-foreground group-hover:bg-background group-hover:text-foreground transition-colors"}`}>
+                    <div className={`p-2 rounded-md ${danger ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground group-hover:bg-background group-hover:text-foreground transition-colors"}`}>
                         <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex flex-col">
-                        <span className={`font-medium text-sm ${danger ? "text-red-500" : "text-foreground"}`}>
+                        <span className={`font-medium text-sm ${danger ? "text-destructive" : "text-foreground"}`}>
                             {label}
                         </span>
                     </div>
@@ -92,9 +91,9 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
                 {user && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Integrazioni</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground">Integrazioni</h3>
                             {(!user?.challongeId || !user?.challengerId) && (
-                                <span className="text-xs text-amber-500 font-medium flex items-center gap-1">
+                                <span className="text-xs text-info font-medium flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3" /> Azione Richiesta
                                 </span>
                             )}
@@ -114,7 +113,7 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
                                 value={user?.challongeId ? "Connected" : "Not Connected"}
                                 action={
                                     user?.challongeId ? (
-                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                                        <div className="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.5)]" />
                                     ) : (
                                         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.location.href = "/api/challonge/login"}>Connect</Button>
                                     )
@@ -128,7 +127,7 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
                                 value={user?.challengerId ? "Connected" : "Not Connected"}
                                 action={
                                     user?.challengerId ? (
-                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                                        <div className="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.5)]" />
                                     ) : (
                                         <Button variant="outline" size="sm" className="h-7 text-xs bg-[#171A21] text-white hover:bg-[#171A21]/90 border-0" onClick={() => window.location.href = "/api/challenger/login"}>Connect</Button>
                                     )
@@ -150,7 +149,7 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
                 {user?.challengerId && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Tornei</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground">Tornei</h3>
                         </div>
                         <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                             <ParticipationsList />
@@ -160,7 +159,7 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
 
                 {/* Section 3: Legal */}
                 <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider px-1">Legali</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground px-1">Legali</h3>
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm divide-y divide-border">
                         <SettingsRow icon={Shield} label="Privacy Policy" href="/privacy-policy" />
                         <SettingsRow icon={FileText} label="Termini del Servizio" href="/terms" />
@@ -170,7 +169,7 @@ export function ProfileSettingsPanel({ user, handleLogout, onOpenAliases, linkEr
                 {/* Section 4: Danger */}
                 {user && (
                     <div className="space-y-4 pb-12">
-                        <h3 className="text-sm font-medium text-destructive/80 uppercase tracking-wider px-1">Danger Zone</h3>
+                        <h3 className="text-sm font-medium text-destructive/80 px-1">Zona pericolosa</h3>
                         <div className="bg-card border border-destructive/20 rounded-xl overflow-hidden shadow-sm">
                             <SettingsRow
                                 icon={LogOut}

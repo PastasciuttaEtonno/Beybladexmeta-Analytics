@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Gamepad2, ChevronRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 
 interface LinkedAccountsCardProps {
     user: any;
@@ -53,11 +53,11 @@ export function LinkedAccountsCard({ user }: LinkedAccountsCardProps) {
                 icon={Gamepad2}
                 label="Challonge"
                 value={(user as any)?.challongeUsername || (user?.challongeId ? "Connected" : (
-                    <span className="w-2 h-2 rounded-full inline-block bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                    <span className="w-2 h-2 rounded-full inline-block bg-destructive shadow-[0_0_8px_hsl(var(--destructive)/0.5)]" />
                 ))}
                 action={
                     user?.challongeId ? (
-                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                        <div className="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.5)]" />
                     ) : (
                         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.location.href = "/api/challonge/login"}>Connect</Button>
                     )
@@ -69,11 +69,11 @@ export function LinkedAccountsCard({ user }: LinkedAccountsCardProps) {
                 icon={Gamepad2}
                 label="Challengermode"
                 value={(user as any)?.challengermodeUsername || (user?.challengerId ? "Connected" : (
-                    <span className="w-2 h-2 rounded-full inline-block bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                    <span className="w-2 h-2 rounded-full inline-block bg-destructive shadow-[0_0_8px_hsl(var(--destructive)/0.5)]" />
                 ))}
                 action={
                     user?.challengerId ? (
-                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                        <div className="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.5)]" />
                     ) : (
                         <Button variant="outline" size="sm" className="h-7 text-xs bg-[#171A21] text-white hover:bg-[#171A21]/90 border-0" onClick={() => window.location.href = "/api/challenger/login"}>Connect</Button>
                     )

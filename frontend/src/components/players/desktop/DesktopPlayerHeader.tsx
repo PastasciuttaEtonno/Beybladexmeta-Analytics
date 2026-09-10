@@ -21,8 +21,7 @@ export function DesktopPlayerHeader({
     return (
         <div className="relative overflow-hidden rounded-xl border border-border/50 bg-card/40 backdrop-blur-xl p-6 shadow-2xl">
             {/* Background Glow Effect */}
-            <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+            <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
 
             <div className="relative flex items-center justify-between z-10">
                 <div className="flex items-center gap-6">
@@ -71,7 +70,7 @@ export function DesktopPlayerHeader({
                 {/* High Level Stats */}
                 <div className="flex gap-8 divide-x divide-white/10">
                     <div className="px-4 text-center">
-                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        <p className="text-sm font-medium text-muted-foreground">
                             Punti Totali
                         </p>
                         <p className="text-3xl font-mono font-bold text-primary mt-1">
@@ -79,7 +78,7 @@ export function DesktopPlayerHeader({
                         </p>
                     </div>
                     <div className="px-4 text-center pl-8">
-                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        <p className="text-sm font-medium text-muted-foreground">
                             Tornei
                         </p>
                         <p className="text-3xl font-mono font-bold text-foreground mt-1">

@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { format, parseISO, isValid } from "date-fns";
+import { parseISO, isValid } from "date-fns";
+import { formatDataAsse, formatMeseAnno } from "@/lib/date";
+import { useColoreToken } from "@/hooks/useColoriToken";
 import { TrendingUp, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -28,7 +30,8 @@ export function DesktopComboTrendSkeleton() {
     );
 }
 
-export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProps) {
+export function DesktopComboTrend({ tournaments }: DesktopComboTrendProps) {
+    const coloreLinea = useColoreToken("chart-1");
     const chartData = useMemo(() => {
         if (!tournaments || tournaments.length === 0) return [];
 
@@ -42,7 +45,7 @@ export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProp
 
             // Week-of-month: W01–W04, resets each month
             const weekOfMonth = Math.ceil(date.getDate() / 7);
-            const monthKey = format(date, "MMM yyyy");
+            const monthKey = formatMeseAnno(date);
             const key = `W${String(weekOfMonth).padStart(2, '0')} ${monthKey}`;
             // Anchor date = first day of that week-of-month bucket
             const anchorDate = new Date(date.getFullYear(), date.getMonth(), (weekOfMonth - 1) * 7 + 1);
@@ -54,8 +57,8 @@ export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProp
         });
 
         // 2. Convert to Array and Sort by Date
-        const result = Object.entries(weeklyCounts).map(([key, value]) => ({
-            name: key,
+        const result = Object.entries(weeklyCounts).map(([, value]) => ({
+            name: formatDataAsse(value.date),
             date: value.date,
             count: value.count
         })).sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -90,8 +93,8 @@ export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProp
                             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTrendCombo" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                        <stop offset="5%" stopColor={coloreLinea} stopOpacity={0.4} />
+                                        <stop offset="95%" stopColor={coloreLinea} stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <XAxis
@@ -131,11 +134,11 @@ export function DesktopComboTrend({ tournaments, season }: DesktopComboTrendProp
                                 <Area
                                     type="monotone"
                                     dataKey="count"
-                                    stroke="#8b5cf6"
+                                    stroke={coloreLinea}
                                     strokeWidth={3}
                                     fillOpacity={1}
                                     fill="url(#colorTrendCombo)"
-                                    activeDot={{ r: 6, strokeWidth: 0, fill: '#8b5cf6' }}
+                                    activeDot={{ r: 6, strokeWidth: 0, fill: coloreLinea }}
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
