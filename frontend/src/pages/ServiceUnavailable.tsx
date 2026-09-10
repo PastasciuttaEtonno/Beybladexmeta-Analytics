@@ -42,8 +42,8 @@ export default function ServiceUnavailable() {
         <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-16 text-center">
             {/* Animated icon */}
             <div className="relative mb-8">
-                <div className="w-24 h-24 rounded-full bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">
-                    <DatabaseZap className="w-11 h-11 text-amber-500" />
+                <div className="w-24 h-24 rounded-full bg-rank-3/10 flex items-center justify-center ring-1 ring-info/20">
+                    <DatabaseZap className="w-11 h-11 text-info" />
                 </div>
                 <span className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-background flex items-center justify-center ring-1 ring-border">
                     <Wifi className="w-4 h-4 text-destructive" />
@@ -73,7 +73,7 @@ export default function ServiceUnavailable() {
                 {checking ? "Verifica in corso…" : "Riprova ora"}
             </Button>
 
-            <p className="mt-12 text-xs text-muted-foreground/50">
+            <p className="mt-12 text-xs text-muted-foreground">
                 Beybladexmeta Analytics
             </p>
         </div>

@@ -3,6 +3,7 @@ import { Seo } from "@/components/Seo";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trophy, Medal, Award } from "lucide-react";
 import { DesktopSlimPlayersList } from "@/components/players/desktop/DesktopSlimPlayersList";
 
 type PlayerItem = {
@@ -38,6 +38,7 @@ type PlayerItem = {
 };
 
 export default function Players() {
+  const isMobile = useIsMobile();
   const [, setLocation] = useLocation();
 
   // Sanitize URL to prevent XSS - only allow http/https protocols
@@ -173,11 +174,11 @@ export default function Players() {
 
   const getRankBadge = (index: number) => {
     if (index === 0)
-      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white w-8 h-6 flex items-center justify-center p-0">1</Badge>;
+      return <Badge className="bg-rank-1 hover:bg-rank-1/90 text-white w-8 h-6 flex items-center justify-center p-0">1</Badge>;
     if (index === 1)
-      return <Badge className="bg-gray-400 hover:bg-gray-500 text-white w-8 h-6 flex items-center justify-center p-0">2</Badge>;
+      return <Badge className="bg-rank-2 hover:bg-rank-2/90 text-white w-8 h-6 flex items-center justify-center p-0">2</Badge>;
     if (index === 2)
-      return <Badge className="bg-amber-600 hover:bg-amber-700 text-white w-8 h-6 flex items-center justify-center p-0">3</Badge>;
+      return <Badge className="bg-rank-3 hover:bg-rank-3/90 text-white w-8 h-6 flex items-center justify-center p-0">3</Badge>;
     return (
       <Badge variant="secondary" className="text-xs w-8 h-6 flex items-center justify-center p-0">
         {index + 1}
@@ -200,13 +201,16 @@ export default function Players() {
           }}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 w-full mb-4 max-w-md mx-auto md:hidden">
+          {isMobile && (
+          <TabsList className="grid grid-cols-2 w-full mb-4 max-w-md mx-auto">
             <TabsTrigger value="components">Componenti</TabsTrigger>
             <TabsTrigger value="players">Giocatori</TabsTrigger>
           </TabsList>
+          )}
 
           <TabsContent value="players" className="space-y-3">
-            <div className="flex flex-wrap items-end gap-2 md:hidden">
+            {isMobile && (
+            <div className="flex flex-wrap items-end gap-2">
               <div className="flex-1 min-w-0 w-full sm:w-auto">
                 <Input
                   id="player-search"
@@ -229,7 +233,9 @@ export default function Players() {
                 </Select>
               </div>
             </div>
+            )}
 
+            {!isMobile && (
             <DesktopSlimPlayersList
               players={filteredPlayers}
               isLoading={isLoading}
@@ -239,16 +245,18 @@ export default function Players() {
               onPlatformChange={setSelectedPlatform}
               sanitizeImageUrl={sanitizeImageUrl}
             />
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:hidden gap-4">
+            )}
+
+            {isMobile && (isLoading ? (
+              <div className="grid grid-cols-1 gap-4">
                 {Array.from({ length: 9 }).map((_, i) => (
                   <Card key={i} className="h-24 bg-muted/30 animate-pulse" />
                 ))}
               </div>
             ) : filteredPlayers.length === 0 ? (
-              <Card className="p-6 text-center md:hidden">Nessun giocatore trovato</Card>
+              <Card className="p-6 text-center">Nessun giocatore trovato</Card>
             ) : (
-              <div className="grid grid-cols-1 md:hidden gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {pageItems.map((p, idx) => {
                   const globalRank = (page - 1) * perPage + idx;
 
@@ -353,7 +361,7 @@ export default function Players() {
                   </Pagination>
                 )}
               </div>
-            )}
+            ))}
           </TabsContent>
         </Tabs>
       </main>

@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card } from "@/components/ui/card";
 import { MobileLeaderboardList } from "@/components/leaderboard/MobileLeaderboardList";
 import { DesktopLeaderboardTable } from "@/components/leaderboard/DesktopLeaderboardTable";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type LeaderboardType = "blade" | "ratchet" | "bit";
 
@@ -18,6 +19,7 @@ export function LeaderboardDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+    const isMobile = useIsMobile();
   const activeType: LeaderboardType = useMemo(() => (type || "blade"), [type]);
 
   const { data, isLoading } = useQuery<{ items: any[]; type: string; limit: number }>(
@@ -66,8 +68,9 @@ export function LeaderboardDialog({
           </div>
         ) : items.length > 0 ? (
           <>
-            <MobileLeaderboardList items={items} activeType={activeType} folder={folder} />
-            <DesktopLeaderboardTable items={items} activeType={activeType} folder={folder} />
+            {isMobile
+                ? <MobileLeaderboardList items={items} activeType={activeType} folder={folder} />
+                : <DesktopLeaderboardTable items={items} activeType={activeType} folder={folder} />}
           </>
         ) : (
           <Card className="p-6 text-center">No data</Card>

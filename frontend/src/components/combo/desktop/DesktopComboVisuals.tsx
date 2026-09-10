@@ -34,9 +34,9 @@ export function DesktopComboVisualsSkeleton() {
 
 export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
     const getRankIcon = (r: number) => {
-        if (r === 1) return <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-[0_2px_4px_rgba(234,179,8,0.5)]" />;
-        if (r === 2) return <Medal className="w-8 h-8 text-slate-300 drop-shadow-[0_2px_4px_rgba(203,213,225,0.5)]" />;
-        if (r === 3) return <Award className="w-8 h-8 text-amber-700 drop-shadow-[0_2px_4px_rgba(180,83,9,0.5)]" />;
+        if (r === 1) return <Trophy className="w-8 h-8 text-rank-1 drop-shadow-[0_2px_4px_hsl(var(--rank-1)/0.5)]" />;
+        if (r === 2) return <Medal className="w-8 h-8 text-rank-2 drop-shadow-[0_2px_4px_hsl(var(--rank-2)/0.5)]" />;
+        if (r === 3) return <Award className="w-8 h-8 text-rank-3 drop-shadow-[0_2px_4px_hsl(var(--rank-3)/0.5)]" />;
         return <span className="text-xl font-black text-muted-foreground/50">#{r}</span>;
     };
 
@@ -96,7 +96,7 @@ export function DesktopComboVisuals({ combo, rank }: DesktopComboVisualsProps) {
                         </div>
 
                         <div className="text-center space-y-0.5 opacity-70 group-hover/item:opacity-100 transition-opacity duration-300">
-                            <p className="text-[9px] uppercase tracking-[0.2em] font-bold text-muted-foreground">{component.label}</p>
+                            <p className="text-xs font-medium text-muted-foreground">{component.label}</p>
                             <p className="text-base font-bold text-foreground leading-none">{component.value}</p>
                         </div>
                     </div>

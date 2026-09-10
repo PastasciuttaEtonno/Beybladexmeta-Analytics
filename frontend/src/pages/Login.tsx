@@ -24,20 +24,61 @@ function resolveRecaptchaSiteKey(): string | null {
   if (RECAPTCHA_SITE_KEY && typeof RECAPTCHA_SITE_KEY === "string" && RECAPTCHA_SITE_KEY.length > 0) {
     return RECAPTCHA_SITE_KEY;
   }
-  const script = document.querySelector('script[src*="https://www.google.com/recaptcha/api.js"]') as HTMLScriptElement | null;
-  if (script?.src) {
-    try {
-      const url = new URL(script.src);
-      const key = url.searchParams.get("render");
-      if (key) return key;
-    } catch { }
-  }
+  // Ripiego sul <meta> in index.html. Prima la chiave si leggeva dalla query
+  // dello <script> di Google, che pero' stava in index.html e quindi caricava
+  // reCAPTCHA su ogni pagina del sito per servire l'unica che lo usa.
+  const meta = document.querySelector('meta[name="recaptcha-site-key"]') as HTMLMetaElement | null;
+  const fromMeta = meta?.content?.trim();
+  if (fromMeta) return fromMeta;
   return null;
 }
 
+const RECAPTCHA_SCRIPT_ID = "recaptcha-v3";
+
+/**
+ * Inietta il client v3, una volta sola.
+ *
+ * La promise e' memoizzata perche' questa funzione viene chiamata sia dal mount
+ * della pagina sia dal submit della registrazione: senza, un utente veloce si
+ * ritroverebbe due <script> e due inizializzazioni.
+ */
+let recaptchaScriptPromise: Promise<void> | null = null;
+
+function loadRecaptchaScript(siteKey: string): Promise<void> {
+  if (recaptchaScriptPromise) return recaptchaScriptPromise;
+
+  recaptchaScriptPromise = new Promise<void>((resolve, reject) => {
+    const existing = document.getElementById(RECAPTCHA_SCRIPT_ID) as HTMLScriptElement | null;
+    if (existing) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = RECAPTCHA_SCRIPT_ID;
+    script.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      // Sbloccare la memoizzazione: un ad-block puo' essere disattivato e il
+      // tentativo successivo deve poter ripartire davvero.
+      recaptchaScriptPromise = null;
+      reject(new Error("Impossibile caricare reCAPTCHA"));
+    };
+    document.head.appendChild(script);
+  });
+
+  return recaptchaScriptPromise;
+}
+
 async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
+  const siteKey = resolveRecaptchaSiteKey();
+  if (!siteKey) {
+    throw new Error("Chiave reCAPTCHA mancante: configura VITE_RECAPTCHA_SITE_KEY.");
+  }
+
+  await loadRecaptchaScript(siteKey);
+
   const w = window as any;
-  // Wait for the v3 client loaded via index.html
   await new Promise<void>((resolve, reject) => {
     const start = Date.now();
     const timer = setInterval(() => {
@@ -56,6 +97,7 @@ async function ensureRecaptchaReady(maxWaitMs: number = 15000): Promise<void> {
     }, 100);
   });
 }
+
 const isValidEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 const isStrongPassword = (s: string) => (
   s.trim().length >= 8 && /[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s) && /[^A-Za-z0-9]/.test(s)
@@ -83,7 +125,6 @@ export default function Login() {
   const [regDisplayName, setRegDisplayName] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [registering, setRegistering] = useState(false);
-  const [recaptchaReady, setRecaptchaReady] = useState(false);
   const [recaptchaLoading, setRecaptchaLoading] = useState(false);
   const [regEmailError, setRegEmailError] = useState<string | null>(null);
   const [regPasswordError, setRegPasswordError] = useState<string | null>(null);
@@ -108,9 +149,7 @@ export default function Login() {
       try {
         setRecaptchaLoading(true);
         await ensureRecaptchaReady(15000);
-        if (mounted) setRecaptchaReady(true);
       } catch {
-        if (mounted) setRecaptchaReady(false);
       } finally {
         if (mounted) setRecaptchaLoading(false);
       }
@@ -126,8 +165,8 @@ export default function Login() {
 
     if (!sanitizedEmail || !sanitizedPassword) {
       toast({
-        title: "Errore",
-        description: "Inserisci sia l'email che la password",
+        title: "Campi mancanti",
+        description: "Inserisci sia l'email che la password.",
         variant: "destructive",
       });
       return;
@@ -153,7 +192,7 @@ export default function Login() {
     } catch (error) {
       const msg = error instanceof Error && error.message ? error.message : "Accesso fallito";
       toast({
-        title: "Errore",
+        title: "Accesso non riuscito",
         description: msg,
         variant: "destructive",
       });
@@ -247,7 +286,7 @@ export default function Login() {
         <Button
           type="button"
           variant="outline"
-          className="w-full h-12 border-[#ff9100] text-[#ff9100] hover:bg-[#ff9100]/10 hover:text-[#ff9100]"
+          className="w-full h-12 border-platform-challonge text-platform-challonge hover:bg-platform-challonge/10 hover:text-platform-challonge"
           onClick={() => { window.location.href = "/api/challonge/login"; }}
           data-testid="button-login-challonge"
         >
@@ -289,8 +328,8 @@ export default function Login() {
 
                 if (!sanitizedEmail || !sanitizedPassword || !sanitizedDisplayName) {
                   toast({
-                    title: "Errore",
-                    description: "Compila tutti i campi",
+                    title: "Campi mancanti",
+                    description: "Compila tutti i campi per registrarti.",
                     variant: "destructive",
                   });
                   return;
@@ -324,9 +363,7 @@ export default function Login() {
                   try {
                     setRecaptchaLoading(true);
                     await ensureRecaptchaReady(15000);
-                    setRecaptchaReady(true);
                   } catch (e) {
-                    setRecaptchaReady(false);
                     throw new Error("reCAPTCHA non disponibile. Verifica connessione, ad-block e riprova.");
                   } finally {
                     setRecaptchaLoading(false);
@@ -364,8 +401,8 @@ export default function Login() {
                   setEmail(sanitizedEmail);
                 } catch (err: any) {
                   toast({
-                    title: "Error",
-                    description: err.message || "Registration failed",
+                    title: "Registrazione non riuscita",
+                    description: err.message || "Riprova fra un momento.",
                     variant: "destructive",
                   });
                 } finally {

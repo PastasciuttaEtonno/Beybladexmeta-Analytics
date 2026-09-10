@@ -7,7 +7,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -155,10 +154,10 @@ export function DesktopSlimPlayersList({
                                             {player.top3Finishes ? (
                                                 <div className="flex items-center justify-end gap-1">
                                                     <span className="font-mono text-sm">{player.top3Finishes}</span>
-                                                    <Trophy className="h-3 w-3 text-amber-500/70" />
+                                                    <Trophy className="h-3 w-3 text-primary/70" />
                                                 </div>
                                             ) : (
-                                                <span className="text-muted-foreground/50">-</span>
+                                                <span className="text-muted-foreground">-</span>
                                             )}
                                         </TableCell>
 

@@ -1,12 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Home, BarChart3, Star, Trophy, User, Sun, Moon } from "lucide-react";
-import { HeaderLogo } from "@/components/HeaderLogo";
 import { useTheme } from "@/contexts/ThemeProvider";
 
 const navItems = [
     { path: '/', icon: Home, label: 'Home' },
-    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/analytics', icon: BarChart3, label: 'Classifiche' },
     { path: '/players', icon: User, label: 'Giocatori' },
     { path: '/favorites', icon: Star, label: 'Preferiti' },
     { path: '/tournaments', icon: Trophy, label: 'Tornei' },
@@ -65,12 +64,12 @@ export function DesktopSidebar() {
                 >
                     {theme === "dark" ? (
                         <>
-                            <Sun className="w-5 h-5 min-w-5 group-hover:text-yellow-500 transition-colors" />
+                            <Sun className="w-5 h-5 min-w-5 group-hover:text-primary transition-colors" />
                             <span className="hidden lg:inline">Tema</span>
                         </>
                     ) : (
                         <>
-                            <Moon className="w-5 h-5 min-w-5 group-hover:text-blue-500 transition-colors" />
+                            <Moon className="w-5 h-5 min-w-5 group-hover:text-primary transition-colors" />
                             <span className="hidden lg:inline">Tema</span>
                         </>
                     )}
@@ -78,7 +77,7 @@ export function DesktopSidebar() {
 
                 <div className="hidden lg:block p-4 rounded-xl bg-muted/50 border border-border">
                     <p className="text-xs text-muted-foreground font-medium">Beybladexmeta Analytics</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">Version 1.0.0</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Version 1.0.0</p>
                 </div>
             </div>
         </aside>

@@ -8,6 +8,11 @@
     "module": "ESNext",
     "target": "ES2022",
     "strict": true,
+    // Attivi perche' il progetto e' appena stato ripulito: 48 import e 281
+    // righe di una feature abbandonata erano rimasti dentro senza che nulla
+    // se ne accorgesse. `npm run check` adesso li vede subito.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "preserve",
     "esModuleInterop": true,

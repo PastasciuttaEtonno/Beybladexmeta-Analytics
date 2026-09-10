@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useRoute, useLocation, Link } from "wouter";
+import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Seo } from "@/components/Seo";
+import { statoTorneoInItaliano } from "@/lib/text";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,7 +18,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Loader2, User, ChevronsUpDown, Pencil } from "lucide-react";
 import { DesktopTournamentHeader } from "@/components/tournaments/desktop/DesktopTournamentHeader";
 import { DesktopTournamentPodium } from "@/components/tournaments/desktop/DesktopTournamentPodium";
-import { DesktopTournamentStandings } from "@/components/tournaments/desktop/DesktopTournamentStandings";
 import { DesktopTournamentAuthPrompt } from "@/components/tournaments/desktop/DesktopTournamentAuthPrompt";
 
 type ComboForm = {
@@ -202,7 +202,6 @@ type ExternalTournamentDetail = {
 
 export default function TournamentDetail() {
   const [, params] = useRoute("/tournaments/:id");
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -416,7 +415,7 @@ export default function TournamentDetail() {
       return apiRequest("PUT", `/api/tournaments/${tournamentId}/players/${selectedPlayer?.id}/combos`, payload);
     },
     onSuccess: () => {
-      toast({ title: "Saved", description: "Player combos updated" });
+      toast({ title: "Combo salvate", description: "Le combo del giocatore sono aggiornate." });
       // Update local cache so UI reflects changes for the specific player
       if (selectedPlayer?.id) {
         setPlayerCombosById((prev) => ({ ...prev, [selectedPlayer.id]: editCombos }));
@@ -428,7 +427,7 @@ export default function TournamentDetail() {
       if (err.message && err.message.includes("Tempo per le modifiche scaduto")) {
         toast({ title: "Modifica bloccata", description: "Finestra di modifica chiusa, contattare l'admin", variant: "destructive" });
       } else {
-        toast({ title: "Error", description: err?.message || "Failed to save combos", variant: "destructive" });
+        toast({ title: "Combo non salvate", description: err?.message || "Riprova fra un momento.", variant: "destructive" });
       }
     },
   });
@@ -675,7 +674,7 @@ export default function TournamentDetail() {
       setPlayerCombosById({});
       toast({ title: "Reset eseguito", description: "Le combo del torneo sono state azzerate" });
     } catch (e: any) {
-      toast({ title: "Errore", description: e?.message || "Reset fallito", variant: "destructive" });
+      toast({ title: "Azzeramento non riuscito", description: e?.message || "Riprova fra un momento.", variant: "destructive" });
     } finally {
       setResetting(false);
     }
@@ -693,7 +692,7 @@ export default function TournamentDetail() {
       // Reload page to reflect changes in lineups if needed, or just let users see it next time
       setTimeout(() => window.location.reload(), 1000);
     } catch (e: any) {
-      toast({ title: "Errore", description: e?.message || "Sync fallito", variant: "destructive" });
+      toast({ title: "Sincronizzazione non riuscita", description: e?.message || "Riprova fra un momento.", variant: "destructive" });
     } finally {
       setResetting(false);
     }
@@ -873,7 +872,7 @@ export default function TournamentDetail() {
               {detailResp?.detail?.name || 'Dettagli torneo'}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              {detailResp?.detail?.state || ''}
+              {statoTorneoInItaliano(detailResp?.detail?.state)}
             </p>
             <div className="text-xs text-muted-foreground flex items-center gap-2">
               <span>Giocatori totali: {totalPlayers}</span>
@@ -886,7 +885,7 @@ export default function TournamentDetail() {
               return contactUrl ? (
                 <p className="text-xs">
                   <a
-                    className="text-blue-600 hover:underline no-underline"
+                    className="text-primary hover:underline no-underline"
                     href={contactUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -954,7 +953,7 @@ export default function TournamentDetail() {
 
             {/* Challonge Action Button Removed - Individual edit only */}
             {detailLoading ? (
-              <div className="flex items-center justify-center py-16" aria-label="Loading leaderboard">
+              <div className="flex items-center justify-center py-16" aria-label="Caricamento della classifica">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
@@ -1024,7 +1023,7 @@ export default function TournamentDetail() {
                             setEditCombos(next);
                             toast({ title: "Eliminata", description: `Combo ${idx + 1} rimossa` });
                           } catch (e: any) {
-                            toast({ title: "Errore", description: e?.message || "Eliminazione fallita", variant: "destructive" });
+                            toast({ title: "Combo non eliminata", description: e?.message || "Riprova fra un momento.", variant: "destructive" });
                           }
                         }}>Elimina</Button>
                       )}
@@ -1035,7 +1034,7 @@ export default function TournamentDetail() {
                       <SearchableSelect
                         id={`edit-${idx}-blade`}
                         value={editCombos[idx]?.blade || ''}
-                        placeholder="Select blade"
+                        placeholder="Scegli il blade"
                         options={componentsData?.blades || []}
                         onSelect={(val) => updateEditCombo(idx, 'blade', val)}
                       />
@@ -1046,7 +1045,7 @@ export default function TournamentDetail() {
                       <SearchableSelect
                         id={`edit-${idx}-assistBlade`}
                         value={editCombos[idx]?.assistBlade || ''}
-                        placeholder="Select assist blade"
+                        placeholder="Scegli l'assist blade"
                         options={componentsData?.assistBlades || []}
                         includeNone
                         disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
@@ -1062,7 +1061,7 @@ export default function TournamentDetail() {
                       <SearchableSelect
                         id={`edit-${idx}-ratchet`}
                         value={editCombos[idx]?.ratchet || ''}
-                        placeholder="Select ratchet"
+                        placeholder="Scegli il ratchet"
                         options={componentsData?.ratchets || []}
                         onSelect={(val) => updateEditCombo(idx, 'ratchet', val)}
                         disabled={!!(componentsData?.bits || []).find((b) => b.name === (editCombos[idx]?.bit || '') && b.isRatchetLess)}
@@ -1074,7 +1073,7 @@ export default function TournamentDetail() {
                       <SearchableSelect
                         id={`edit-${idx}-bit`}
                         value={editCombos[idx]?.bit || ''}
-                        placeholder="Select bit"
+                        placeholder="Scegli il bit"
                         options={(componentsData?.bits || []).map((b) => b.name)}
                         onSelect={(val) => updateEditCombo(idx, 'bit', val)}
                       />
@@ -1085,7 +1084,7 @@ export default function TournamentDetail() {
                       <SearchableSelect
                         id={`edit-${idx}-lockChip`}
                         value={editCombos[idx]?.lockChip || ''}
-                        placeholder="Select lock chip"
+                        placeholder="Scegli il lock chip"
                         options={componentsData?.lockChips || []}
                         includeNone
                         disabled={!isSingleWordBlade(editCombos[idx]?.blade || '')}
@@ -1120,7 +1119,7 @@ export default function TournamentDetail() {
                 })()}
 
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Annulla</Button>
                   <Button
                     type="button"
                     onClick={() => saveCombosMutation.mutate()}

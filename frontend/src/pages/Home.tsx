@@ -1,13 +1,11 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, TrendingUp, Shield, Cog, Zap, Eye } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeProvider';
+import { Trophy, Shield, Cog, Zap, Eye } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { HeaderLogo } from '@/components/HeaderLogo';
 import { LeaderboardDialog } from '@/components/LeaderboardDialog';
 import { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
 import { Seo } from '@/components/Seo';
 import {
@@ -19,10 +17,11 @@ import {
 } from "@/components/ui/select";
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { ComponentImage } from '@/components/ComponentImage';
-import { DesktopBentoGrid } from '@/components/dashboard/DesktopBentoGrid';
+import { DesktopMetaSummary } from '@/components/dashboard/DesktopMetaSummary';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function Home() {
-  const { theme } = useTheme();
+  const isMobile = useIsMobile();
   const [, setLocation] = useLocation();
   const [leaderboardType, setLeaderboardType] = useState<"blade" | "ratchet" | "bit" | null>(null);
   const dialogOpen = leaderboardType !== null;
@@ -70,8 +69,10 @@ export default function Home() {
         description="Il portale definitivo per l'analisi del metagame di Beyblade X in Italia. Scopri le migliori combo, i trend dei tornei e scala la classifica globale."
       />
 
-      {/* MOBILE CONTENT (< 768px) */}
-      <div className="flex flex-col min-h-screen bg-background pb-20 md:hidden">
+      {/* Un albero solo alla volta: nascondere l'altro con md:hidden lo
+          lasciava comunque montato, con i suoi hook e le sue immagini. */}
+      {isMobile && (
+      <div className="flex flex-col min-h-screen bg-background pb-20">
         <PageHeader title="Home" action={<HeaderLogo />} />
 
         <main className="flex-1 px-4 py-4 max-w-2xl mx-auto w-full space-y-6">
@@ -95,13 +96,13 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                    <SelectTrigger className="w-44 h-9">
+                    <SelectTrigger className="w-44 h-9" aria-label="Filtra per stagione">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Season 2026">Season 2026</SelectItem>
                       <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
-                      <SelectItem value="All Time">All Time</SelectItem>
+                      <SelectItem value="All Time">Tutte le stagioni</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -125,11 +126,11 @@ export default function Home() {
                   </div>
                 </Card>
               ) : !topBlade ? (
-                <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-blade-empty" onClick={() => setLeaderboardType('blade')}>
+                <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98]" data-testid="card-top-blade-empty" onClick={() => setLeaderboardType('blade')}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="w-5 h-5 text-purple-500" />
+                    <Trophy className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-semibold">Top Blade</h2>
-                    <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
+                    <Eye className="w-4 h-4 text-muted-foreground ml-auto" />
                   </div>
                   <div className="py-6 text-center">
                     <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
@@ -139,11 +140,11 @@ export default function Home() {
                   </div>
                 </Card>
               ) : (
-                <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-blade" onClick={() => setLeaderboardType('blade')}>
+                <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98]" data-testid="card-top-blade" onClick={() => setLeaderboardType('blade')}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="w-5 h-5 text-purple-500" />
+                    <Trophy className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-semibold">Top Blade</h2>
-                    <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
+                    <Eye className="w-4 h-4 text-muted-foreground ml-auto" />
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -190,11 +191,11 @@ export default function Home() {
                   </div>
                 </Card>
               ) : !topRatchet ? (
-                <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-ratchet-empty" onClick={() => setLeaderboardType('ratchet')}>
+                <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98]" data-testid="card-top-ratchet-empty" onClick={() => setLeaderboardType('ratchet')}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="w-5 h-5 text-purple-500" />
+                    <Trophy className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-semibold">Top Ratchet</h2>
-                    <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
+                    <Eye className="w-4 h-4 text-muted-foreground ml-auto" />
                   </div>
                   <div className="py-6 text-center">
                     <Cog className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
@@ -204,11 +205,11 @@ export default function Home() {
                   </div>
                 </Card>
               ) : (
-                <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-ratchet" onClick={() => setLeaderboardType('ratchet')}>
+                <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98]" data-testid="card-top-ratchet" onClick={() => setLeaderboardType('ratchet')}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="w-5 h-5 text-purple-500" />
+                    <Trophy className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-semibold">Top Ratchet</h2>
-                    <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
+                    <Eye className="w-4 h-4 text-muted-foreground ml-auto" />
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -254,11 +255,11 @@ export default function Home() {
                   </div>
                 </Card>
               ) : !topBit ? (
-                <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-bit-empty" onClick={() => setLeaderboardType('bit')}>
+                <Card className="p-6 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98]" data-testid="card-top-bit-empty" onClick={() => setLeaderboardType('bit')}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="w-5 h-5 text-purple-500" />
+                    <Trophy className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-semibold">Top Bit</h2>
-                    <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
+                    <Eye className="w-4 h-4 text-muted-foreground ml-auto" />
                   </div>
                   <div className="py-6 text-center">
                     <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
@@ -268,11 +269,11 @@ export default function Home() {
                   </div>
                 </Card>
               ) : (
-                <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-purple-500/50 active:scale-[0.98]" data-testid="card-top-bit" onClick={() => setLeaderboardType('bit')}>
+                <Card className="p-6 space-y-4 cursor-pointer min-h-[180px] transition-all hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98]" data-testid="card-top-bit" onClick={() => setLeaderboardType('bit')}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="w-5 h-5 text-purple-500" />
+                    <Trophy className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-semibold">Top Bit</h2>
-                    <Eye className="w-4 h-4 text-muted-foreground ml-auto md:hidden" />
+                    <Eye className="w-4 h-4 text-muted-foreground ml-auto" />
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -303,6 +304,7 @@ export default function Home() {
           </Tabs>
         </main>
       </div>
+      )}
 
       <LeaderboardDialog
         type={leaderboardType}
@@ -313,32 +315,32 @@ export default function Home() {
         }}
       />
 
-      {/* DESKTOP CONTENT (>= 768px) */}
-      <div className="hidden md:block max-w-[1400px] mx-auto w-full p-8">
+      {!isMobile && (
+      <div className="max-w-[1400px] mx-auto w-full p-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-black tracking-tight text-foreground/90">Il Meta in Sintesi</h1>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground mr-2">Filtra per stagione:</span>
             <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-              <SelectTrigger className="w-[180px] bg-background/50 backdrop-blur-sm border-white/10">
+              <SelectTrigger className="w-[180px] bg-background/50 backdrop-blur-sm border-white/10" aria-label="Filtra per stagione">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Season 2026">Season 2026</SelectItem>
                 <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
-                <SelectItem value="All Time">All Time</SelectItem>
+                <SelectItem value="All Time">Tutte le stagioni</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <DesktopBentoGrid
+        <DesktopMetaSummary
           selectedSeason={selectedSeason}
           onSelectType={(type) => setLeaderboardType(type)}
         />
 
-        {/* Note: In a real "split" we might render other desktop sections here */}
       </div>
+      )}
     </>
   );
 }

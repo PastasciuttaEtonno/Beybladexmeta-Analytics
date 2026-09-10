@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { format } from "date-fns";
+import { formatDataBreve } from "@/lib/date";
 import {
     Table,
     TableBody,
@@ -43,9 +43,9 @@ export function DesktopPlayerTournaments({ tournaments, isLoading }: DesktopPlay
 
     const getPlacementBadge = (placement: number | null) => {
         if (placement === null) return <span className="text-muted-foreground">-</span>;
-        if (placement === 1) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white w-6 h-6 p-0 flex items-center justify-center">1</Badge>;
-        if (placement === 2) return <Badge className="bg-gray-400 hover:bg-gray-500 text-white w-6 h-6 p-0 flex items-center justify-center">2</Badge>;
-        if (placement === 3) return <Badge className="bg-amber-600 hover:bg-amber-700 text-white w-6 h-6 p-0 flex items-center justify-center">3</Badge>;
+        if (placement === 1) return <Badge className="bg-rank-1 hover:bg-rank-1/90 text-white w-6 h-6 p-0 flex items-center justify-center">1</Badge>;
+        if (placement === 2) return <Badge className="bg-rank-2 hover:bg-rank-2/90 text-white w-6 h-6 p-0 flex items-center justify-center">2</Badge>;
+        if (placement === 3) return <Badge className="bg-rank-3 hover:bg-rank-3/90 text-white w-6 h-6 p-0 flex items-center justify-center">3</Badge>;
         return <span className="font-mono text-muted-foreground">#{placement}</span>;
     };
 
@@ -71,7 +71,7 @@ export function DesktopPlayerTournaments({ tournaments, isLoading }: DesktopPlay
                     {tournaments.map((t) => (
                         <TableRow key={t.tournamentId} className="hover:bg-muted/50 transition-colors">
                             <TableCell className="font-mono text-xs text-muted-foreground">
-                                {t.date ? format(new Date(t.date), 'dd MMM yyyy') : '-'}
+                                {formatDataBreve(t.date, "-")}
                             </TableCell>
                             <TableCell>
                                 <Link href={`/tournaments/${encodeURIComponent(t.tournamentId)}`} asChild>

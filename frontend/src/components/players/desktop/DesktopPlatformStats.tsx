@@ -38,7 +38,7 @@ export function DesktopPlatformStats({ platformStats }: DesktopPlatformStatsProp
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Challengermode Card */}
-            <Card className="border-t-4 border-t-orange-500 bg-card/60 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
+            <Card className="border-t-4 border-t-platform-challengermode bg-card/60 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -46,21 +46,21 @@ export function DesktopPlatformStats({ platformStats }: DesktopPlatformStatsProp
                             Challengermode
                         </CardTitle>
                         {cmStats.tournamentsPlayed > 0 && (
-                            <span className="text-xs font-mono text-orange-500 bg-orange-500/10 px-2 py-1 rounded-full">
+                            <span className="text-xs font-mono text-platform-challengermode bg-platform-challengermode/10 px-2 py-1 rounded-full">
                                 ACTIVE
                             </span>
                         )}
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                    <StatRow label="Punti Totali" value={cmStats.totalPoints.toLocaleString()} icon={Trophy} colorClass="text-yellow-500" />
-                    <StatRow label="Tornei Giocati" value={cmStats.tournamentsPlayed} icon={Award} colorClass="text-blue-500" />
-                    <StatRow label="Top 3" value={cmStats.top3Finishes} icon={Medal} colorClass="text-amber-600" />
+                    <StatRow label="Punti Totali" value={cmStats.totalPoints.toLocaleString()} icon={Trophy} colorClass="text-primary" />
+                    <StatRow label="Tornei Giocati" value={cmStats.tournamentsPlayed} icon={Award} colorClass="text-chart-2" />
+                    <StatRow label="Top 3" value={cmStats.top3Finishes} icon={Medal} colorClass="text-rank-3" />
                 </CardContent>
             </Card>
 
             {/* Challonge Card */}
-            <Card className="border-t-4 border-t-[#FF914D] bg-card/60 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
+            <Card className="border-t-4 border-t-platform-challonge bg-card/60 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -68,16 +68,16 @@ export function DesktopPlatformStats({ platformStats }: DesktopPlatformStatsProp
                             Challonge
                         </CardTitle>
                         {challongeStats.tournamentsPlayed > 0 && (
-                            <span className="text-xs font-mono text-[#FF914D] bg-[#FF914D]/10 px-2 py-1 rounded-full">
+                            <span className="text-xs font-mono text-platform-challonge bg-platform-challonge/10 px-2 py-1 rounded-full">
                                 ACTIVE
                             </span>
                         )}
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                    <StatRow label="Punti Totali" value={challongeStats.totalPoints.toLocaleString()} icon={Trophy} colorClass="text-yellow-500" />
-                    <StatRow label="Tornei Giocati" value={challongeStats.tournamentsPlayed} icon={Award} colorClass="text-blue-500" />
-                    <StatRow label="Top 3" value={challongeStats.top3Finishes} icon={Medal} colorClass="text-amber-600" />
+                    <StatRow label="Punti Totali" value={challongeStats.totalPoints.toLocaleString()} icon={Trophy} colorClass="text-primary" />
+                    <StatRow label="Tornei Giocati" value={challongeStats.tournamentsPlayed} icon={Award} colorClass="text-chart-2" />
+                    <StatRow label="Top 3" value={challongeStats.top3Finishes} icon={Medal} colorClass="text-rank-3" />
                 </CardContent>
             </Card>
         </div>

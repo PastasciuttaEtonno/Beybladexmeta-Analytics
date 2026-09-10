@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -122,6 +122,7 @@ const MAX_DECKS = 20;
 const PER_PAGE = 10;
 
 export default function Favorites() {
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -227,9 +228,9 @@ export default function Favorites() {
     },
   });
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="w-8 h-8 text-yellow-500" />;
-    if (rank === 2) return <Medal className="w-8 h-8 text-slate-400" />;
-    if (rank === 3) return <Award className="w-8 h-8 text-amber-700" />;
+    if (rank === 1) return <Trophy className="w-8 h-8 text-rank-1" />;
+    if (rank === 2) return <Medal className="w-8 h-8 text-rank-2" />;
+    if (rank === 3) return <Award className="w-8 h-8 text-rank-3" />;
     return null;
   };
 
@@ -261,14 +262,14 @@ export default function Favorites() {
       setComboModalOpen(false);
       resetComboForm();
       toast({
-        title: "Success",
-        description: "Combo added to favorites",
+        title: "Combo salvata",
+        description: "La trovi fra i tuoi preferiti.",
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to add combo",
+        title: "Combo non salvata",
+        description: "Riprova fra un momento.",
         variant: "destructive",
       });
     },
@@ -286,8 +287,8 @@ export default function Favorites() {
         setCurrentPage(Math.ceil(remainingCount / PER_PAGE));
       }
       toast({
-        title: "Success",
-        description: "Combo removed from favorites",
+        title: "Combo rimossa",
+        description: "Non e' piu' fra i tuoi preferiti.",
       });
     },
   });
@@ -301,14 +302,14 @@ export default function Favorites() {
       setDeckModalOpen(false);
       resetDeckForm();
       toast({
-        title: "Success",
-        description: "Deck created successfully",
+        title: "Deck creato",
+        description: "Lo trovi nella scheda Deck.",
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to create deck",
+        title: "Deck non creato",
+        description: "Riprova fra un momento.",
         variant: "destructive",
       });
     },
@@ -326,8 +327,8 @@ export default function Favorites() {
         setCurrentDeckPage(Math.ceil(remainingCount / PER_PAGE));
       }
       toast({
-        title: "Success",
-        description: "Deck deleted successfully",
+        title: "Deck eliminato",
+        description: "",
       });
     },
   });
@@ -352,8 +353,8 @@ export default function Favorites() {
   const handleAddCombo = () => {
     if (!blade || !assistBlade || !ratchet || !bit || !lockChip) {
       toast({
-        title: "Error",
-        description: "Please select all components",
+        title: "Combo incompleta",
+        description: "Scegli blade, ratchet e bit prima di salvare.",
         variant: "destructive",
       });
       return;
@@ -376,8 +377,8 @@ export default function Favorites() {
   const handleAddDeck = () => {
     if (!deckName.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a deck name",
+        title: "Manca il nome",
+        description: "Dai un nome al deck per poterlo ritrovare.",
         variant: "destructive",
       });
       return;
@@ -405,8 +406,8 @@ export default function Favorites() {
 
     if (!allCombosComplete) {
       toast({
-        title: "Error",
-        description: "Please complete all 3 combos",
+        title: "Deck incompleto",
+        description: "Un deck richiede tutte e tre le combo.",
         variant: "destructive",
       });
       return;
@@ -428,8 +429,8 @@ export default function Favorites() {
 
     if (hasDuplicates) {
       toast({
-        title: "Error",
-        description: "All parts must be different across the 3 combos (except None for Assist Blade and Lock Chip)",
+        title: "Pezzi ripetuti",
+        description: "Nelle tre combo ogni pezzo va usato una volta sola. Fanno eccezione assist blade e lock chip lasciati vuoti.",
         variant: "destructive",
       });
       return;
@@ -484,7 +485,8 @@ export default function Favorites() {
           action={<HeaderLogo />}
         />
 
-        <div className="pt-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full hidden md:block">
+        {!isMobile && (
+        <div className="pt-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full">
           <DesktopFavoritesWrapper
             decks={decksData?.decks || []}
             combos={combosData?.combos || []}
@@ -501,17 +503,19 @@ export default function Favorites() {
             maxDecks={MAX_DECKS}
           />
         </div>
+        )}
 
-        <main className="flex-1 px-4 py-4 w-full mx-auto md:hidden">
+        {isMobile && (
+        <main className="flex-1 px-4 py-4 w-full mx-auto">
           <Tabs defaultValue="combos" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6 lg:w-[400px]">
               <TabsTrigger value="combos" data-testid="tab-combos">
                 <Star className="w-4 h-4 mr-2" />
-                Combos
+                Combo
               </TabsTrigger>
               <TabsTrigger value="decks" data-testid="tab-decks">
                 <Layers className="w-4 h-4 mr-2" />
-                Decks
+                Deck
               </TabsTrigger>
             </TabsList>
 
@@ -701,7 +705,7 @@ export default function Favorites() {
             <TabsContent value="decks" className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">Decks Preferiti</h2>
+                  <h2 className="text-lg font-semibold">Deck preferiti</h2>
                   {!decksLoading && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {totalDecks} / {MAX_DECKS} deck salvati
@@ -880,6 +884,7 @@ export default function Favorites() {
             </TabsContent >
           </Tabs >
         </main >
+        )}
 
         <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -923,7 +928,7 @@ export default function Favorites() {
                           />
                         </div>
                         <div className="text-center space-y-0.5">
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          <p className="text-xs font-medium text-muted-foreground">
                             {component.label}
                           </p>
                           <p
@@ -956,25 +961,25 @@ export default function Favorites() {
                       <CardContent className="space-y-3">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">1st Place</p>
+                            <p className="text-sm text-muted-foreground">Primi posti</p>
                             <p className="text-2xl font-bold">
                               {Number(comboStatsData.combo.primiPosti)}
                             </p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">2nd Place</p>
+                            <p className="text-sm text-muted-foreground">Secondi posti</p>
                             <p className="text-2xl font-bold">
                               {Number(comboStatsData.combo.secondiPosti)}
                             </p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">3rd Place</p>
+                            <p className="text-sm text-muted-foreground">Terzi posti</p>
                             <p className="text-2xl font-bold">
                               {Number(comboStatsData.combo.terziPosti)}
                             </p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Total Score</p>
+                            <p className="text-sm text-muted-foreground">Punteggio totale</p>
                             <p className="text-2xl font-bold text-primary">
                               {Number(comboStatsData.combo.punteggioTotale).toLocaleString()}
                             </p>
@@ -1024,7 +1029,7 @@ export default function Favorites() {
                 <Label htmlFor="blade">Blade</Label>
                 <Select value={blade} onValueChange={setBlade}>
                   <SelectTrigger id="blade" data-testid="select-blade">
-                    <SelectValue placeholder="Select blade..." />
+                    <SelectValue placeholder="Scegli il blade..." />
                   </SelectTrigger>
                   <SelectContent>
                     {components?.blades.map((b) => (
@@ -1047,7 +1052,7 @@ export default function Favorites() {
                     id="assistBlade"
                     data-testid="select-assist-blade"
                   >
-                    <SelectValue placeholder="Select assist blade..." />
+                    <SelectValue placeholder="Scegli l'assist blade..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="None">None</SelectItem>
@@ -1072,7 +1077,7 @@ export default function Favorites() {
                     id="ratchet"
                     data-testid="select-ratchet"
                   >
-                    <SelectValue placeholder="Select ratchet..." />
+                    <SelectValue placeholder="Scegli il ratchet..." />
                   </SelectTrigger>
                   <SelectContent>
                     {components?.ratchets.map((r) => (
@@ -1091,7 +1096,7 @@ export default function Favorites() {
                 <Label htmlFor="bit">Bit</Label>
                 <Select value={bit} onValueChange={setBit}>
                   <SelectTrigger id="bit" data-testid="select-bit">
-                    <SelectValue placeholder="Select bit..." />
+                    <SelectValue placeholder="Scegli il bit..." />
                   </SelectTrigger>
                   <SelectContent>
                     {(components?.bits || []).map((b) => (
@@ -1114,7 +1119,7 @@ export default function Favorites() {
                     id="lockChip"
                     data-testid="select-lock-chip"
                   >
-                    <SelectValue placeholder="Select lock chip..." />
+                    <SelectValue placeholder="Scegli il lock chip..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="None">None</SelectItem>
@@ -1169,7 +1174,7 @@ export default function Favorites() {
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="deckName">Deck Name</Label>
+                <Label htmlFor="deckName">Nome del deck</Label>
                 <Input
                   id="deckName"
                   value={deckName}
@@ -1197,7 +1202,7 @@ export default function Favorites() {
                     <SelectTrigger
                       data-testid={`select-deck-blade-${index}`}
                     >
-                      <SelectValue placeholder="Select blade..." />
+                      <SelectValue placeholder="Scegli il blade..." />
                     </SelectTrigger>
                     <SelectContent>
                       {components?.blades.map((b) => (
@@ -1218,7 +1223,7 @@ export default function Favorites() {
                     <SelectTrigger
                       data-testid={`select-deck-assist-blade-${index}`}
                     >
-                      <SelectValue placeholder="Select assist blade..." />
+                      <SelectValue placeholder="Scegli l'assist blade..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="None">None</SelectItem>
@@ -1245,7 +1250,7 @@ export default function Favorites() {
                     <SelectTrigger
                       data-testid={`select-deck-ratchet-${index}`}
                     >
-                      <SelectValue placeholder="Select ratchet..." />
+                      <SelectValue placeholder="Scegli il ratchet..." />
                     </SelectTrigger>
                     <SelectContent>
                       {components?.ratchets.map((r) => (
@@ -1268,7 +1273,7 @@ export default function Favorites() {
                     <SelectTrigger
                       data-testid={`select-deck-bit-${index}`}
                     >
-                      <SelectValue placeholder="Select bit..." />
+                      <SelectValue placeholder="Scegli il bit..." />
                     </SelectTrigger>
                     <SelectContent>
                       {(components?.bits || []).map((b) => (
@@ -1289,7 +1294,7 @@ export default function Favorites() {
                     <SelectTrigger
                       data-testid={`select-deck-lock-chip-${index}`}
                     >
-                      <SelectValue placeholder="Select lock chip..." />
+                      <SelectValue placeholder="Scegli il lock chip..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="None">None</SelectItem>
@@ -1317,7 +1322,7 @@ export default function Favorites() {
                 data-testid="button-save-deck"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Create Deck
+                Crea deck
               </Button>
               {totalDecks >= MAX_DECKS && (
                 <p className="text-xs text-muted-foreground text-center w-full mt-2">

@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Layers, Star, Info } from "lucide-react";
+import { Plus, Layers, Star } from "lucide-react";
 import { DesktopDeckCard } from "./DesktopDeckCard";
 import { DesktopFavoriteComboCard } from "./DesktopFavoriteComboCard";
 import { DesktopDeckCardSkeleton } from "./DesktopDeckCardSkeleton";
 import { DesktopFavoriteComboCardSkeleton } from "./DesktopFavoriteComboCardSkeleton";
 import type { FavoriteCombo, FavoriteDeck, FavoriteDeckCombo } from "@/types/api";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 // Redefine locally to avoid circular imports or complex type sharing
 interface DeckWithCombos extends FavoriteDeck {

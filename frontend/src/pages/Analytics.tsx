@@ -27,26 +27,26 @@ import {
   Trophy,
   Medal,
   Award,
-  TrendingUp,
   Filter,
   X,
   ChevronsLeft,
   ChevronsRight,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
   Search,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Seo } from "@/components/Seo";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useColoriToken } from "@/hooks/useColoriToken";
 import type { ComboStats } from "@/types/api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { DesktopAnalyticsGrid } from "@/components/analytics/desktop/DesktopAnalyticsGrid";
+import { DesktopAnalyticsTable } from "@/components/analytics/desktop/DesktopAnalyticsTable";
 
-const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE"];
+
 
 interface PaginationMeta {
   page: number;
@@ -141,7 +141,11 @@ function ComponentImage({ folder, name, priority = false }: { folder: string; na
 }
 
 export default function Analytics() {
-  const [location, setLocation] = useLocation();
+  const isMobile = useIsMobile();
+  // La palette categoriale del grafico: era una serie di esadecimali scritti a
+  // mano, gli stessi che recharts mette negli esempi della documentazione.
+  const colors = useColoriToken("chart-1", "chart-2", "chart-3", "chart-4", "chart-5");
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const q = params.get("q");
@@ -163,6 +167,26 @@ export default function Analytics() {
     return ((order ?? ssOrder ?? "desc") as "asc" | "desc");
   });
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+
+  /**
+   * Ordina cliccando l'intestazione della colonna.
+   *
+   * Prima l'unico modo era aprire la finestra dei filtri, scegliere il criterio
+   * da un menu a tendina, scegliere il verso da un secondo menu e confermare:
+   * quattro gesti per rispondere a "chi ha piu' primi posti?". Qui il criterio
+   * nuovo parte dal piu' alto, che e' sempre quello che si vuole vedere per
+   * primo, e ricliccare la stessa colonna inverte.
+   */
+  const ordinaPerColonna = (chiave: "score" | "first" | "second" | "third" | "fourth") => {
+    if (sortBy === chiave) {
+      setSortOrder((precedente) => (precedente === "desc" ? "asc" : "desc"));
+    } else {
+      setSortBy(chiave);
+      setSortOrder("desc");
+    }
+    setCurrentPage(1);
+  };
+
   const [currentPage, setCurrentPage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const pStr = params.get("page");
@@ -380,11 +404,19 @@ export default function Analytics() {
   const hasActiveFilters =
     searchTerm !== "" || sortBy !== "score" || sortOrder !== "desc" || selectedSeason !== "All Time";
 
+  /**
+   * Coppa, medaglia e nastro dicono "podio del meta", e valgono solo nella
+   * classifica canonica: punti, dal piu' alto, prima pagina. Riordinando per
+   * secondi posti la prima riga e' semplicemente la prima di quell'ordine, e
+   * una coppa li' direbbe una cosa falsa.
+   */
+  const classificaCanonica = sortBy === "score" && sortOrder === "desc" && currentPage === 1;
+
   const getRankIcon = (index: number) => {
-    if (currentPage !== 1) return null;
-    if (index === 0) return <Trophy className="w-5 h-5 text-yellow-500" />;
-    if (index === 1) return <Medal className="w-5 h-5 text-gray-400" />;
-    if (index === 2) return <Award className="w-5 h-5 text-amber-600" />;
+    if (!classificaCanonica) return null;
+    if (index === 0) return <Trophy className="w-5 h-5 text-rank-1" />;
+    if (index === 1) return <Medal className="w-5 h-5 text-rank-2" />;
+    if (index === 2) return <Award className="w-5 h-5 text-rank-3" />;
     return null;
   };
 
@@ -392,14 +424,14 @@ export default function Analytics() {
     const page = data?.pagination?.page ?? 1;
     const limit = data?.pagination?.limit ?? 20;
     const overall = (page - 1) * limit + index + 1;
-    if (currentPage !== 1) return <Badge variant="outline">{overall}</Badge>;
+    if (!classificaCanonica) return <Badge variant="outline">{overall}</Badge>;
     if (index === 0)
-      return <Badge className="bg-yellow-500 hover:bg-yellow-600">1st</Badge>;
+      return <Badge className="bg-rank-1 hover:bg-rank-1/90">1°</Badge>;
     if (index === 1)
-      return <Badge className="bg-gray-400 hover:bg-gray-500">2nd</Badge>;
+      return <Badge className="bg-rank-2 hover:bg-rank-2/90">2°</Badge>;
     if (index === 2)
-      return <Badge className="bg-amber-600 hover:bg-amber-700">3rd</Badge>;
-    return <Badge variant="outline">{index + 1}</Badge>;
+      return <Badge className="bg-rank-3 hover:bg-rank-3/90">3°</Badge>;
+    return <Badge variant="outline">{overall}</Badge>;
   };
 
   const getComboId = (combo: ComboStats) => {
@@ -426,15 +458,18 @@ export default function Analytics() {
 
       <main className="flex-1 px-4 py-4 w-full max-w-[1400px] mx-auto space-y-6">
         <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "leaderboard" | "trends")} defaultValue="leaderboard" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 md:hidden">
-            <TabsTrigger value="leaderboard">Top Combos</TabsTrigger>
+          {isMobile && (
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="leaderboard">Migliori combo</TabsTrigger>
             <TabsTrigger value="trends">Analisi Trend</TabsTrigger>
           </TabsList>
+          )}
 
           <TabsContent value="leaderboard">
             <Card className="p-4">
               {/* Desktop Search Bar */}
-              <div className="hidden md:flex mb-4 gap-2">
+              {!isMobile && (
+              <div className="flex mb-4 gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -458,6 +493,7 @@ export default function Analytics() {
                   )}
                 </Button>
               </div>
+              )}
 
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 flex-wrap flex-1 mr-2 min-h-[40px]">
@@ -469,21 +505,21 @@ export default function Analytics() {
                   )}
                   {searchTerm && (
                     <Badge variant="secondary" className="text-xs">
-                      Search: {searchTerm}
+                      Cerca: {searchTerm}
                     </Badge>
                   )}
                   {sortBy !== "score" && (
                     <Badge variant="secondary" className="text-xs">
-                      Sort:{" "}
+                      Ordina per:{" "}
                       {sortBy === "first"
-                        ? "1st Place"
+                        ? "primi posti"
                         : sortBy === "second"
-                          ? "2nd Place"
+                          ? "secondi posti"
                           : sortBy === "third"
-                            ? "3rd Place"
+                            ? "terzi posti"
                             : sortBy === "fourth"
-                              ? "4th Place"
-                              : "Date"}
+                              ? "quarti posti"
+                              : "data"}
                     </Badge>
                   )}
                   {sortOrder !== "desc" && (
@@ -587,7 +623,7 @@ export default function Analytics() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="All Time">All Time</SelectItem>
+                            <SelectItem value="All Time">Tutte le stagioni</SelectItem>
                             <SelectItem value="Off Season 2025">Off Season 2025</SelectItem>
                             <SelectItem value="Season 2026">Season 2026</SelectItem>
                           </SelectContent>
@@ -635,19 +671,23 @@ export default function Analytics() {
               ) : data?.combos && data.combos.length > 0 ? (
                 <>
                   {/* Desktop Grid View (>= 768px) */}
-                  <div className="hidden md:block">
-                    <DesktopAnalyticsGrid
-                      combos={data?.combos || []}
-                      currentPage={data?.pagination?.page || 1}
-                      itemsPerPage={data?.pagination?.limit || 20}
-                      getComboId={getComboId}
-                      season={selectedSeason}
-                      isLoading={isLoading}
-                    />
-                  </div>
+                  {!isMobile && (
+                  <DesktopAnalyticsTable
+                    combos={data?.combos || []}
+                    currentPage={data?.pagination?.page || 1}
+                    itemsPerPage={data?.pagination?.limit || 20}
+                    getComboId={getComboId}
+                    season={selectedSeason}
+                    isLoading={isLoading}
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSort={ordinaPerColonna}
+                  />
+                  )}
 
                   {/* Mobile List View (< 768px) */}
-                  <div className="space-y-3 md:hidden">
+                  {isMobile && (
+                  <div className="space-y-3">
                     {data.combos.map((combo, index) => (
                       <Link
                         key={`${combo.blade}-${combo.assistBlade}-${combo.ratchet}-${combo.bit}-${combo.lockChip}`}
@@ -734,45 +774,53 @@ export default function Analytics() {
                                 <div className="flex items-center gap-4 pt-3 border-t border-border">
                                   <div className="text-center">
                                     <p className="text-xs text-muted-foreground">
-                                      Score
+                                      Punti
                                     </p>
                                     <p
                                       className="text-lg font-bold text-primary"
                                       data-testid={`text-score-${index}`}
                                     >
-                                      {combo.punteggioTotale.toLocaleString()}
+                                      {combo.punteggioTotale.toLocaleString("it-IT")}
                                     </p>
                                   </div>
                                   <div className="text-center">
                                     <p className="text-xs text-muted-foreground">
-                                      1st
+                                      1°
                                     </p>
-                                    <p className="text-sm font-semibold text-yellow-500">
-                                      {combo.primiPosti}
-                                    </p>
-                                  </div>
-                                  <div className="text-center">
-                                    <p className="text-xs text-muted-foreground">
-                                      2nd
-                                    </p>
-                                    <p className="text-sm font-semibold text-gray-400">
-                                      {combo.secondiPosti}
+                                    <p className="text-sm font-semibold">
+                                      {combo.primiPosti
+                                        ? <span className="text-rank-1">{combo.primiPosti}</span>
+                                        : <span className="text-muted-foreground">–</span>}
                                     </p>
                                   </div>
                                   <div className="text-center">
                                     <p className="text-xs text-muted-foreground">
-                                      3rd
+                                      2°
                                     </p>
-                                    <p className="text-sm font-semibold text-amber-600">
-                                      {combo.terziPosti}
+                                    <p className="text-sm font-semibold">
+                                      {combo.secondiPosti
+                                        ? <span className="text-rank-2">{combo.secondiPosti}</span>
+                                        : <span className="text-muted-foreground">–</span>}
                                     </p>
                                   </div>
                                   <div className="text-center">
                                     <p className="text-xs text-muted-foreground">
-                                      4th
+                                      3°
                                     </p>
-                                    <p className="text-sm font-semibold text-slate-500">
-                                      {combo.quartiPosti}
+                                    <p className="text-sm font-semibold">
+                                      {combo.terziPosti
+                                        ? <span className="text-rank-3">{combo.terziPosti}</span>
+                                        : <span className="text-muted-foreground">–</span>}
+                                    </p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                      4°
+                                    </p>
+                                    <p className="text-sm font-semibold">
+                                      {combo.quartiPosti
+                                        ? <span className="text-rank-4">{combo.quartiPosti}</span>
+                                        : <span className="text-muted-foreground">–</span>}
                                     </p>
                                   </div>
                                 </div>
@@ -784,13 +832,14 @@ export default function Analytics() {
                     ))}
 
                   </div>
+                  )}
                 </>
               ) : (
                 <div className="py-12 text-center">
                   <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground">Dati assenti</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    I dati apparirano una volta che i tornei verranno registrati
+                    I dati appariranno una volta registrati i tornei
                   </p>
                 </div>
               )}
@@ -811,6 +860,7 @@ export default function Analytics() {
                       variant="outline"
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
+                      aria-label="Vai alla prima pagina"
                       data-testid="button-first-page"
                     >
                       <ChevronsLeft className="w-4 h-4" />
@@ -823,6 +873,7 @@ export default function Analytics() {
                         setCurrentPage((prev) => Math.max(1, prev - 1))
                       }
                       disabled={currentPage === 1}
+                      aria-label="Vai alla pagina precedente"
                       data-testid="button-previous-page"
                     >
                       <ChevronLeft className="w-4 h-4" />
@@ -837,6 +888,7 @@ export default function Analytics() {
                         )
                       }
                       disabled={currentPage === data.pagination.totalPages}
+                      aria-label="Vai alla pagina successiva"
                       data-testid="button-next-page"
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -849,6 +901,7 @@ export default function Analytics() {
                         setCurrentPage(data.pagination.totalPages)
                       }
                       disabled={currentPage === data.pagination.totalPages}
+                      aria-label="Vai all'ultima pagina"
                       data-testid="button-last-page"
                     >
                       <ChevronsRight className="w-4 h-4" />
@@ -888,7 +941,7 @@ export default function Analytics() {
                     onValueChange={setSelectedSeason}
                   >
                     <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Select Season" />
+                      <SelectValue placeholder="Scegli la stagione" />
                     </SelectTrigger>
                     <SelectContent>
                       {(seasonsData?.seasons || ["Season 2026", "All Time", "Off Season 2025"]).map((season) => (
@@ -907,7 +960,7 @@ export default function Analytics() {
                     </PopoverTrigger>
                     <PopoverContent className="p-0 w-[calc(100vw-2rem)] sm:w-[280px]">
                       <Command>
-                        <CommandInput placeholder="Search component name..." />
+                        <CommandInput placeholder="Cerca un componente..." />
                         <CommandList>
                           <CommandEmpty>No results found.</CommandEmpty>
                           <CommandGroup heading="Names">
@@ -946,9 +999,9 @@ export default function Analytics() {
                       <YAxis />
                       <Tooltip
                         wrapperStyle={{ outline: 'none' }}
-                        contentStyle={{ backgroundColor: 'var(--popover)', borderColor: 'var(--border)', color: 'var(--popover-foreground)' }}
-                        labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
-                        itemStyle={{ color: 'var(--popover-foreground)' }}
+                        contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--popover-foreground))' }}
+                        labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+                        itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
                       />
                       <Legend content={() => null} />
                       {transformedData.length > 0 &&

@@ -66,6 +66,13 @@ services:
       PORT: 8000
       SESSION_SECRET: ${SESSION_SECRET:-dev-secret-non-usare-in-produzione}
       APP_BASE_URL: http://localhost:8080
+      # Da dove il backend riprende la shell della SPA per riscriverne i tag
+      # og:image, quando serve /combo/:id. Senza, _fetch_index_html esce
+      # subito e la pagina di una combo risponde {"error":"not_found"} -
+      # non a un clic dentro l'applicazione, che resta lato client, ma a un
+      # link aperto da fuori o a un ricaricamento. Il nome del servizio, non
+      # localhost: dentro il container quello e' il backend stesso.
+      FRONTEND_ORIGIN: http://frontend
       # Le chiavi arrivano dal .env della repo, che docker compose legge da solo.
       VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}

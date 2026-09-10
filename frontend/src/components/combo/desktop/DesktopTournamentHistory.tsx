@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { formatDataBreve } from "@/lib/date";
 import { Link } from "wouter";
 import type { TournamentEntry } from "@/hooks/useComboDetails";
 
@@ -34,9 +34,9 @@ export function DesktopTournamentHistory({
 }: DesktopTournamentHistoryProps) {
 
     const getPlacementBadge = (placement: number) => {
-        if (placement === 1) return <Badge className="bg-yellow-500/20 text-yellow-600 hover:bg-yellow-500/30 border-yellow-500/50">1st Place</Badge>;
-        if (placement === 2) return <Badge className="bg-zinc-500/20 text-zinc-500 hover:bg-zinc-500/30 border-zinc-500/50">2nd Place</Badge>;
-        if (placement === 3) return <Badge className="bg-amber-600/20 text-amber-600 hover:bg-amber-600/30 border-amber-600/50">3rd Place</Badge>;
+        if (placement === 1) return <Badge className="bg-rank-1/20 text-rank-1 hover:bg-rank-1/30 border-rank-1/50">1° posto</Badge>;
+        if (placement === 2) return <Badge className="bg-rank-2/20 text-rank-2 hover:bg-rank-2/30 border-rank-2/50">2° posto</Badge>;
+        if (placement === 3) return <Badge className="bg-rank-3/20 text-rank-3 hover:bg-rank-3/30 border-rank-3/50">3° posto</Badge>;
         return <Badge variant="outline" className="text-muted-foreground">#{placement}</Badge>;
     };
 
@@ -96,7 +96,7 @@ export function DesktopTournamentHistory({
                                             </Link>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
-                                            {t.date ? format(new Date(t.date), 'MMM dd, yyyy') : 'Unknown'}
+                                            {formatDataBreve(t.date)}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
                                             <Link href={`/player/${encodeURIComponent(t.playerId)}`} asChild>
@@ -119,7 +119,7 @@ export function DesktopTournamentHistory({
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4">
                         <p className="text-sm text-muted-foreground">
-                            Page {currentPage} of {totalPages}
+                            Pagina {currentPage} di {totalPages}
                         </p>
                         <div className="flex items-center gap-2">
                             <Button
@@ -129,7 +129,7 @@ export function DesktopTournamentHistory({
                                 disabled={currentPage === 1}
                             >
                                 <ChevronLeft className="h-4 w-4 mr-1" />
-                                Previous
+                                Precedente
                             </Button>
                             <Button
                                 variant="outline"
@@ -137,7 +137,7 @@ export function DesktopTournamentHistory({
                                 onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
                                 disabled={currentPage === totalPages}
                             >
-                                Next
+                                Successiva
                                 <ChevronRight className="h-4 w-4 ml-1" />
                             </Button>
                         </div>

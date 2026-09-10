@@ -1,11 +1,9 @@
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLogo } from "@/components/HeaderLogo";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,13 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { apiRequest } from "@/lib/queryClient";
-import { Lock, Trophy, Medal, Award, Eraser, ChevronsUpDown, Loader2, User, Pencil, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { formatDataBreve } from "@/lib/date";
+import { markdownATestoSemplice, statoTorneoInItaliano } from "@/lib/text";
+import { Eraser, Loader2, CheckCircle, AlertCircle, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import {
@@ -33,151 +30,21 @@ import {
   PaginationNext,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
-import { Filter, X } from "lucide-react";
+import { Filter } from "lucide-react";
 
-type ComboForm = {
-  blade: string;
-  assistBlade: string;
-  ratchet: string;
-  bit: string;
-  lockChip: string;
-};
 
-const isSingleWordBlade = (bladeName: string): boolean => {
-  if (!bladeName) return true;
-  const hasMultipleCapitals = /[A-Z].*[A-Z]/.test(bladeName);
-  return !hasMultipleCapitals;
-};
 
-type SearchableSelectProps = {
-  id: string;
-  testId?: string;
-  value: string;
-  onSelect: (val: string) => void;
-  options: string[];
-  placeholder: string;
-  disabled?: boolean;
-  includeNone?: boolean;
-};
 
-function SearchableSelect({
-  id,
-  testId,
-  value,
-  onSelect,
-  options,
-  placeholder,
-  disabled = false,
-  includeNone = false,
-}: SearchableSelectProps) {
-  const [open, setOpen] = useState(false);
-  const shownOptions = includeNone ? ["None", ...options] : options;
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          id={id}
-          data-testid={testId}
-          disabled={disabled}
-        >
-          {value || placeholder}
-          <ChevronsUpDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="p-0 w-[280px]">
-        <Command>
-          <CommandInput placeholder={`Search ${placeholder.toLowerCase()}...`} />
-          <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup heading="Names">
-              {shownOptions.map((opt) => (
-                <CommandItem
-                  key={opt}
-                  value={opt}
-                  onSelect={(val) => {
-                    onSelect(val);
-                    setOpen(false);
-                  }}
-                >
-                  {opt}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 export default function Tournaments() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'add' | 'list'>('list');
-  const [nomeTorneo, setNomeTorneo] = useState<string>("");
-  const [dataTorneo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [descrizione, setDescrizione] = useState<string>("");
-  const [participants, setParticipants] = useState<number>(0);
-  const [regione, setRegione] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  const [firstPlace, setFirstPlace] = useState<ComboForm[]>([
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  ]);
 
-  const [secondPlace, setSecondPlace] = useState<ComboForm[]>([
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  ]);
 
-  const [thirdPlace, setThirdPlace] = useState<ComboForm[]>([
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  ]);
 
-  // Inline ComponentImage (consistent with other pages)
-  const PUBLIC_MINIO_URL = (import.meta.env.VITE_PUBLIC_MINIO_URL || "").replace(/\/$/, "");
-  function ComponentImage({ folder, name }: { folder: string; name: string }) {
-    const [attemptIndex, setAttemptIndex] = useState(0);
-    const getImageVariations = (n: string, format: "png" | "webp") => {
-      const variations = [
-        n.toLowerCase().replace(/\s+/g, ""),
-        n.toLowerCase().replace(/\s+/g, "-"),
-        n.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().replace(/\s+/g, "-"),
-      ];
-      return variations.map((v) => `${PUBLIC_MINIO_URL}/${folder}/${v}.${format}`);
-    };
-    const allAttempts = [...getImageVariations(name, "webp"), ...getImageVariations(name, "png")];
-    const handleError = () => {
-      if (attemptIndex < allAttempts.length - 1) setAttemptIndex(attemptIndex + 1);
-    };
-    return (
-      <div className="aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
-        {attemptIndex >= allAttempts.length ? (
-          <div className="text-center p-4">
-            <p className="text-sm text-muted-foreground">Image not available</p>
-          </div>
-        ) : (
-          <img
-            key={attemptIndex}
-            src={allAttempts[attemptIndex]}
-            alt={name}
-            className="w-full h-full object-contain"
-            onError={handleError}
-          />
-        )}
-      </div>
-    );
-  }
 
   // Sanitize URL to prevent XSS - only allow http/https protocols
   const sanitizeImageUrl = (url: string | null | undefined): string | null => {
@@ -219,204 +86,13 @@ export default function Tournaments() {
     "Sardegna",
   ];
 
-  const { data: componentsData } = useQuery<{
-    blades: string[];
-    assistBlades: string[];
-    ratchets: string[];
-    bits: { name: string; isRatchetLess: boolean }[];
-    lockChips: string[];
-  }>({
-    queryKey: ["/api/components"],
-  });
 
-  // Deprecated admin batch submission (frontend not using; Challengermode flow in use)
-  // const submitMutation = useMutation({
-  //   mutationFn: async (data: any) => {
-  //     return apiRequest("POST", "/api/admin/tournament-results", data);
-  //   },
-  //   onSuccess: () => {
-  //     toast({
-  //       title: "Success",
-  //       description: "Tournament results submitted successfully",
-  //     });
-  //     setParticipants(0);
-  //     setFirstPlace([
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //     ]);
-  //     setSecondPlace([
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //     ]);
-  //     setThirdPlace([
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //       { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  //     ]);
-  //   },
-  //   onError: (error: any) => {
-  //     toast({
-  //       title: "Error",
-  //       description: error.message || "Failed to submit tournament results",
-  //       variant: "destructive",
-  //     });
-  //   },
-  // });
 
-  const updateCombo = (
-    position: "first" | "second" | "third",
-    index: number,
-    field: keyof ComboForm,
-    value: string,
-  ) => {
-    const setter =
-      position === "first"
-        ? setFirstPlace
-        : position === "second"
-          ? setSecondPlace
-          : setThirdPlace;
-    const combos =
-      position === "first"
-        ? firstPlace
-        : position === "second"
-          ? secondPlace
-          : thirdPlace;
 
-    const newCombos = [...combos];
-    newCombos[index] = { ...newCombos[index], [field]: value };
 
-    if (field === "blade" && !isSingleWordBlade(value)) {
-      newCombos[index].assistBlade = "None";
-      newCombos[index].lockChip = "None";
-    }
-
-    setter(newCombos);
-  };
-
-  const validateDeckUniqueness = (
-    combos: ComboForm[],
-    deckName: string,
-  ): string | null => {
-    const parts: { [key: string]: string[] } = {
-      blade: [],
-      assistBlade: [],
-      ratchet: [],
-      bit: [],
-      lockChip: [],
-    };
-
-    for (const combo of combos) {
-      parts.blade.push(combo.blade);
-      parts.assistBlade.push(combo.assistBlade);
-      parts.ratchet.push(combo.ratchet);
-      parts.bit.push(combo.bit);
-      parts.lockChip.push(combo.lockChip);
-    }
-
-    const checkDuplicates = (
-      arr: string[],
-      partName: string,
-      allowNone: boolean,
-    ): string | null => {
-      const filtered = allowNone ? arr.filter((v) => v !== "None") : arr;
-      const unique = new Set(filtered);
-      if (filtered.length !== unique.size) {
-        return `${deckName} has duplicate ${partName}s. Each combo must use different parts (except "None" for Assist Blade and Lock Chip).`;
-      }
-      return null;
-    };
-
-    const errors = [
-      checkDuplicates(parts.blade, "Blade", false),
-      checkDuplicates(parts.assistBlade, "Assist Blade", true),
-      checkDuplicates(parts.ratchet, "Ratchet", false),
-      checkDuplicates(parts.bit, "Bit", false),
-      checkDuplicates(parts.lockChip, "Lock Chip", true),
-    ].filter(Boolean);
-
-    return errors.length > 0 ? errors[0] : null;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validazione meta torneo
-    if (!nomeTorneo.trim()) {
-      toast({ title: "Errore", description: "Inserisci il nome del torneo", variant: "destructive" });
-      return;
-    }
-    // dataTorneo viene impostata automaticamente al giorno corrente (YYYY-MM-DD)
-
-    // Validate participants range: 6–200 inclusive
-    if (participants < 6 || participants > 200) {
-      toast({
-        title: "Error",
-        description: "I partecipanti devono essere compresi tra 6 e 200",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validazione regione: obbligatoria e deve essere una regione italiana valida
-    if (!ITALIAN_REGIONS.includes(regione)) {
-      toast({
-        title: "Errore",
-        description: "Seleziona una regione italiana valida",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const allCombos = [...firstPlace, ...secondPlace, ...thirdPlace];
-    const hasEmpty = allCombos.some(
-      (combo) =>
-        !combo.blade ||
-        !combo.assistBlade ||
-        !combo.ratchet ||
-        !combo.bit ||
-        !combo.lockChip,
-    );
-
-    if (hasEmpty) {
-      toast({
-        title: "Error",
-        description: "Please fill in all combo components",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const firstPlaceError = validateDeckUniqueness(firstPlace, "1st Place");
-    const secondPlaceError = validateDeckUniqueness(secondPlace, "2nd Place");
-    const thirdPlaceError = validateDeckUniqueness(thirdPlace, "3rd Place");
-
-    const validationError =
-      firstPlaceError || secondPlaceError || thirdPlaceError;
-    if (validationError) {
-      toast({
-        title: "Validation Error",
-        description: validationError,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    return;
-  };
 
   // Non-admins can access list view; add tab is gated below
 
-  // Deprecated add-results form UI (not rendered; Challengermode data entry supersedes this)
-  // const renderComboInputs = (
-  //   combos: ComboForm[],
-  //   position: "first" | "second" | "third",
-  //   icon: React.ReactNode,
-  //   title: string,
-  // ) => (/* form UI omitted */);
-
-  // List view state and data
   type TorneoCard = {
     torneoId: string;
     nomeTorneo: string;
@@ -531,33 +207,11 @@ export default function Tournaments() {
   // Selection state and dialog
   // Dialog replaced by route-based detail page
 
-  // Admin: player combo editor state
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<{ id: string; username: string } | null>(null);
-  const [editCombos, setEditCombos] = useState<ComboForm[]>([
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-    { blade: "", assistBlade: "", ratchet: "", bit: "", lockChip: "" },
-  ]);
 
   // Admin combo editor dialog moved to TournamentDetail route
 
   // Keep local editCombos for add-results form only
 
-  const updateEditCombo = (index: number, field: keyof ComboForm, value: string) => {
-    setEditCombos((prev) =>
-      prev.map((c, i) => {
-        if (i !== index) return c;
-        const updated = { ...c, [field]: value };
-        // If blade has a space, it's a single-piece; clear assist blade and lock chip
-        if (field === 'blade' && value.includes(' ')) {
-          updated.assistBlade = '';
-          updated.lockChip = '';
-        }
-        return updated;
-      })
-    );
-  };
 
   // Save mutation not used on list page
 
@@ -670,10 +324,10 @@ export default function Tournaments() {
         {/* Compact filter bar */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex-1 min-w-[180px]">
-            <Label htmlFor="filter-name" className="sr-only">Tournament name</Label>
+            <Label htmlFor="filter-name" className="sr-only">Nome del torneo</Label>
             <Input
               id="filter-name"
-              aria-label="Tournament name"
+              aria-label="Nome del torneo"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cerca torneo..."
@@ -801,14 +455,16 @@ export default function Tournaments() {
                   </div>
                   <div className="flex items-center gap-1">
                     <p className="text-xs text-muted-foreground">
-                      {t.dataTorneo ? format(new Date(t.dataTorneo), 'dd MMM yyyy') : (t.state || 'Completed tournament')}
+                      {t.dataTorneo ? formatDataBreve(t.dataTorneo) : (statoTorneoInItaliano(t.state) || 'Data non disponibile')}
                     </p>
                     {isOffSeasonDate(t.dataTorneo) && (
                       <Badge variant="secondary" className="text-[10px] ml-1">Off Season</Badge>
                     )}
-                    <Badge variant="outline" className="text-[10px] ml-1">{t.region || "mancante"}</Badge>
+                    {t.region && (
+                      <Badge variant="outline" className="text-[10px] ml-1">{t.region}</Badge>
+                    )}
                     {t.hasCombos ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <CheckCircle className="w-4 h-4 text-success" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-muted-foreground" />
                     )}
@@ -816,14 +472,14 @@ export default function Tournaments() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   {t.description && (
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{t.description}</p>
+                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{markdownATestoSemplice(t.description)}</p>
                   )}
                   {(() => {
                     const contactUrl = sanitizeImageUrl(t.contactUrl);
                     return contactUrl ? (
                       <p className="mt-2 text-xs">
                         <a
-                          className="text-blue-600 hover:underline no-underline"
+                          className="text-primary hover:underline no-underline"
                           href={contactUrl}
                           target="_blank"
                           rel="noopener noreferrer"

@@ -4,7 +4,6 @@ import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowLeft, Mail } from "lucide-react";
-import { Card } from "@/components/ui/card";
 
 export default function Contact() {
     return (

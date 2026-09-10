@@ -89,7 +89,7 @@ function ToolChips({ calls }: { calls: ChatToolCall[] }) {
 
 export function ChatPanel({ className }: { className?: string }) {
   const {
-    messages, phase, busy, statusDetail, liveSources, liveTools, liveText,
+    messages, busy, statusDetail, liveSources, liveTools, liveText,
     error, errorReference, send, stop, rate,
   } = useChatStream();
   const [draft, setDraft] = useState("");

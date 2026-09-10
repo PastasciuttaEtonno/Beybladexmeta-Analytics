@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { HeaderLogo } from "@/components/HeaderLogo";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLocation, Link } from "wouter";
+import { Link } from "wouter";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import { Seo } from "@/components/Seo";
@@ -23,10 +22,9 @@ import { ProfileSidebar } from "@/components/profile/desktop/ProfileSidebar";
 import { ProfileSettingsPanel } from "@/components/profile/desktop/ProfileSettingsPanel";
 
 export default function Profile() {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
 
   // Desktop specific state
   const [isAliasesDialogOpen, setIsAliasesDialogOpen] = useState(false);
@@ -44,7 +42,7 @@ export default function Profile() {
       const message = decodeURIComponent(error);
       setLinkError(message);
       toast({
-        title: "Account Linking Error",
+        title: "Collegamento account non riuscito",
         description: message,
         variant: "destructive",
       });
@@ -59,18 +57,20 @@ export default function Profile() {
   }, [user?.challengerId, user?.challongeId]);
 
 
+  const isMobile = useIsMobile();
+
   const handleLogout = async () => {
     try {
       await logout();
-      toast({ title: "Logged out", description: "Come back soon!" });
+      toast({ title: "Uscita effettuata" });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to logout", variant: "destructive" });
+      toast({ title: "Uscita non riuscita", description: "Riprova fra un momento.", variant: "destructive" });
     }
   };
 
   // --- Mobile View Component (Inline) ---
   const MobileProfileView = () => (
-    <div className="md:hidden flex flex-col min-h-screen bg-background pb-20">
+    <div className="flex flex-col min-h-screen bg-background pb-20">
       <PageHeader title="Profilo" action={<HeaderLogo />} />
       <main className="flex-1 px-4 py-4 w-full mx-auto space-y-6">
 
@@ -142,21 +142,21 @@ export default function Profile() {
               <a className="w-full p-4 flex items-center gap-3">
                 <Lock className="w-5 h-5 text-muted-foreground" />
                 <span className="flex-1 font-medium">Privacy Policy</span>
-                <ChevronRight className="w-5 h-5 text-muted-foreground text-muted-foreground/50" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </a>
             </Link>
             <Link href="/terms" asChild>
               <a className="w-full p-4 flex items-center gap-3">
                 <Info className="w-5 h-5 text-muted-foreground" />
                 <span className="flex-1 font-medium">Termini di Servizio</span>
-                <ChevronRight className="w-5 h-5 text-muted-foreground text-muted-foreground/50" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </a>
             </Link>
             <Link href="/contact" asChild>
               <a className="w-full p-4 flex items-center gap-3">
                 <HelpCircle className="w-5 h-5 text-muted-foreground" />
                 <span className="flex-1 font-medium">Supporto</span>
-                <ChevronRight className="w-5 h-5 text-muted-foreground text-muted-foreground/50" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </a>
             </Link>
           </Card>
@@ -172,7 +172,7 @@ export default function Profile() {
           ) : (
             <Link href="/login" asChild>
               <a className="inline-flex items-center justify-center w-full h-12 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90">
-                Login / Register
+                Accedi o registrati
               </a>
             </Link>
           )}
@@ -185,10 +185,11 @@ export default function Profile() {
     <>
       <Seo title="Profilo · Beybladexmeta Analytics" description="Gestisci il tuo profilo" robots="noindex, nofollow" />
 
-      <MobileProfileView />
+      {isMobile && <MobileProfileView />}
 
       {/* Desktop View (h-screen overflow-hidden to prevent 1px mismatch scrollbars) */}
-      <div className="hidden md:block h-screen overflow-hidden bg-background">
+      {!isMobile && (
+      <div className="h-screen overflow-hidden bg-background">
         <DesktopProfileLayout
           sidebar={
             <ProfileSidebar
@@ -206,6 +207,7 @@ export default function Profile() {
           }
         />
       </div>
+      )}
 
       {/* Aliases Modal for Desktop */}
       <Dialog open={isAliasesDialogOpen} onOpenChange={setIsAliasesDialogOpen}>
@@ -215,7 +217,7 @@ export default function Profile() {
           </DialogHeader>
           <AliasManager user={user as any} />
           <div className="flex justify-end mt-4">
-            <Button variant="ghost" onClick={() => setIsAliasesDialogOpen(false)}>Close</Button>
+            <Button variant="ghost" onClick={() => setIsAliasesDialogOpen(false)}>Chiudi</Button>
           </div>
         </DialogContent>
       </Dialog>

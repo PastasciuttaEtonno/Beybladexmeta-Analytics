@@ -2,131 +2,161 @@ import { Switch, Route, Redirect, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
-import { useAuth } from "@/contexts/AuthContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { BottomNav } from "@/components/BottomNav";
-import { TournamentRegistrationNotice } from "@/components/TournamentRegistrationNotice";
 import { IntroAnimation } from "@/components/IntroAnimation";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useServiceHealth } from "@/hooks/useServiceHealth";
-import Login from "@/pages/Login";
-import ServiceUnavailable from "@/pages/ServiceUnavailable";
-import Home from "@/pages/Home";
-import Analytics from "@/pages/Analytics";
-import Favorites from "@/pages/Favorites";
-import Tournaments from "@/pages/Tournaments";
-import TournamentDetail from "@/pages/TournamentDetail";
-import Profile from "@/pages/Profile";
-import ComboDetail from "@/pages/ComboDetail";
-import ComponentLeaderboard from "@/pages/ComponentLeaderboard";
-import Players from "@/pages/Players";
-import PlayerDetail from "@/pages/PlayerDetail";
-import About from "@/pages/About";
-import Contact from "@/pages/Contact";
-import Terms from "@/pages/Terms";
-import ImportTournament from "@/pages/admin/ImportTournament";
-import ChatLogs from "@/pages/admin/ChatLogs";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import { ResponsiveAppShell } from "@/components/layout/ResponsiveAppShell";
 import { ChatLauncher } from "@/components/chat/ChatLauncher";
-import Chat from "@/pages/Chat";
+import { ChunkErrorBoundary } from "@/components/ChunkErrorBoundary";
+
+/**
+ * Le rotte, divise in chunk separati.
+ *
+ * Prima ogni pagina era importata staticamente e il build produceva un solo
+ * file da 1,18 MB (408 KB gzip): chi apriva la home scaricava anche Analytics
+ * con tutto recharts, il pannello di amministrazione e le pagine legali.
+ *
+ * Home resta statica di proposito - e' la pagina d'ingresso, e farle aspettare
+ * un secondo round trip di rete sposterebbe soltanto il problema. Tutto il
+ * resto arriva quando serve.
+ */
+import Home from "@/pages/Home";
+
+const Login = lazy(() => import("@/pages/Login"));
+const ServiceUnavailable = lazy(() => import("@/pages/ServiceUnavailable"));
+const Analytics = lazy(() => import("@/pages/Analytics"));
+const Favorites = lazy(() => import("@/pages/Favorites"));
+const Tournaments = lazy(() => import("@/pages/Tournaments"));
+const TournamentDetail = lazy(() => import("@/pages/TournamentDetail"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const ComboDetail = lazy(() => import("@/pages/ComboDetail"));
+const ComponentLeaderboard = lazy(() => import("@/pages/ComponentLeaderboard"));
+const Players = lazy(() => import("@/pages/Players"));
+const PlayerDetail = lazy(() => import("@/pages/PlayerDetail"));
+const About = lazy(() => import("@/pages/About"));
+const Contact = lazy(() => import("@/pages/Contact"));
+const Terms = lazy(() => import("@/pages/Terms"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const Chat = lazy(() => import("@/pages/Chat"));
+const ImportTournament = lazy(() => import("@/pages/admin/ImportTournament"));
+const ChatLogs = lazy(() => import("@/pages/admin/ChatLogs"));
+
+/**
+ * Il riempitivo mentre il chunk della rotta arriva.
+ *
+ * Occupa l'altezza dello schermo perche' un fallback alto zero farebbe
+ * collassare la pagina e poi risalire: un salto di layout misurabile su una
+ * connessione lenta, che e' esattamente quando questo si vede.
+ */
+function CaricamentoRotta() {
+  return (
+    <div className="min-h-screen w-full" role="status" aria-live="polite">
+      <span className="sr-only">Caricamento della pagina in corso</span>
+    </div>
+  );
+}
 
 function AppRoutes() {
   return (
-    <Switch>
-      <Route path="/login" component={Login} />
+    <ChunkErrorBoundary descrizione="Questa pagina non si è caricata. Di solito succede quando il sito viene aggiornato mentre lo stai usando.">
+      <Suspense fallback={<CaricamentoRotta />}>
+      <Switch>
+        <Route path="/login" component={Login} />
 
-      <Route path="/privacy-policy">
-        <PrivacyPolicy />
-        <BottomNav />
-      </Route>
+        <Route path="/privacy-policy">
+          <PrivacyPolicy />
+          <BottomNav />
+        </Route>
 
-      <Route path="/terms">
-        <Terms />
-        <BottomNav />
-      </Route>
+        <Route path="/terms">
+          <Terms />
+          <BottomNav />
+        </Route>
 
-      <Route path="/about">
-        <About />
-        <BottomNav />
-      </Route>
+        <Route path="/about">
+          <About />
+          <BottomNav />
+        </Route>
 
-      <Route path="/contact">
-        <Contact />
-        <BottomNav />
-      </Route>
+        <Route path="/contact">
+          <Contact />
+          <BottomNav />
+        </Route>
 
-      <Route path="/">
-        <Home />
-        <BottomNav />
-      </Route>
+        <Route path="/">
+          <Home />
+          <BottomNav />
+        </Route>
 
-      <Route path="/chat">
-        <Chat />
-        <BottomNav />
-      </Route>
+        <Route path="/chat">
+          <Chat />
+          <BottomNav />
+        </Route>
 
-      <Route path="/analytics">
-        <Analytics />
-        <BottomNav />
-      </Route>
+        <Route path="/analytics">
+          <Analytics />
+          <BottomNav />
+        </Route>
 
-      <Route path="/favorites">
-        <Favorites />
-        <BottomNav />
-      </Route>
+        <Route path="/favorites">
+          <Favorites />
+          <BottomNav />
+        </Route>
 
-      <Route path="/tournaments">
-        <Tournaments />
-        <BottomNav />
-      </Route>
+        <Route path="/tournaments">
+          <Tournaments />
+          <BottomNav />
+        </Route>
 
-      <Route path="/tournaments/:id">
-        <TournamentDetail />
-        <BottomNav />
-      </Route>
+        <Route path="/tournaments/:id">
+          <TournamentDetail />
+          <BottomNav />
+        </Route>
 
-      <Route path="/profile">
-        <Profile />
-        <BottomNav />
-      </Route>
+        <Route path="/profile">
+          <Profile />
+          <BottomNav />
+        </Route>
 
-      <Route path="/combo/:id">
-        <ComboDetail />
-      </Route>
+        <Route path="/combo/:id">
+          <ComboDetail />
+        </Route>
 
-      <Route path="/leaderboard/:type">
-        <ComponentLeaderboard />
-        <BottomNav />
-      </Route>
+        <Route path="/leaderboard/:type">
+          <ComponentLeaderboard />
+          <BottomNav />
+        </Route>
 
-      <Route path="/players">
-        <Players />
-        <BottomNav />
-      </Route>
+        <Route path="/players">
+          <Players />
+          <BottomNav />
+        </Route>
 
-      <Route path="/players/:id">
-        <PlayerDetail />
-        <BottomNav />
-      </Route>
+        <Route path="/players/:id">
+          <PlayerDetail />
+          <BottomNav />
+        </Route>
 
-      <Route path="/admin/chat-logs">
-        <ChatLogs />
-        <BottomNav />
-      </Route>
+        <Route path="/admin/chat-logs">
+          <ChatLogs />
+          <BottomNav />
+        </Route>
 
-      <Route path="/admin/import">
-        <ImportTournament />
-        <BottomNav />
-      </Route>
+        <Route path="/admin/import">
+          <ImportTournament />
+          <BottomNav />
+        </Route>
 
-      <Route>
-        <Redirect to="/" />
-      </Route>
-    </Switch>
+        <Route>
+          <Redirect to="/" />
+        </Route>
+      </Switch>
+      </Suspense>
+    </ChunkErrorBoundary>
   );
 }
 
@@ -148,7 +178,9 @@ export default function App() {
   if (serviceStatus === "unavailable") {
     return (
       <ThemeProvider>
-        <ServiceUnavailable />
+        <Suspense fallback={<CaricamentoRotta />}>
+          <ServiceUnavailable />
+        </Suspense>
       </ThemeProvider>
     );
   }
@@ -165,7 +197,6 @@ export default function App() {
                 perche' la domanda nasce mentre si guarda una combo. */}
             <ChatLauncher />
             <Toaster />
-            {/* <TournamentRegistrationNotice /> */}
             {showIntro && (
               <IntroAnimation onComplete={handleIntroComplete} />
             )}

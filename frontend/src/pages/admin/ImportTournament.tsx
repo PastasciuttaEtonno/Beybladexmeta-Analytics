@@ -22,7 +22,7 @@ export default function ImportTournament() {
     if (!user || !user.isAdmin) {
         return (
             <div className="container py-8">
-                <h1 className="text-2xl font-bold text-red-500">Access Denied</h1>
+                <h1 className="text-2xl font-bold text-destructive">Accesso riservato</h1>
                 <p>You must be an administrator to view this page.</p>
             </div>
         );
@@ -31,8 +31,8 @@ export default function ImportTournament() {
     const handleImport = async () => {
         if (!jsonInput.trim()) {
             toast({
-                title: "Error",
-                description: "Please paste the JSON content first.",
+                title: "Contenuto mancante",
+                description: "Incolla il JSON del torneo prima di importare.",
                 variant: "destructive",
             });
             return;
@@ -43,8 +43,8 @@ export default function ImportTournament() {
             parsedData = JSON.parse(jsonInput);
         } catch (e) {
             toast({
-                title: "Invalid JSON",
-                description: "The text you pasted is not valid JSON.",
+                title: "JSON non valido",
+                description: "Il testo incollato non e' JSON valido. Controlla che sia completo.",
                 variant: "destructive",
             });
             return;
@@ -66,7 +66,7 @@ export default function ImportTournament() {
 
             if (data.success) {
                 toast({
-                    title: "Import Successful",
+                    title: "Torneo importato",
                     description: `Tournament imported with ID: ${data.id}`,
                 });
                 queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
@@ -76,7 +76,7 @@ export default function ImportTournament() {
             }
         } catch (error) {
             toast({
-                title: "Import Failed",
+                title: "Importazione non riuscita",
                 description: (error as Error).message,
                 variant: "destructive",
             });
@@ -88,27 +88,27 @@ export default function ImportTournament() {
     const handleForceRefresh = async () => {
         await queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
         toast({
-            title: "Refreshed",
-            description: "Tournament list has been refreshed.",
+            title: "Elenco aggiornato",
+            description: "L'elenco dei tornei e' stato ricaricato.",
         });
     };
 
     return (
         <div className="container max-w-4xl mx-auto py-8 px-4 pb-20">
             <PageHeader
-                title="Admin Import"
+                title="Importazione tornei"
                 description="Manually import normalized tournament JSON files."
                 action={
                     <Button variant="outline" size="sm" onClick={handleForceRefresh}>
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Force Refresh
+                        Forza aggiornamento
                     </Button>
                 }
             />
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Import Tournament JSON</CardTitle>
+                    <CardTitle>Importa un torneo da JSON</CardTitle>
                     <CardDescription>
                         Paste the raw JSON content of a normalized tournament file here.
                         It must contain fields like `id`, `tournament_name`, `start_date`, etc.

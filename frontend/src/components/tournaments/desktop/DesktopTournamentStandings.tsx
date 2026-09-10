@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { User, Pencil } from "lucide-react";
-import { Link } from "wouter";
 
 interface ComboForm {
     blade: string;
@@ -47,25 +46,25 @@ function formatComboText(combo: ComboForm): string {
 function getPlacementBadge(placement: number) {
     if (placement === 1)
         return (
-            <Badge className="bg-yellow-500/20 text-yellow-600 hover:bg-yellow-500/30 border-yellow-500/50">
+            <Badge className="bg-rank-1/20 text-rank-1 hover:bg-rank-1/30 border-rank-1/50">
                 1°
             </Badge>
         );
     if (placement === 2)
         return (
-            <Badge className="bg-zinc-500/20 text-zinc-500 hover:bg-zinc-500/30 border-zinc-500/50">
+            <Badge className="bg-rank-2/20 text-rank-2 hover:bg-rank-2/30 border-rank-2/50">
                 2°
             </Badge>
         );
     if (placement === 3)
         return (
-            <Badge className="bg-amber-600/20 text-amber-600 hover:bg-amber-600/30 border-amber-600/50">
+            <Badge className="bg-rank-3/20 text-rank-3 hover:bg-rank-3/30 border-rank-3/50">
                 3°
             </Badge>
         );
     if (placement === 4)
         return (
-            <Badge className="bg-purple-500/20 text-purple-500 hover:bg-purple-500/30 border-purple-500/50">
+            <Badge className="bg-rank-4/20 text-rank-4 hover:bg-rank-4/30 border-rank-4/50">
                 4°
             </Badge>
         );
