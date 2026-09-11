@@ -24,9 +24,20 @@ services:
       - beyblade_dev_pgdata:/var/lib/postgresql
       # Mounted file by file, not as a directory: you cannot mount anything
       # else inside a directory that is itself mounted read-only.
-      # They run in filename order, so the prod snapshot lands before the
+      # They run in filename order, so the snapshot lands before the
       # migrations that fix what the snapshot is missing.
-      - ./docker/initdb/10-beyblade.sql.gz:/docker-entrypoint-initdb.d/10-beyblade.sql.gz:ro
+      #
+      # Il default e' docker/ci-db.sql.gz, che E' nel repo: stesso schema e
+      # stessi dati di meta e tornei del database vero, senza la tabella degli
+      # utenti. Chi clona il progetto ottiene quindi un sito funzionante senza
+      # dover chiedere niente a nessuno.
+      #
+      # Chi ha accesso alla replica di produzione la usa mettendo in .env:
+      #   SEED_SQL=./docker/initdb/10-beyblade.sql.gz
+      # Quel file resta fuori da git perche' contiene email e hash delle
+      # password (vedi .gitignore). Cambiare seed richiede `npm run db:reset`:
+      # a volume gia' inizializzato Postgres ignora questa cartella.
+      - ${SEED_SQL:-./docker/ci-db.sql.gz}:/docker-entrypoint-initdb.d/10-seed.sql.gz:ro
       - ./migrations/0007_unified_meta_view.sql:/docker-entrypoint-initdb.d/20-unified-meta-view.sql:ro
       - ./migrations/0008_stats_season_primary_keys.sql:/docker-entrypoint-initdb.d/30-stats-pks.sql:ro
     healthcheck:
@@ -101,14 +112,22 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_PUBLIC_MINIO_URL: ${VITE_PUBLIC_MINIO_URL:-http://localhost:9000}
+        # Le foto dei componenti. Il default punta all'archivio pubblico di
+        # produzione, cosi' un clone pulito vede il sito completo; il default
+        # precedente era localhost:9000, dove in locale non c'e' niente e la
+        # pagina si riempiva di immagini rotte. Chi ha un Garage o un MinIO
+        # suo lo dichiara in .env.
+        #
+        # E' un argomento di BUILD: finisce dentro il bundle, quindi cambiarlo
+        # richiede `docker compose ... up -d --build`, non un riavvio.
+        VITE_PUBLIC_MINIO_URL: ${VITE_PUBLIC_MINIO_URL:-https://beyblades.web.92.4.170.189.sslip.io}
     container_name: beyblade-dev-web
     restart: unless-stopped
     ports:
       - "8080:80"
     environment:
       API_UPSTREAM: http://backend-py:8000
-      PUBLIC_STORAGE_ORIGIN: ${VITE_PUBLIC_MINIO_URL:-http://localhost:9000}
+      PUBLIC_STORAGE_ORIGIN: ${VITE_PUBLIC_MINIO_URL:-https://beyblades.web.92.4.170.189.sslip.io}
     depends_on:
       - backend-py
 
