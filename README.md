@@ -43,14 +43,42 @@ on 2026-08-21 and the Express service was removed; it is in the git history up
 to commit `465343b`, along with the parity harnesses that proved the two agreed
 on all 176 compared URLs.
 
-## Local setup
+## Running it
 
-Prerequisites: Node 20+, Docker, and a copy of the production dump at
-`docker/initdb/10-beyblade.sql.gz` (see [Getting the data](#getting-the-data)).
+### The whole site, in one command
+
+Prerequisite: Docker. Nothing else — no Node, no Python, no credentials, no
+database dump.
+
+```bash
+git clone https://github.com/PastasciuttaEtonno/Beybladexmeta-Analytics.git
+cd Beybladexmeta-Analytics
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+Open <http://localhost:8080>. That is the real site: nginx serving the built
+SPA, FastAPI behind it, Postgres with the actual meta and tournament data.
+
+The database is seeded from `docker/ci-db.sql.gz`, which **is** in the repo: it
+is the same schema and the same tournament data as production, minus the users
+table. So a fresh clone gets a working site without asking anyone for anything.
+
+What stays off without credentials: the assistant (`/api/chat` returns 503) and
+captcha-backed registration. Everything else works. Copy `.env.example` to
+`.env` when you want to switch any of that on — the file explains each variable
+and what breaks without it.
+
+Also up: Adminer on <http://localhost:8081> (server `db`, user/password
+`postgres`) and Postgres itself on `:5433`.
+
+### With the tooling, for development
+
+For hot reload and the helper scripts you want Node 20+ and
+[uv](https://docs.astral.sh/uv/) as well:
 
 ```bash
 npm run install:all      # frontend deps + backend-py via uv
-npm run db:up            # Postgres on :5433, seeded from the dump on first start
+npm run db:up            # just Postgres on :5433
 cp backend-py/.env.example backend-py/.env   # then fill in
 cp frontend/.env.example   frontend/.env     # then fill in
 npm run dev              # fastapi :8000 + frontend :5173
@@ -59,6 +87,18 @@ npm run dev              # fastapi :8000 + frontend :5173
 Open <http://localhost:5173>. The Vite dev server proxies `/api`, `/sitemap.xml`
 and `/combo/` to the backend, so the browser sees a single origin and the session
 cookie behaves exactly as it does in production.
+
+### Working against the real data
+
+Maintainers with access to the production replica point the seed at it in
+`.env`:
+
+```bash
+SEED_SQL=./docker/initdb/10-beyblade.sql.gz
+```
+
+then `npm run db:reset`, because Postgres only runs the seed on an empty
+volume. That dump is **not** committed — see [Getting the data](#getting-the-data).
 
 Other root scripts: `npm run build`, `npm run check` (typecheck),
 `npm run db:psql`, `npm run db:reset` (wipes the volume and re-seeds),
