@@ -130,7 +130,7 @@ jobs:
             || true
 
       - name: carica i risultati
-        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v3
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v3
         if: always()
         with:
           sarif_file: semgrep.sarif
@@ -149,7 +149,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
 
       # pip-audit legge il lock, non l'ambiente installato: vede quello che
       # finira' davvero nell'immagine, comprese le dipendenze transitive che
@@ -245,7 +245,7 @@ jobs:
       # ha trovato che controlli.yml girava senza un blocco `permissions`, e
       # quindi col token in scrittura su tutto il repo.
       - name: checkov
-        uses: bridgecrewio/checkov-action@f967808197a8d784d3e72919f38c3ff0cda7884e # master del 2026-09-09
+        uses: bridgecrewio/checkov-action@a8664e3a0549367977f0cda990a34311835c87c0 # master del 2026-09-09
         with:
           directory: .
           config_file: .checkov.yaml
